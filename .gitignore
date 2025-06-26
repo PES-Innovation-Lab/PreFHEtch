@@ -1,5 +1,9 @@
-.cache/
 build/
+
+.cache/
+uploads/
+
+.idea/
 
 *.o
 

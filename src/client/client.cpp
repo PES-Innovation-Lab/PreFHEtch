@@ -1,3 +1,6 @@
-#include "client.hpp"
+#include "client_lib.h"
 
-int main() { hello_client(HELLO_CLIENT); }
+int main() {
+    ping_server();
+    return 0;
+}

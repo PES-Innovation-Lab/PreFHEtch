@@ -6,57 +6,92 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_BUILD_TYPE Release)
 
 project(PreFHEtch
-  VERSION 0.1
-  LANGUAGES CXX
+        VERSION 0.1
+        LANGUAGES CXX
 )
 
-find_package(faiss)
+# Web framework to build servers
+find_package(Drogon)
+# Library to make HTTP requests
+find_package(cpr CONFIG REQUIRED)
 
 include(FetchContent)
 
 FetchContent_Declare(
-  SEAL
-  GIT_REPOSITORY https://github.com/microsoft/SEAL.git
-  GIT_TAG 7a931d55ba84a40b85938f6ca3ac206f18654093
+        spdlog
+        GIT_REPOSITORY https://github.com/gabime/spdlog
+        GIT_TAG v1.15.3
 )
 
-FetchContent_MakeAvailable(SEAL)
+FetchContent_MakeAvailable(spdlog)
+
+# FAISS and SEAL - Enable when required
+
+#find_package(faiss)
+#
+#FetchContent_Declare(
+#        SEAL
+#        GIT_REPOSITORY https://github.com/microsoft/SEAL.git
+#        GIT_TAG 7a931d55ba84a40b85938f6ca3ac206f18654093
+#)
+#
+#FetchContent_MakeAvailable(SEAL)
+
+# PreFHEtch_server
 
 add_library(PreFHEtch_server_lib
-  src/server/server_lib.cpp
+        src/server/server_lib.cpp
+        src/server/controllers/Query.h
+        src/server/controllers/Query.cc
 )
 
 target_include_directories(PreFHEtch_server_lib
-  PUBLIC
-  include/server
+        PUBLIC
+        "include/server"
+        "{spdlog_SOURCE_DIR}/include"
 )
 
 target_link_libraries(PreFHEtch_server_lib
-  SEAL::seal
-  faiss
+        PRIVATE
+        Drogon::Drogon
+        spdlog::spdlog
+        #  SEAL::seal
+        #  faiss
 )
 
 add_executable(PreFHEtch_server
-  src/server/server.cpp
+        src/server/server.cpp
 )
 
 target_link_libraries(PreFHEtch_server
-  PreFHEtch_server_lib
+        PRIVATE
+        PreFHEtch_server_lib
+        spdlog::spdlog
 )
 
+# PreFHEtch_client
+
 add_library(PreFHEtch_client_lib
-  src/client/client_lib.cpp
+        src/client/client_lib.cpp
 )
 
 target_include_directories(PreFHEtch_client_lib
-  PUBLIC
-  include/client
+        PUBLIC include/client
+)
+
+target_link_libraries(PreFHEtch_client_lib
+        PRIVATE
+        cpr::cpr
+        spdlog::spdlog
 )
 
 add_executable(PreFHEtch_client
-  src/client/client.cpp
+        src/client/client.cpp
 )
 
 target_link_libraries(PreFHEtch_client
-  PreFHEtch_client_lib
+        PRIVATE
+        PreFHEtch_client_lib
+        cpr::cpr
+        spdlog::spdlog
 )

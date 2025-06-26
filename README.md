@@ -4,7 +4,10 @@ Pre-Filtering Homomorphically Encrypted queries for Triage and Candidate Handlin
 
 # Building the project
 
-- Install [FAISS](https://github.com/facebookresearch/faiss/blob/main/INSTALL.md)
+- Install the dependencies
+    - [FAISS](https://github.com/facebookresearch/faiss/blob/main/INSTALL.md)
+    - [Drogon](https://github.com/drogonframework/drogon) 
+    - [cpr](https://github.com/libcpr/cpr)
 
 - Configure the build system
 

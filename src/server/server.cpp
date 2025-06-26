@@ -1,3 +1,6 @@
-#include "server.hpp"
+#include "server_lib.h"
 
-int main() { hello_server(HELLO_SERVER); }
+int main() {
+    run_server();
+    return 0;
+}

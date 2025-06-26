@@ -1,8 +1,16 @@
-#include <iostream>
+#include "drogon/HttpAppFramework.h"
+#include "spdlog/spdlog.h"
 
-#include "server.hpp"
+// Include controllers headers to register with server
+#include "controllers/Query.h"
+#include "server_lib.h"
 
-void hello_server(const std::string &msg) {
-  std::cout << msg;
-  std::cout << std::endl;
+void init_logger() {}
+
+void run_server() {
+    init_logger();
+    drogon::app().addListener("localhost", 8080);
+
+    SPDLOG_INFO("Server listening on localhost:8080:");
+    drogon::app().run();
 }
