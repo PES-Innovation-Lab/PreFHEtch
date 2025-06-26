@@ -2,5 +2,6 @@
 
 int main() {
     ping_server();
+    get_centroids();
     return 0;
 }

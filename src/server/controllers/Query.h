@@ -10,9 +10,13 @@ class Query : public drogon::HttpController<Query> {
     METHOD_LIST_BEGIN
 
     ADD_METHOD_TO(Query::ping, "/ping", Get);
+    ADD_METHOD_TO(Query::query, "/query", Get);
 
     METHOD_LIST_END
 
     void ping(const HttpRequestPtr &req,
+              std::function<void(const HttpResponsePtr &)> &&callback) const;
+
+    void query(const HttpRequestPtr &req,
               std::function<void(const HttpResponsePtr &)> &&callback) const;
 };

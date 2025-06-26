@@ -10,8 +10,10 @@ project(PreFHEtch
         LANGUAGES CXX
 )
 
+# JSON Library
+find_package(jsoncpp CONFIG REQUIRED)
 # Web framework to build servers
-find_package(Drogon)
+find_package(Drogon REQUIRED)
 # Library to make HTTP requests
 find_package(cpr CONFIG REQUIRED)
 
@@ -27,7 +29,7 @@ FetchContent_MakeAvailable(spdlog)
 
 # FAISS and SEAL - Enable when required
 
-#find_package(faiss)
+#find_package(faiss REQUIRED)
 #
 #FetchContent_Declare(
 #        SEAL
@@ -39,59 +41,60 @@ FetchContent_MakeAvailable(spdlog)
 
 # PreFHEtch_server
 
-add_library(PreFHEtch_server_lib
-        src/server/server_lib.cpp
-        src/server/controllers/Query.h
-        src/server/controllers/Query.cc
-)
-
-target_include_directories(PreFHEtch_server_lib
-        PUBLIC
-        "include/server"
-        "{spdlog_SOURCE_DIR}/include"
-)
-
-target_link_libraries(PreFHEtch_server_lib
-        PRIVATE
+add_library(PreFHEtch_server_headers INTERFACE)
+target_include_directories(PreFHEtch_server_headers INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include/server)
+target_link_libraries(PreFHEtch_server_headers
+        INTERFACE
+        JsonCpp::JsonCpp
         Drogon::Drogon
         spdlog::spdlog
         #  SEAL::seal
         #  faiss
 )
 
+add_library(PreFHEtch_server_lib
+        src/server/server_lib.cpp
+        src/server/controllers/Query.h
+        src/server/controllers/Query.cc
+)
+target_link_libraries(PreFHEtch_server_lib
+        PUBLIC
+        PreFHEtch_server_headers
+)
+
 add_executable(PreFHEtch_server
         src/server/server.cpp
 )
-
 target_link_libraries(PreFHEtch_server
         PRIVATE
         PreFHEtch_server_lib
-        spdlog::spdlog
 )
 
 # PreFHEtch_client
 
+add_library(PreFHEtch_client_headers INTERFACE)
+target_include_directories(PreFHEtch_client_headers INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include/client)
+target_link_libraries(PreFHEtch_client_headers
+        INTERFACE
+        JsonCpp::JsonCpp
+        cpr::cpr
+        spdlog::spdlog
+        #  SEAL::seal
+        #  faiss
+)
+
 add_library(PreFHEtch_client_lib
         src/client/client_lib.cpp
 )
-
-target_include_directories(PreFHEtch_client_lib
-        PUBLIC include/client
-)
-
 target_link_libraries(PreFHEtch_client_lib
-        PRIVATE
-        cpr::cpr
-        spdlog::spdlog
+        PUBLIC
+        PreFHEtch_client_headers
 )
 
 add_executable(PreFHEtch_client
         src/client/client.cpp
 )
-
 target_link_libraries(PreFHEtch_client
         PRIVATE
         PreFHEtch_client_lib
-        cpr::cpr
-        spdlog::spdlog
 )
