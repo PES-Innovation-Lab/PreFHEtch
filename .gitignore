@@ -4,8 +4,11 @@ build/
 uploads/
 
 .idea/
+.vscode/
 
 *.o
 
 *.out
 *.exe
+
+siftsmall*

@@ -3,14 +3,13 @@ cmake_minimum_required(VERSION 3.30)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-set(CMAKE_BUILD_TYPE Release)
 
 project(PreFHEtch
         VERSION 0.1
         LANGUAGES CXX
 )
 
-# JSON Library
+# Drogon JSON dependency
 find_package(jsoncpp CONFIG REQUIRED)
 # Web framework to build servers
 find_package(Drogon REQUIRED)
@@ -18,6 +17,13 @@ find_package(Drogon REQUIRED)
 find_package(cpr CONFIG REQUIRED)
 
 include(FetchContent)
+
+# JSON Library
+FetchContent_Declare(json
+        URL https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz
+)
+
+FetchContent_MakeAvailable(json)
 
 FetchContent_Declare(
         spdlog
@@ -45,7 +51,7 @@ add_library(PreFHEtch_server_headers INTERFACE)
 target_include_directories(PreFHEtch_server_headers INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include/server)
 target_link_libraries(PreFHEtch_server_headers
         INTERFACE
-        JsonCpp::JsonCpp
+        nlohmann_json::nlohmann_json
         Drogon::Drogon
         spdlog::spdlog
         #  SEAL::seal
@@ -76,7 +82,7 @@ add_library(PreFHEtch_client_headers INTERFACE)
 target_include_directories(PreFHEtch_client_headers INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include/client)
 target_link_libraries(PreFHEtch_client_headers
         INTERFACE
-        JsonCpp::JsonCpp
+        nlohmann_json::nlohmann_json
         cpr::cpr
         spdlog::spdlog
         #  SEAL::seal
@@ -85,6 +91,7 @@ target_link_libraries(PreFHEtch_client_headers
 
 add_library(PreFHEtch_client_lib
         src/client/client_lib.cpp
+        src/client/client_utils.cpp
 )
 target_link_libraries(PreFHEtch_client_lib
         PUBLIC
