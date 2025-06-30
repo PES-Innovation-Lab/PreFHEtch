@@ -35,8 +35,8 @@ FetchContent_MakeAvailable(spdlog)
 
 # FAISS and SEAL - Enable when required
 
-#find_package(faiss REQUIRED)
-#
+find_package(faiss REQUIRED)
+
 #FetchContent_Declare(
 #        SEAL
 #        GIT_REPOSITORY https://github.com/microsoft/SEAL.git
@@ -54,8 +54,8 @@ target_link_libraries(PreFHEtch_server_headers
         nlohmann_json::nlohmann_json
         Drogon::Drogon
         spdlog::spdlog
+        faiss
         #  SEAL::seal
-        #  faiss
 )
 
 add_library(PreFHEtch_server_lib
@@ -85,8 +85,8 @@ target_link_libraries(PreFHEtch_client_headers
         nlohmann_json::nlohmann_json
         cpr::cpr
         spdlog::spdlog
-        #  SEAL::seal
         #  faiss
+        #  SEAL::seal
 )
 
 add_library(PreFHEtch_client_lib
