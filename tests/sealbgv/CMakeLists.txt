@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.10)
+project(sealauto VERSION 1.0)
+add_executable(sealauto ecfs.cpp)
+find_package(SEAL)
+target_link_libraries(sealauto SEAL::seal)
