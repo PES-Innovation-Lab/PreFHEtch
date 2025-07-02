@@ -37,3 +37,5 @@ void vecs_read(const char *fname, size_t &d_out, size_t &n_out,
 
     fclose(f);
 }
+
+void init_logger();

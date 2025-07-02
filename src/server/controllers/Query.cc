@@ -1,3 +1,5 @@
+#include <memory>
+
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 
@@ -23,8 +25,10 @@ void Query::query(
     std::function<void(const HttpResponsePtr &)> &&callback) const {
     SPDLOG_INFO("Received request on /query");
 
+    std::shared_ptr<Server> srvr = Server::getInstance();
+
     std::vector<std::array<float, PRECISE_VECTOR_DIMENSIONS>> centroids;
-    retrieve_centroids(centroids);
+    srvr->retrieve_centroids(centroids);
     const nlohmann::json centroids_json = centroids;
 
     const HttpResponsePtr resp = HttpResponse::newHttpResponse();

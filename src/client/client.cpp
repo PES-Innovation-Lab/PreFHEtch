@@ -9,9 +9,9 @@ int main() {
 
     // Replace std::vector<float> with the corresponding Encrypted Vector type
 
-    // std::array<float, PRECISE_VECTOR_DIMENSIONS> precise_query;
-    // get_query(precise_query);
-    // SPDLOG_INFO("Query vector obtained successfully");
+    std::array<float, PRECISE_VECTOR_DIMENSIONS> precise_query;
+    get_query(precise_query);
+    SPDLOG_INFO("Query vector obtained successfully");
 
     // Query quantisation
     // Get parameters from server ( refactor to get_centroids_params()? )
@@ -28,9 +28,14 @@ int main() {
     SPDLOG_INFO("Fetched centroids from server successfully");
 
     // // Compute nearest centroids
-    // std::array<int64_t, NPROBE> nearest_centroids_idx;
-    // compute_nearest_centroids(centroids, nearest_centroids_idx);
-    // SPDLOG_INFO("Computed nearest centroids successfully");
+    std::map<float, int64_t> nearest_centroids_idx;
+    sort_nearest_centroids(precise_query, centroids, nearest_centroids_idx);
+    SPDLOG_INFO("Computed nearest centroids successfully");
+
+    for (const auto &centroid_distance : nearest_centroids_idx) {
+        SPDLOG_INFO("Distance = {}, Index = {}", centroid_distance.first,
+                    centroid_distance.second);
+    }
 
     // // To be parallelised (async?)
     // const std::vector<float> encrypted_coarse_query =

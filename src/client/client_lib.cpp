@@ -1,3 +1,5 @@
+#include <iostream>
+#include <map>
 #include <vector>
 
 #include <cpr/cpr.h>
@@ -5,6 +7,10 @@
 #include <spdlog/spdlog.h>
 
 #include "client_lib.h"
+
+#include "client_utils.h"
+
+char const *QUERY_DATASET_PATH = "../sift/siftsmall/siftsmall_query.fvecs";
 
 // Test method to ping server
 void ping_server() {
@@ -14,14 +20,22 @@ void ping_server() {
     SPDLOG_INFO("Response = {}, Status code = {}", resp.dump(), r.status_code);
 }
 
-void get_query(std::vector<float> &precise_query) {
-    precise_query.reserve(PRECISE_VECTOR_DIMENSIONS);
+void get_query(std::array<float, PRECISE_VECTOR_DIMENSIONS> &query) {
+    size_t nq;
+    std::vector<float> xq;
 
-    float start = 0.0;
-    constexpr float step = 1.0 / PRECISE_VECTOR_DIMENSIONS;
-    for (int j = 0; j < PRECISE_VECTOR_DIMENSIONS; j++, start += step) {
-        precise_query.push_back(start);
+    SPDLOG_INFO("Loading query:");
+
+    size_t d2;
+    vecs_read<float>(QUERY_DATASET_PATH, d2, nq, xq);
+    assert(PRECISE_VECTOR_DIMENSIONS == d2 ||
+           !"query does not have same dimension as train set");
+
+    for (int i = 0; i < PRECISE_VECTOR_DIMENSIONS; i++) {
+        query[i] = xq[i];
+        printf("%.1f, ", xq[i]);
     }
+    printf("\n");
 }
 
 void get_centroids(
@@ -34,4 +48,18 @@ void get_centroids(
     centroids =
         resp.get<std::vector<std::array<float, PRECISE_VECTOR_DIMENSIONS>>>();
     SPDLOG_INFO("Retrieved centroids -> {}", resp.dump());
+}
+
+void sort_nearest_centroids(
+    const std::array<float, PRECISE_VECTOR_DIMENSIONS> &precise_query,
+    const std::vector<std::array<float, PRECISE_VECTOR_DIMENSIONS>> &centroids,
+    std::map<float, int64_t> &nearest_centroids_idx) {
+
+    for (int i = 0; i < centroids.size(); i++) {
+        float distance = 0.0;
+        for (int j = 0; j < PRECISE_VECTOR_DIMENSIONS; j++) {
+            distance += std::pow(precise_query[j] - centroids[i][j], 2);
+        }
+        nearest_centroids_idx[distance] = i;
+    }
 }

@@ -1,14 +1,15 @@
 #include <cstdio>
+#include <iostream>
 #include <vector>
 
-#include <sys/stat.h>
-
 #include <faiss/AutoTune.h>
-#include <faiss/index_factory.h>
+#include <faiss/IndexFlat.h>
+#include <faiss/IndexIVFPQ.h>
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 
 #include "server_lib.h"
+#include "server_utils.h"
 
 // Include controllers headers to register with server
 #include "controllers/Query.h"
@@ -20,19 +21,23 @@ char const *QUERY_DATASET_PATH = "../sift/siftsmall/siftsmall_query.fvecs";
 char const *GROUNDTRUTH_DATASET_PATH =
     "../sift/siftsmall/siftsmall_groundtruth.ivecs";
 
-void init_logger() {}
+Server::Server()
+    : m_Quantizer(PRECISE_VECTOR_DIMENSIONS),
+      m_Index(&m_Quantizer, PRECISE_VECTOR_DIMENSIONS, NLIST, SUB_QUANTIZERS,
+              SUB_VECTOR_SIZE) {
+    SPDLOG_INFO("Preparing index with precise dimension d={}",
+                PRECISE_VECTOR_DIMENSIONS);
+}
 
-void run_webserver() {
-    init_logger();
+void Server::run_webserver() {
     drogon::app().addListener("localhost", 8080);
 
     SPDLOG_INFO("Server listening on localhost:8080");
     drogon::app().run();
 }
 
-void init_index() {
-    const char *index_key = "IVF4096,Flat";
-    faiss::Index *index;
+void Server::init_index(const char *index_key) {
+    // IVF with 128 centroids gives R@10 of 0.86 for sift10k
     size_t d;
 
     // Training the index
@@ -41,13 +46,10 @@ void init_index() {
 
         size_t nt;
         std::vector<float> xt;
-        fvecs_read(TRAIN_DATASET_PATH, d, nt, xt);
-
-        SPDLOG_INFO("Preparing index \"{}\" d={}", index_key, d);
-        index = faiss::index_factory(d, index_key);
+        vecs_read<float>(TRAIN_DATASET_PATH, d, nt, xt);
 
         SPDLOG_INFO("Training on {} vectors", nt);
-        index->train(nt, xt.data());
+        m_Index.train(nt, xt.data());
     }
 
     // Adding vectors to the index
@@ -56,11 +58,11 @@ void init_index() {
 
         size_t nb, d2;
         std::vector<float> xb;
-        fvecs_read(BASE_DATASET_PATH, d2, nb, xb);
+        vecs_read<float>(BASE_DATASET_PATH, d2, nb, xb);
         assert(d == d2 || !"dataset does not have same dimension as train set");
 
         SPDLOG_INFO("Indexing database, size {}*{}", nb, d);
-        index->add(nb, xb.data());
+        m_Index.add(nb, xb.data());
     }
 
     size_t nq;
@@ -70,7 +72,7 @@ void init_index() {
         SPDLOG_INFO("Loading queries");
 
         size_t d2;
-        fvecs_read(QUERY_DATASET_PATH, d2, nq, xq);
+        vecs_read<float>(QUERY_DATASET_PATH, d2, nq, xq);
         assert(d == d2 || !"query does not have same dimension as train set");
     }
 
@@ -84,7 +86,7 @@ void init_index() {
         // load ground-truth and convert int to long
         size_t nq2;
         std::vector<int> gt_int;
-        ivecs_read(GROUNDTRUTH_DATASET_PATH, k, nq2, gt_int);
+        vecs_read<int>(GROUNDTRUTH_DATASET_PATH, k, nq2, gt_int);
         assert(nq2 == nq || !"incorrect nb of ground truth entries");
 
         gt.resize(k * nq);
@@ -112,13 +114,13 @@ void init_index() {
         SPDLOG_INFO("Preparing auto-tune parameters");
 
         faiss::ParameterSpace params;
-        params.initialize(index);
+        params.initialize(&m_Index);
 
         SPDLOG_INFO("Auto-tuning over {} parameters ({} combinations)",
                     params.parameter_ranges.size(), params.n_combinations());
 
         faiss::OperatingPoints ops;
-        params.explore(index, nq, xq.data(), crit, &ops);
+        params.explore(&m_Index, nq, xq.data(), crit, &ops);
 
         SPDLOG_INFO("Found the following operating points: ");
         ops.display();
@@ -140,7 +142,7 @@ void init_index() {
 
         SPDLOG_INFO("Setting parameter configuration \"{}\" on index",
                     selected_params.c_str());
-        params.set_index_parameters(index, selected_params.c_str());
+        params.set_index_parameters(&m_Index, selected_params.c_str());
 
         SPDLOG_INFO("Perform a search on {} queries", nq);
 
@@ -148,14 +150,29 @@ void init_index() {
         faiss::idx_t *I = new faiss::idx_t[nq * k];
         float *D = new float[nq * k];
 
-        index->search(nq, xq.data(), k, D, I);
+        m_Index.search(nq, xq.data(), k, D, I);
+
+        int temp_k = 10;
+        SPDLOG_INFO("Ground truth results of query[0] ({} nearest-neighbours):",
+                    temp_k);
+        for (int i = 0; i < temp_k; i++) {
+            printf("k@%d = %lld, ", i + 1, gt[i]);
+        }
+        printf("\n");
+
+        SPDLOG_INFO("Calculated results of query[0] ({} nearest-neighbours):",
+                    temp_k);
+        for (int i = 0; i < temp_k; i++) {
+            printf("k@%d = %lld, ", i + 1, I[i]);
+        }
+        printf("\n");
 
         SPDLOG_INFO("Compute recalls");
 
         // evaluate result by hand.
         int n_1 = 0, n_10 = 0, n_100 = 0;
         for (int i = 0; i < nq; i++) {
-            int gt_nn = gt[i * k];
+            long long gt_nn = gt[i * k];
             for (int j = 0; j < k; j++) {
                 if (I[i * k + j] == gt_nn) {
                     if (j < 1)
@@ -176,84 +193,10 @@ void init_index() {
     }
 }
 
-// Returns a dummy set of NUM_CENTROIDS centroids between 0 and 1
-void retrieve_centroids(
+void Server::retrieve_centroids(
     std::vector<std::array<float, PRECISE_VECTOR_DIMENSIONS>> &centroids) {
-    centroids.reserve(NUM_CENTROIDS);
-
-    for (int i = 0; i < NUM_CENTROIDS; i++) {
-        std::array<float, PRECISE_VECTOR_DIMENSIONS> centroid;
-
-        float start = 0.0;
-        constexpr float step = 1.0 / PRECISE_VECTOR_DIMENSIONS;
-        for (int j = 0; j < PRECISE_VECTOR_DIMENSIONS; j++, start += step) {
-            centroid[j] = start;
-        }
-
-        centroids.push_back(centroid);
+    centroids.resize(NLIST);
+    for (int i = 0; i < NLIST; i++) {
+        m_Quantizer.reconstruct(i, centroids[i].data());
     }
-}
-
-void fvecs_read(const char *fname, size_t &d_out, size_t &n_out,
-                std::vector<float> &vecs) {
-    FILE *f = fopen(fname, "r");
-    if (!f) {
-        SPDLOG_ERROR("could not open %s", fname);
-        perror("");
-        abort();
-    }
-
-    int d;
-    fread(&d, 1, sizeof(int), f);
-    assert((d > 0 && d < 1000000) || !"Incorrect dimensions");
-    fseek(f, 0, SEEK_SET);
-    struct stat st{};
-    fstat(fileno(f), &st);
-    const size_t sz = st.st_size;
-    assert(sz % ((d + 1) * 4) == 0 || !"Incorrect file size");
-    const size_t n = sz / ((d + 1) * 4);
-
-    d_out = d;
-    n_out = n;
-    vecs.resize(n * (d + 1));
-    const size_t nr = fread(vecs.data(), sizeof(float), n * (d + 1), f);
-    assert(nr == n * (d + 1) || !"could not read whole file");
-
-    // shift array to remove row headers
-    for (size_t i = 0; i < n; i++)
-        memmove(vecs.data() + i * d, vecs.data() + 1 + i * (d + 1),
-                d * sizeof(float));
-
-    fclose(f);
-}
-
-void ivecs_read(const char *fname, size_t &d_out, size_t &n_out,
-                std::vector<int> &vecs) {
-    FILE *f = fopen(fname, "r");
-    if (!f) {
-        SPDLOG_ERROR("could not open %s", fname);
-        perror("");
-        abort();
-    }
-
-    int d;
-    fread(&d, 1, sizeof(int), f);
-    assert((d > 0 && d < 1000000) || !"Incorrect dimensions");
-    fseek(f, 0, SEEK_SET);
-    struct stat st{};
-    fstat(fileno(f), &st);
-    const size_t sz = st.st_size;
-    assert(sz % ((d + 1) * 4) == 0 || !"Incorrect file size");
-    const size_t n = sz / ((d + 1) * 4);
-
-    d_out = d;
-    n_out = n;
-    vecs.resize(n * d);
-    int *tmp = new int[n * (d + 1)];
-    fread(tmp, sizeof(int), n * (d + 1), f);
-    for (size_t i = 0; i < n; i++) {
-        memcpy(vecs.data() + i * d, tmp + 1 + i * (d + 1), d * sizeof(int));
-    }
-    delete[] tmp;
-    fclose(f);
 }

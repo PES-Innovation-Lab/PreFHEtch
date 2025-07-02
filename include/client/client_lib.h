@@ -1,9 +1,10 @@
 #pragma once
 
+#include <map>
 #include <vector>
 
-constexpr int64_t PRECISE_VECTOR_DIMENSIONS = 10;
-constexpr int64_t COARSE_VECTOR_DIMENSIONS = 5;
+constexpr int64_t PRECISE_VECTOR_DIMENSIONS = 128;
+constexpr int64_t COARSE_VECTOR_DIMENSIONS = 8;
 constexpr int64_t NPROBE = 5;
 
 const std::string server_addr = "http://localhost:8080/";
@@ -20,9 +21,10 @@ void compute_coarse_query(
 
 void get_centroids(
     std::vector<std::array<float, PRECISE_VECTOR_DIMENSIONS>> &centroids);
-void compute_nearest_centroids(
+void sort_nearest_centroids(
+    const std::array<float, PRECISE_VECTOR_DIMENSIONS> &precise_query,
     const std::vector<std::array<float, PRECISE_VECTOR_DIMENSIONS>> &centroids,
-    std::array<int64_t, NPROBE> &nearest_centroids_idx);
+    std::map<float, int64_t> &nearest_centroids_idx);
 
 // std::vector<float> compute_encrypted_coarse_query(const std::vector<float>
 // &); std::vector<float> compute_encrypted_precise_query(const

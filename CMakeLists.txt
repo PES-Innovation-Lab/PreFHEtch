@@ -60,6 +60,7 @@ target_link_libraries(PreFHEtch_server_headers
 
 add_library(PreFHEtch_server_lib
         src/server/server_lib.cpp
+        src/server/server_utils.cpp
         src/server/controllers/Query.h
         src/server/controllers/Query.cc
 )
