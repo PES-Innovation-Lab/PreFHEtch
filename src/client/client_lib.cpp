@@ -1,4 +1,3 @@
-#include <iostream>
 #include <map>
 #include <vector>
 
@@ -8,7 +7,7 @@
 
 #include "client_lib.h"
 
-#include "client_utils.h"
+#include "client_server_utils.h"
 
 char const *QUERY_DATASET_PATH = "../sift/siftsmall/siftsmall_query.fvecs";
 
@@ -42,12 +41,12 @@ void get_centroids(
     std::vector<std::array<float, PRECISE_VECTOR_DIMENSIONS>> &centroids) {
     SPDLOG_INFO("Sending a request to /query at localhost 8080");
     cpr::Response r = cpr::Get(cpr::Url(server_addr + "query"));
-    SPDLOG_INFO("Response = {}, Status code = {}", r.text, r.status_code);
+    // SPDLOG_INFO("Response = {}, Status code = {}", r.text, r.status_code);
 
     const nlohmann::json resp = nlohmann::json::parse(r.text);
     centroids =
         resp.get<std::vector<std::array<float, PRECISE_VECTOR_DIMENSIONS>>>();
-    SPDLOG_INFO("Retrieved centroids -> {}", resp.dump());
+    // SPDLOG_INFO("Retrieved centroids -> {}", resp.dump());
 }
 
 void sort_nearest_centroids(

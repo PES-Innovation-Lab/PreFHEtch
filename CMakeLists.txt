@@ -33,22 +33,16 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(spdlog)
 
-# FAISS and SEAL - Enable when required
-
 find_package(faiss REQUIRED)
-
-#FetchContent_Declare(
-#        SEAL
-#        GIT_REPOSITORY https://github.com/microsoft/SEAL.git
-#        GIT_TAG 7a931d55ba84a40b85938f6ca3ac206f18654093
-#)
-#
-#FetchContent_MakeAvailable(SEAL)
 
 # PreFHEtch_server
 
 add_library(PreFHEtch_server_headers INTERFACE)
-target_include_directories(PreFHEtch_server_headers INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include/server)
+target_include_directories(PreFHEtch_server_headers
+        INTERFACE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/server
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/common
+)
 target_link_libraries(PreFHEtch_server_headers
         INTERFACE
         nlohmann_json::nlohmann_json
@@ -63,6 +57,7 @@ add_library(PreFHEtch_server_lib
         src/server/server_utils.cpp
         src/server/controllers/Query.h
         src/server/controllers/Query.cc
+        src/common/client_server_utils.cpp
 )
 target_link_libraries(PreFHEtch_server_lib
         PUBLIC
@@ -80,7 +75,11 @@ target_link_libraries(PreFHEtch_server
 # PreFHEtch_client
 
 add_library(PreFHEtch_client_headers INTERFACE)
-target_include_directories(PreFHEtch_client_headers INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include/client)
+target_include_directories(PreFHEtch_client_headers
+        INTERFACE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/client
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/common
+)
 target_link_libraries(PreFHEtch_client_headers
         INTERFACE
         nlohmann_json::nlohmann_json
@@ -93,6 +92,7 @@ target_link_libraries(PreFHEtch_client_headers
 add_library(PreFHEtch_client_lib
         src/client/client_lib.cpp
         src/client/client_utils.cpp
+        src/common/client_server_utils.cpp
 )
 target_link_libraries(PreFHEtch_client_lib
         PUBLIC

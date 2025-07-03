@@ -1,5 +1,4 @@
 #include <cstdio>
-#include <iostream>
 #include <vector>
 
 #include <faiss/AutoTune.h>
@@ -8,8 +7,8 @@
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 
+#include "client_server_utils.h"
 #include "server_lib.h"
-#include "server_utils.h"
 
 // Include controllers headers to register with server
 #include "controllers/Query.h"

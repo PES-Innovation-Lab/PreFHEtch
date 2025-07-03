@@ -5,8 +5,7 @@
 #include "client_lib.h"
 
 int main() {
-    ping_server();
-
+    // ping_server();
     // Replace std::vector<float> with the corresponding Encrypted Vector type
 
     std::array<float, PRECISE_VECTOR_DIMENSIONS> precise_query;
@@ -30,11 +29,17 @@ int main() {
     // // Compute nearest centroids
     std::map<float, int64_t> nearest_centroids_idx;
     sort_nearest_centroids(precise_query, centroids, nearest_centroids_idx);
-    SPDLOG_INFO("Computed nearest centroids successfully");
+    SPDLOG_INFO("Computed nearest centroids successfully, top NPROBE "
+                "centroids are:");
 
-    for (const auto &centroid_distance : nearest_centroids_idx) {
-        SPDLOG_INFO("Distance = {}, Index = {}", centroid_distance.first,
-                    centroid_distance.second);
+    std::map<float, int64_t>::iterator nearest_centroids_it =
+        nearest_centroids_idx.begin();
+    for (int i = 0;
+         i < NPROBE && nearest_centroids_it != nearest_centroids_idx.end();
+         i++) {
+        SPDLOG_INFO("Distance = {}, Centroid index = {}", nearest_centroids_it->first,
+                    nearest_centroids_it->second);
+        std::advance(nearest_centroids_it, 1);
     }
 
     // // To be parallelised (async?)
