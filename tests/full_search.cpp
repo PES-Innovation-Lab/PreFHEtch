@@ -2,42 +2,41 @@
 // should use faiss ofcourse
 #include "faiss/Index.h"
 #include "faiss/MetricType.h"
-#include <cassert>
-#include <cstddef>
 #include <faiss/impl/ProductQuantizer.h>
 #include <faiss/index_factory.h>
 #include <faiss/IndexIVF.h>
 
+#include <cassert>
+#include <cstddef>
 #include <stdexcept>
-#include <limits.h>
-#include <sys/time.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 
+#include <algorithm>
+#include <vector>
+
+const char* index_key = "IVF256,PQ8";
+const size_t nprobe = 10;
 
 void sort_floats_with_labels(float* arr, faiss::idx_t* labels, size_t n) {
-    for (size_t i = 0; i < n - 1; i++) {
-        size_t min_idx = i;
-        for (size_t j = i + 1; j < n; j++) {
-            if (arr[j] < arr[min_idx]) {
-                min_idx = j;
-            }
-        }
+    std::vector<std::pair<float, faiss::idx_t>> paired(n);
 
-        // Swap values
-        if (min_idx != i) {
-            float temp_val = arr[i];
-            arr[i] = arr[min_idx];
-            arr[min_idx] = temp_val;
+    for (size_t i = 0; i < n; ++i) {
+        paired[i] = {arr[i], labels[i]};
+    }
 
-            int temp_label = labels[i];
-            labels[i] = labels[min_idx];
-            labels[min_idx] = temp_label;
-        }
+    std::sort(paired.begin(), paired.end(),
+              [](const auto& a, const auto& b) {
+                  return a.first < b.first;
+              });
+
+    for (size_t i = 0; i < n; ++i) {
+        arr[i] = paired[i].first;
+        labels[i] = paired[i].second;
     }
 }
 
-namespace faiss {
-
+// function adapted from demo_sift1M from faiss demos.
 float* fvecs_read(const char* fname, size_t* d_out, size_t* n_out) {
     FILE* f = fopen(fname, "r");
     if (!f) {
@@ -69,31 +68,29 @@ float* fvecs_read(const char* fname, size_t* d_out, size_t* n_out) {
     return x;
 }
 
-}  // namespace faiss
-
 double elapsed() {
     struct timeval tv;
     gettimeofday(&tv, nullptr);
     return tv.tv_sec + tv.tv_usec * 1e-6;
 }
 
-int add_dist(size_t index, size_t nprobe, float dist, float *temp_nprobe_store, faiss::idx_t* temp_nprobe_store_indexes) {
-    for (int i = 0; i < nprobe; i++) {
-      if (dist < temp_nprobe_store[i]) {
-          for (int j = nprobe - 1; j > i; j--) {
-              temp_nprobe_store[j] = temp_nprobe_store[j - 1];
-          }
-          for (int j = nprobe - 1; j > i; j--) {
-              temp_nprobe_store_indexes[j] = temp_nprobe_store_indexes[j - 1];
-          }
-          temp_nprobe_store[i] = dist;
-          temp_nprobe_store_indexes[i] = index;
-          return 1;
-      }
-  }
-  return 0;
-}
+int add_dist(size_t index, size_t nprobe, float dist, float* temp_nprobe_store, faiss::idx_t* temp_nprobe_store_indexes) {
+    int i;
+    // Find position to insert
+    for (i = 0; i < nprobe; i++) {
+        if (dist < temp_nprobe_store[i]) break;
+    }
+    if (i == nprobe) return 0; 
 
+    if (nprobe - i - 1 > 0) {
+        memmove(&temp_nprobe_store[i + 1], &temp_nprobe_store[i], (nprobe - i - 1) * sizeof(float));
+        memmove(&temp_nprobe_store_indexes[i + 1], &temp_nprobe_store_indexes[i], (nprobe - i - 1) * sizeof(faiss::idx_t));
+    }
+
+    temp_nprobe_store[i] = dist;
+    temp_nprobe_store_indexes[i] = index;
+    return 1;
+}
 
 int main() {
   
@@ -109,22 +106,31 @@ int main() {
   size_t n_query;
   size_t n_gt;
   size_t k;
+
+  /**************************
+    * READING ALL THE REQUIRED DATA 
+    * AND SETTING UP THE INDEX
+  ***************************/
  
-  float *x_learn = faiss::fvecs_read("./dataset/sift1M/sift_learn.fvecs", &d, &n_learn);
+  float *x_learn = fvecs_read("./dataset/sift10k/siftsmall_learn.fvecs", &d, &n_learn);
   printf("n_learn : %ld, d : %ld\n", n_learn, d);
   
-  float *x_base = faiss::fvecs_read("./dataset/sift1M/sift_base.fvecs", &d, &n_base);
+  float *x_base = fvecs_read("./dataset/sift10k/siftsmall_base.fvecs", &d, &n_base);
   printf("n_base : %ld\n", n_base);
 
-  int *gt_int = (int *) faiss::fvecs_read("./dataset/sift1M/sift_groundtruth.ivecs", &k, &n_gt);
-  float *x_query = faiss::fvecs_read("./dataset/sift1M/sift_query.fvecs", &d, &n_query);
+  int *gt_int = (int *) fvecs_read("./dataset/sift10k/siftsmall_groundtruth.ivecs", &k, &n_gt);
+  float *x_query = fvecs_read("./dataset/sift10k/siftsmall_query.fvecs", &d, &n_query);
   printf("k : %ld\n", k);
-  index = faiss::index_factory(d, "IVF4096,PQ8");
+  index = faiss::index_factory(d, index_key);
 
   auto *ivf = dynamic_cast<faiss::IndexIVF*>(index);
   if (ivf){
     // do nothing.
-  } else throw std::runtime_error("Error casting index to IVF index.");
+  } else throw std::runtime_error("Error casting index to IVF index."); 
+
+  /**************************
+    * TRAINING AND ADDING VECTORS TO THE DATABASE 
+    ************************/
 
   printf("[%.3f s] Starting Training\n", elapsed()-t0);
   ivf->train(n_learn, x_learn);
@@ -133,22 +139,25 @@ int main() {
 
   printf("[%.3f s] Adding vectors into database\n", elapsed()-t0);
   ivf->add(n_base, x_base);
-  
+
   delete[] x_base;
 
   printf("[%.3f s] Finished Adding vectors to the database\n", elapsed()-t0);
 
-  size_t nprobe = 20;
-  faiss::idx_t* labels = new faiss::idx_t[n_query * nprobe * 250];
-  float* distances = new float[n_query * nprobe * 250];
+  // ivf->nprobe = 10;
+  // size_t nprobe = ivf->nprobe;
+  
+  ivf->nprobe = nprobe;
+  faiss::idx_t* labels = new faiss::idx_t[n_query * nprobe * (n_base/nprobe)];
+  float* distances = new float[n_query * nprobe * (n_base/nprobe)];
   faiss::idx_t* centroid_indexes = new faiss::idx_t[n_query*nprobe];
 
-  // get the centroid indexes from the client 
-  // we will send the client the data using index->get_centroids();
-  // for now lets choose all the centroids to search through
-  
-  // these are the full precision vectors.
-  // need to search through them.
+  /************************************
+    * SETTING UP CENTROIDS AND CENTROID SEARCH 
+    **********************************/
+
+  // setting centroid_indexes.
+  printf("[%.3f s] Computing centroid_indexes\n", elapsed()-t0);
   float* centroid_values = ivf->get_IVF_centroids();
 
   auto compute_distance = [&] (float* centroid_value, float* query) {
@@ -162,7 +171,6 @@ int main() {
   };
 
   
-
   for (int ith_query = 0; ith_query < n_query; ith_query++) {
     // compute nprobe number of centroids.
     // go through centroid_values, compute distance.
@@ -171,20 +179,27 @@ int main() {
     for (int i = 0; i<nprobe; i++){
       temp_nprobe_store[i] = 1e10;
     }
-    for (int j = 0; j<4096; j++) {
+    for (int j = 0; j<256; j++) {
       float dist = compute_distance(&centroid_values[j*d], &x_query[ith_query*d]);
       add_dist(j, nprobe, dist, temp_nprobe_store, temp_nprobe_store_indexes);
     }
 
     for (int i = 0; i<nprobe; i++){
-      assert(temp_nprobe_store_indexes[i] < 4096);
+      assert(temp_nprobe_store_indexes[i] < 256);
       centroid_indexes[ith_query * nprobe + i] = temp_nprobe_store_indexes[i];
     }
   }
 
   size_t* list_sizes_per_query = new size_t[n_query];
 
-  auto searchtime = elapsed();
+  /*************************************
+    * PERFORM SEARCH AFTER CENTROID SEARCH IS COMPLETED
+    ***********************************/
+
+
+  printf("[%.3f s] Starting Search\n", elapsed()-t0);
+
+  double searchtime = elapsed();
   // ivf->search(n_query, x_query, k, distances, labels);
   ivf->search_encrypted(n_query, x_query,centroid_indexes, distances, labels, list_sizes_per_query);
   searchtime = elapsed() - searchtime;
@@ -202,13 +217,29 @@ int main() {
     }
   }
 
+  /***********************************
+    * SORTING COARSE DISTANCES 
+    *********************************/
+
+  printf("[%.3f s] Starting sorting\n", elapsed()-t0);
+
   faiss::idx_t to_add = 0;
   for (int i = 0; i<n_query; i++) {
     sort_floats_with_labels(&distances[to_add], &labels[to_add], list_sizes_per_query[i]);
     to_add += list_sizes_per_query[i];
   }
 
+
+  printf("[%.3f s] Time taken to sort the data\n", elapsed() - t0);
+
   delete[] distances;
+
+
+  /************************************** 
+    * RECALL COMPUTATION 
+    ************************************/
+
+  printf("[%.3f s] Starting recall computation\n", elapsed()-t0);
 
   faiss::idx_t* gt = new faiss::idx_t[k * n_query];
   for (int i = 0; i < k * n_query; i++) {
@@ -221,7 +252,7 @@ int main() {
   for (int i = 0; i<k_limit; i++){
     n_k[i] = 0;
   }
-  int n_1 = 0, n_10 = 0, n_100 = 0, n_max = 0;
+  int n_1 = 0, n_10 = 0, n_20 = 0, n_100 = 0, n_max = 0;
   for (int i = 0; i < n_query; i++) {
       // for each query find the nearest neighbour.
       int gt_nn = gt[i * k];
@@ -254,23 +285,30 @@ int main() {
     printf("R@%d:%.4f\n", i+1, prev_output);
   }
 
-  // Fine search
-  // Fine search only the top k = 100 vectors.
-  // The recall computed after this is for R@1
-  
-  x_base = faiss::fvecs_read("./dataset/sift1M/sift_base.fvecs", &d, &n_base);
-  float finesearchtime = elapsed();
+  printf("[%.3f s] finished recall computation\n", elapsed()-t0);
+
+  /**********************************************
+    * FINE SEARCH 
+    ********************************************/
+
+  printf("[%.3f s] Starting fine search\n", elapsed()-t0);
+
+  x_base = fvecs_read("./dataset/sift10k/siftsmall_base.fvecs", &d, &n_base);
+  double finesearchtime = elapsed();
   faiss::idx_t* closest_labels = new faiss::idx_t[n_query];
 
   to_add = 0;
 
-  k = 100;
   for (int i = 0; i < n_query; i++) {
       float* query = &x_query[i * d];
 
-      float min_dist = std::numeric_limits<float>::max();
+      float min_dist = 1e10;
       faiss::idx_t best_label = -1;
 
+      // this k will be 100 if there are 100 vectors to fine search through 
+      // for the query, if there are less than 100 it is set to the maximum 
+      // vectors assigned to the query.
+      k = (list_sizes_per_query[i] > 100)? 100:list_sizes_per_query[i];
       for (int j = 0; j < k; j++) {
           faiss::idx_t db_idx = labels[to_add + j];
           float* db_vector = &x_base[db_idx * d];
