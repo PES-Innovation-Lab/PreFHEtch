@@ -3,9 +3,7 @@
 #include <map>
 #include <vector>
 
-constexpr int64_t PRECISE_VECTOR_DIMENSIONS = 128;
-constexpr int64_t COARSE_VECTOR_DIMENSIONS = 8;
-constexpr int64_t NPROBE = 5;
+#include "client_server_utils.h"
 
 const std::string server_addr = "http://localhost:8080/";
 
@@ -31,15 +29,20 @@ void sort_nearest_centroids(
 // std::vector<float> &);
 
 void get_coarse_scores(
-    const std::array<int64_t, NPROBE> &nearest_centroids_idx,
-    const std::array<float, COARSE_VECTOR_DIMENSIONS> &coarse_query,
-    std::vector<float> &coarse_scores);
+    std::map<float, int64_t> &sorted_centroids,
+    // Sending precise query temporarily, will be sending coarse vector in a
+    // future implementation
+    const std::array<float, PRECISE_VECTOR_DIMENSIONS> &precise_query,
+    std::vector<float> &coarse_scores,
+    std::vector<faiss_idx_t> &coarse_vectors_idx,
+    std::array<size_t, NQUERY> &list_sizes_per_query);
+
 void compute_nearest_coarse_vectors(
     const std::vector<float> &coarse_scores,
     std::vector<int64_t> &nearest_coarse_vectors_idx);
 
 void get_precise_scores(
-    const std::vector<int64_t> &nearest_coarse_vectors_idx,
+    const std::vector<int64_t> &sorted_centroids,
     const std::array<float, PRECISE_VECTOR_DIMENSIONS> &precise_query,
     std::vector<float> &precise_scores);
 void compute_nearest_precise_vectors(

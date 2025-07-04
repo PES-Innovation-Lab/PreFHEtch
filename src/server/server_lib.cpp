@@ -3,6 +3,7 @@
 
 #include <faiss/AutoTune.h>
 #include <faiss/IndexFlat.h>
+#include <faiss/IndexIVF.h>
 #include <faiss/IndexIVFPQ.h>
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
@@ -12,6 +13,7 @@
 
 // Include controllers headers to register with server
 #include "controllers/Query.h"
+#include "faiss/MetricType.h"
 
 char const *TRAIN_DATASET_PATH = "../sift/siftsmall/siftsmall_learn.fvecs";
 char const *BASE_DATASET_PATH = "../sift/siftsmall/siftsmall_base.fvecs";
@@ -35,7 +37,7 @@ void Server::run_webserver() {
     drogon::app().run();
 }
 
-void Server::init_index(const char *index_key) {
+void Server::init_index() {
     // IVF with 128 centroids gives R@10 of 0.86 for sift10k
     size_t d;
 
@@ -198,4 +200,30 @@ void Server::retrieve_centroids(
     for (int i = 0; i < NLIST; i++) {
         m_Quantizer.reconstruct(i, centroids[i].data());
     }
+}
+
+void Server::prefilter(
+    const std::array<float, PRECISE_VECTOR_DIMENSIONS> &precise_query,
+    std::array<int64_t, NPROBE> &nearest_centroid_idx,
+    std::vector<float> &coarse_distance_scores,
+    std::vector<faiss::idx_t> &coarse_distance_indexes,
+    std::array<size_t, NQUERY> &list_sizes_per_query) {
+
+    // Reset nprobe, previously set by auto-tuning
+    m_Index.nprobe = NPROBE;
+
+    coarse_distance_scores.resize(NBASE * NQUERY);
+    coarse_distance_indexes.resize(NBASE * NQUERY);
+
+    m_Index.search_encrypted(
+        1, precise_query.data(), nearest_centroid_idx.data(),
+        coarse_distance_scores.data(), coarse_distance_indexes.data(),
+        list_sizes_per_query.data());
+
+    size_t coarse_vectors_count = std::accumulate(
+        list_sizes_per_query.begin(), list_sizes_per_query.end(), 0);
+    coarse_distance_scores.resize(coarse_vectors_count);
+    coarse_distance_indexes.resize(coarse_vectors_count);
+
+    SPDLOG_INFO("Prefiltering complete");
 }

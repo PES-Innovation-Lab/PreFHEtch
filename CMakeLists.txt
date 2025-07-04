@@ -18,11 +18,22 @@ find_package(cpr CONFIG REQUIRED)
 
 include(FetchContent)
 
+# Faiss fork to incorporate custom features
+FetchContent_Declare(
+        prefhetch-faiss
+        GIT_REPOSITORY https://github.com/PES-Innovation-Lab/PreFHEtch-faiss
+        GIT_TAG bbff0fc5a360c9aa41e03e53a00c876abe06f40e
+)
+set(FAISS_ENABLE_GPU OFF CACHE BOOL "GPU support")
+set(FAISS_ENABLE_PYTHON OFF CACHE BOOL "Python bindings")
+set(BUILD_TESTING OFF CACHE BOOL "Tests")
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries")
+FetchContent_MakeAvailable(prefhetch-faiss)
+
 # JSON Library
 FetchContent_Declare(json
         URL https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz
 )
-
 FetchContent_MakeAvailable(json)
 
 FetchContent_Declare(
@@ -30,10 +41,7 @@ FetchContent_Declare(
         GIT_REPOSITORY https://github.com/gabime/spdlog
         GIT_TAG v1.15.3
 )
-
 FetchContent_MakeAvailable(spdlog)
-
-find_package(faiss REQUIRED)
 
 # PreFHEtch_server
 
@@ -49,7 +57,6 @@ target_link_libraries(PreFHEtch_server_headers
         Drogon::Drogon
         spdlog::spdlog
         faiss
-        #  SEAL::seal
 )
 
 add_library(PreFHEtch_server_lib
@@ -85,8 +92,6 @@ target_link_libraries(PreFHEtch_client_headers
         nlohmann_json::nlohmann_json
         cpr::cpr
         spdlog::spdlog
-        #  faiss
-        #  SEAL::seal
 )
 
 add_library(PreFHEtch_client_lib

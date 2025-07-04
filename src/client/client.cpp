@@ -29,18 +29,7 @@ int main() {
     // // Compute nearest centroids
     std::map<float, int64_t> nearest_centroids_idx;
     sort_nearest_centroids(precise_query, centroids, nearest_centroids_idx);
-    SPDLOG_INFO("Computed nearest centroids successfully, top NPROBE "
-                "centroids are:");
-
-    std::map<float, int64_t>::iterator nearest_centroids_it =
-        nearest_centroids_idx.begin();
-    for (int i = 0;
-         i < NPROBE && nearest_centroids_it != nearest_centroids_idx.end();
-         i++) {
-        SPDLOG_INFO("Distance = {}, Centroid index = {}", nearest_centroids_it->first,
-                    nearest_centroids_it->second);
-        std::advance(nearest_centroids_it, 1);
-    }
+    SPDLOG_INFO("Computed nearest centroids successfully");
 
     // // To be parallelised (async?)
     // const std::vector<float> encrypted_coarse_query =
@@ -50,8 +39,13 @@ int main() {
     //     compute_encrypted_precise_query(query);
 
     // Send nearest centroids to server to compute coarse scores (distances)
-    // std::vector<float> coarse_scores;
-    // get_coarse_scores(nearest_centroids_idx, coarse_query, coarse_scores);
+    std::vector<float> coarse_distance_scores;
+    std::vector<faiss_idx_t> coarse_vector_indexes;
+    std::array<size_t, NQUERY> list_sizes_per_query;
+    get_coarse_scores(nearest_centroids_idx, precise_query,
+                      coarse_distance_scores, coarse_vector_indexes,
+                      list_sizes_per_query);
+
     // std::vector<int64_t> nearest_coarse_vectors_idx;
     // compute_nearest_coarse_vectors(coarse_scores,
     // nearest_coarse_vectors_idx);

@@ -6,16 +6,7 @@
 #include <faiss/IndexFlat.h>
 #include <faiss/IndexIVFPQ.h>
 
-// Dataset - SIFT10K
-
-constexpr int64_t PRECISE_VECTOR_DIMENSIONS = 128;
-constexpr int64_t COARSE_VECTOR_DIMENSIONS = 8;
-
-constexpr int64_t NPROBE = 5;
-constexpr int64_t K = 100;
-constexpr int64_t NLIST = 256;
-constexpr int64_t SUB_QUANTIZERS = 8;
-constexpr int64_t SUB_VECTOR_SIZE = 8;
+#include "client_server_utils.h"
 
 // Singleton class pattern for static access across all controllers
 class Server {
@@ -30,8 +21,14 @@ class Server {
         return srvr;
     }
 
-    void init_index(const char *index_key);
+    void init_index();
     void run_webserver();
     void retrieve_centroids(
         std::vector<std::array<float, PRECISE_VECTOR_DIMENSIONS>> &centroids);
+    void prefilter(
+        const std::array<float, PRECISE_VECTOR_DIMENSIONS> &precise_query,
+        std::array<int64_t, NPROBE> &nearest_centroid_idx,
+        std::vector<float> &coarse_distance_scores,
+        std::vector<faiss::idx_t> &coarse_distance_indexes,
+        std::array<size_t, NQUERY> &list_sizes_per_query);
 };

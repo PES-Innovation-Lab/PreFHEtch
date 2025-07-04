@@ -15,11 +15,11 @@ class Query : public drogon::HttpController<Query> {
     // Returns: centroids (quantisation parameters to be implemented)
     ADD_METHOD_TO(Query::query, "/query", Get);
 
-    // // Endpoint to perform a coarse search
-    // // Accepts: Nearest centroid indexes (std::vector<int64_t>), coarse query
-    // vector (std::array<float>)
-    // // Returns: Coarse distance scores (std::vector<float>)
-    // ADD_METHOD_TO(Query::coarse_search, "/coarse-search", Post);
+    // Endpoint to perform a coarse search
+    // Accepts: Nearest centroid indexes (std::vector<int64_t>), coarse query
+    // vector (std::array<float>) Returns: Coarse distance scores
+    // (std::vector<float>)
+    ADD_METHOD_TO(Query::coarse_search, "/coarsesearch", Post);
     //
     // // Endpoint to perform a precise search
     // // Accepts: Nearest coarse vector - indexes (std::vector<int64_t>),
@@ -40,10 +40,10 @@ class Query : public drogon::HttpController<Query> {
     void query(const HttpRequestPtr &req,
                std::function<void(const HttpResponsePtr &)> &&callback) const;
 
-    // void coarse_search(const HttpRequestPtr &req,
-    //            std::function<void(const HttpResponsePtr &)> &&callback)
-    //            const;
-    //
+    void coarse_search(
+        const HttpRequestPtr &req,
+        std::function<void(const HttpResponsePtr &)> &&callback) const;
+
     // void precise_search(const HttpRequestPtr &req,
     //            std::function<void(const HttpResponsePtr &)> &&callback)
     //            const;
