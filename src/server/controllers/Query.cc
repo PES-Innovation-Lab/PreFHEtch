@@ -49,7 +49,7 @@ void Query::coarse_search(
 
     const std::array<float, PRECISE_VECTOR_DIMENSIONS> precise_query =
         req_body["preciseQuery"];
-    std::array<int64_t, NPROBE> nearest_centroids =
+    std::array<faiss_idx_t, NPROBE> nearest_centroids =
         req_body["nearestCentroidIndexes"];
     std::vector<float> coarse_distance_scores;
     std::vector<faiss::idx_t> coarse_vector_indexes;

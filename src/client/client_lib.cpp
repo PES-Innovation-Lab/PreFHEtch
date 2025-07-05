@@ -1,4 +1,4 @@
-#include <map>
+#include <algorithm>
 #include <vector>
 
 #include <cpr/cpr.h>
@@ -52,19 +52,33 @@ void get_centroids(
 void sort_nearest_centroids(
     const std::array<float, PRECISE_VECTOR_DIMENSIONS> &precise_query,
     const std::vector<std::array<float, PRECISE_VECTOR_DIMENSIONS>> &centroids,
-    std::map<float, int64_t> &nearest_centroids_idx) {
+    std::vector<DistanceIndexData> &nearest_centroids) {
 
+    nearest_centroids.reserve(centroids.size());
     for (int i = 0; i < centroids.size(); i++) {
         float distance = 0.0;
         for (int j = 0; j < PRECISE_VECTOR_DIMENSIONS; j++) {
             distance += std::pow(precise_query[j] - centroids[i][j], 2);
         }
-        nearest_centroids_idx[distance] = i;
+        nearest_centroids.push_back(DistanceIndexData{
+            distance,
+            i,
+        });
     }
+
+    std::sort(nearest_centroids.begin(), nearest_centroids.end(),
+              [&](const DistanceIndexData &a, const DistanceIndexData &b) {
+                  return a.distance < b.distance;
+              });
+
+    // for (const auto &vec: nearest_centroids) {
+    //     SPDLOG_INFO("distance = {}, centroid = {}", vec.distance,
+    //     vec.nearest_centroid_idx);
+    // }
 }
 
 void get_coarse_scores(
-    std::map<float, int64_t> &sorted_centroids,
+    std::vector<DistanceIndexData> &sorted_centroids,
     // Sending precise query temporarily, will be sending coarse vector in a
     // future implementation
     const std::array<float, PRECISE_VECTOR_DIMENSIONS> &precise_query,
@@ -73,14 +87,14 @@ void get_coarse_scores(
     std::array<size_t, NQUERY> &list_sizes_per_query) {
     SPDLOG_INFO("Sending a request to /coarsesearch at {}", server_addr);
 
-    std::array<int64_t, NPROBE> nearest_centroids_id;
-    std::map<float, int64_t>::iterator nearest_centroids_it =
-        sorted_centroids.begin();
+    std::array<faiss_idx_t, NPROBE> nearest_centroids_id;
+    const size_t centroids_count = sorted_centroids.size();
 
-    for (int i = 0;
-         i < NPROBE && nearest_centroids_it != sorted_centroids.end(); i++) {
-        nearest_centroids_id[i] = nearest_centroids_it->second;
-        std::advance(nearest_centroids_it, 1);
+    for (int i = 0; i < NPROBE; i++) {
+        if (i >= centroids_count) {
+            throw std::runtime_error("Centroids count is lesser than NPROBE");
+        }
+        nearest_centroids_id[i] = sorted_centroids[i].idx;
     }
 
     nlohmann::json coarse_search_json;
@@ -98,4 +112,33 @@ void get_coarse_scores(
         resp.at("coarseVectorIndexes").get<std::vector<faiss_idx_t>>();
     list_sizes_per_query =
         resp.at("listSizesPerQuery").get<std::array<size_t, NQUERY>>();
+}
+
+void compute_nearest_coarse_vectors(
+    const std::vector<float> &coarse_distance_scores,
+    const std::vector<faiss_idx_t> &coarse_vector_indexes,
+    const std::array<size_t, NQUERY> &list_sizes_per_query,
+    std::vector<DistanceIndexData> &nearest_coarse_vectors) {
+    size_t current_vector_index = 0;
+    nearest_coarse_vectors.reserve(coarse_vector_indexes.size());
+
+    for (int i = 0; i < list_sizes_per_query.size(); i++) {
+        for (int j = 0; j < list_sizes_per_query[i]; j++) {
+            const size_t idx = current_vector_index + j;
+            nearest_coarse_vectors.push_back(DistanceIndexData{
+                coarse_distance_scores[idx],
+                coarse_vector_indexes[idx],
+            });
+        }
+        current_vector_index += list_sizes_per_query[i];
+    }
+
+    std::sort(nearest_coarse_vectors.begin(), nearest_coarse_vectors.end(), [&](const DistanceIndexData &a, const DistanceIndexData &b) {
+        return a.distance < b.distance;
+    });
+
+    // for (const DistanceIndexData &dist_ind_data : nearest_coarse_vectors) {
+    //     SPDLOG_INFO("Distance  = {}, Coarse vector index = {}", dist_ind_data.distance,
+    //                 dist_ind_data.idx);
+    // }
 }

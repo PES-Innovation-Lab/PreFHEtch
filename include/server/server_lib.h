@@ -27,7 +27,7 @@ class Server {
         std::vector<std::array<float, PRECISE_VECTOR_DIMENSIONS>> &centroids);
     void prefilter(
         const std::array<float, PRECISE_VECTOR_DIMENSIONS> &precise_query,
-        std::array<int64_t, NPROBE> &nearest_centroid_idx,
+        std::array<faiss::idx_t, NPROBE> &nearest_centroid_idx,
         std::vector<float> &coarse_distance_scores,
         std::vector<faiss::idx_t> &coarse_distance_indexes,
         std::array<size_t, NQUERY> &list_sizes_per_query);
