@@ -10,6 +10,8 @@ constexpr int64_t PRECISE_VECTOR_DIMENSIONS = 128;
 constexpr int64_t COARSE_VECTOR_DIMENSIONS = 8;
 
 constexpr int64_t NPROBE = 20;
+constexpr int64_t COARSE_PROBE = 1000;
+constexpr int64_t PRECISE_PROBE = 100;
 constexpr int64_t NBASE = 10000;
 constexpr int64_t NQUERY = 1;
 
@@ -26,7 +28,7 @@ void vecs_read(const char *fname, size_t &d_out, size_t &n_out,
                std::vector<T> &vecs) {
     FILE *f = fopen(fname, "r");
     if (!f) {
-        SPDLOG_ERROR("could not open %s", fname);
+        SPDLOG_ERROR("could not open {}", fname);
         perror("");
         abort();
     }

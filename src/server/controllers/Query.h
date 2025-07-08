@@ -16,21 +16,21 @@ class Query : public drogon::HttpController<Query> {
     ADD_METHOD_TO(Query::query, "/query", Get);
 
     // Endpoint to perform a coarse search
-    // Accepts: Nearest centroid indexes (std::vector<faiss_idx_t>), coarse query
-    // vector (std::array<float>) Returns: Coarse distance scores
-    // (std::vector<float>)
+    // Accepts: Nearest centroid indexes and coarse query
+    // Temporarily sending precise query
+    // Returns: Coarse distance scores, coarse vector indexes and list sizes per
+    // query
     ADD_METHOD_TO(Query::coarse_search, "/coarsesearch", Post);
-    //
-    // // Endpoint to perform a precise search
-    // // Accepts: Nearest coarse vector - indexes (std::vector<faiss_idx_t>),
-    // precise query vector (std::array<float>)
-    // // Returns: Precise distance scores (std::vector<float>)
-    // ADD_METHOD_TO(Query::precise_search, "/precise-search", Post);
-    //
-    // // Endpoint to retrieve vectors
-    // // Accepts: Nearest precise vector - indexes (std::vector<faiss_idx_t>)
-    // // Returns: Query results (std::vector<float>)
-    // ADD_METHOD_TO(Query::precise_vector_pir, "/precise-vector-pir", Post);
+
+    // Endpoint to perform a precise search
+    // Accepts: Nearest coarse vector indexes and precise query
+    // Returns:
+    ADD_METHOD_TO(Query::precise_search, "/precisesearch", Post);
+
+    // Endpoint to retrieve vectors
+    // Accepts: Nearest precise vector indexes
+    // Returns: Query results
+    ADD_METHOD_TO(Query::precise_vector_pir, "/precise-vector-pir", Post);
 
     METHOD_LIST_END
 
@@ -44,11 +44,11 @@ class Query : public drogon::HttpController<Query> {
         const HttpRequestPtr &req,
         std::function<void(const HttpResponsePtr &)> &&callback) const;
 
-    // void precise_search(const HttpRequestPtr &req,
-    //            std::function<void(const HttpResponsePtr &)> &&callback)
-    //            const;
-    //
-    // void precise_vector_pir(const HttpRequestPtr &req,
-    //            std::function<void(const HttpResponsePtr &)> &&callback)
-    //            const;
+    void precise_search(
+        const HttpRequestPtr &req,
+        std::function<void(const HttpResponsePtr &)> &&callback) const;
+
+    void precise_vector_pir(
+        const HttpRequestPtr &req,
+        std::function<void(const HttpResponsePtr &)> &&callback) const;
 };

@@ -15,6 +15,8 @@
 #include "controllers/Query.h"
 #include "faiss/MetricType.h"
 
+char const *SERVER_ADDRESS = "localhost";
+
 char const *TRAIN_DATASET_PATH = "../sift/siftsmall/siftsmall_learn.fvecs";
 char const *BASE_DATASET_PATH = "../sift/siftsmall/siftsmall_base.fvecs";
 
@@ -31,7 +33,7 @@ Server::Server()
 }
 
 void Server::run_webserver() {
-    drogon::app().addListener("localhost", 8080);
+    drogon::app().addListener(SERVER_ADDRESS, SERVER_PORT);
 
     SPDLOG_INFO("Server listening on localhost:8080");
     drogon::app().run();
@@ -49,6 +51,11 @@ void Server::init_index() {
         std::vector<float> xt;
         vecs_read<float>(TRAIN_DATASET_PATH, d, nt, xt);
 
+        if (d != PRECISE_VECTOR_DIMENSIONS) {
+            throw std::runtime_error("Incorrect dimensions for train set, not "
+                                     "the same as PRECISE_VECTOR_DIMENSIONS");
+        }
+
         SPDLOG_INFO("Training on {} vectors", nt);
         m_Index.train(nt, xt.data());
     }
@@ -58,12 +65,11 @@ void Server::init_index() {
         SPDLOG_INFO("Loading database");
 
         size_t nb, d2;
-        std::vector<float> xb;
-        vecs_read<float>(BASE_DATASET_PATH, d2, nb, xb);
+        vecs_read<float>(BASE_DATASET_PATH, d2, nb, m_DatasetBase);
         assert(d == d2 || !"dataset does not have same dimension as train set");
 
         SPDLOG_INFO("Indexing database, size {}*{}", nb, d);
-        m_Index.add(nb, xb.data());
+        m_Index.add(nb, m_DatasetBase.data());
     }
 
     size_t nq;
@@ -202,7 +208,7 @@ void Server::retrieve_centroids(
     }
 }
 
-void Server::prefilter(
+void Server::coarseSearch(
     const std::array<float, PRECISE_VECTOR_DIMENSIONS> &precise_query,
     std::array<faiss::idx_t, NPROBE> &nearest_centroid_idx,
     std::vector<float> &coarse_distance_scores,
@@ -225,5 +231,57 @@ void Server::prefilter(
     coarse_distance_scores.resize(coarse_vectors_count);
     coarse_distance_indexes.resize(coarse_vectors_count);
 
-    SPDLOG_INFO("Prefiltering complete");
+    SPDLOG_INFO("Coarse search complete");
+}
+
+void Server::preciseSearch(
+    const std::array<float, PRECISE_VECTOR_DIMENSIONS> &precise_query,
+    const std::array<faiss::idx_t, PRECISE_PROBE> &nearest_coarse_vector_idx,
+    std::array<std::array<float, PRECISE_PROBE>, NQUERY>
+        &precise_distance_scores) {
+    SPDLOG_INFO("Starting precise search on the server");
+
+    float *dataset_base_ptr = m_DatasetBase.data();
+
+    for (int i = 0; i < NQUERY; i++) {
+        for (int j = 0; j < PRECISE_PROBE; j++) {
+            float dist = 0.0;
+            float *precise_vec_idx =
+                dataset_base_ptr +
+                ((nearest_coarse_vector_idx[(i * PRECISE_PROBE) + j]) *
+                 PRECISE_VECTOR_DIMENSIONS);
+
+            for (int k = 0; k < PRECISE_VECTOR_DIMENSIONS; k++) {
+                dist += std::pow((precise_vec_idx[k] - precise_query[k]), 2);
+            }
+
+            precise_distance_scores[i][j] = dist;
+        }
+    }
+
+    SPDLOG_INFO("Precise search completed");
+}
+
+void Server::preciseVectorPIR(
+    const std::array<std::array<faiss_idx_t, K>, NQUERY>
+        k_nearest_precise_vectors_idx,
+    std::array<std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, K>,
+               NQUERY>
+        query_results) {
+    SPDLOG_INFO("Starting precise vector PIR on the server");
+
+    float *dataset_base_ptr = m_DatasetBase.data();
+
+    for (int i = 0; i < NQUERY; i++) {
+        for (int j = 0; j < K; j++) {
+            float *precise_vec_idx =
+                dataset_base_ptr + (k_nearest_precise_vectors_idx[i][j] *
+                                    PRECISE_VECTOR_DIMENSIONS);
+
+            memcpy(query_results[i][j].data(), precise_vec_idx,
+                   PRECISE_VECTOR_DIMENSIONS * sizeof(float));
+        }
+    }
+
+    SPDLOG_INFO("Precise vector PIR completed");
 }

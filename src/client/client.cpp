@@ -41,28 +41,34 @@ int main() {
     // Send nearest centroids to server to compute coarse scores (distances)
     std::vector<float> coarse_distance_scores;
     std::vector<faiss_idx_t> coarse_vector_indexes;
-    std::array<size_t, NQUERY> list_sizes_per_query;
-    get_coarse_scores(nearest_centroids, precise_query,
-                      coarse_distance_scores, coarse_vector_indexes,
-                      list_sizes_per_query);
+    std::array<size_t, NQUERY> list_sizes_per_query_coarse;
+    get_coarse_scores(nearest_centroids, precise_query, coarse_distance_scores,
+                      coarse_vector_indexes, list_sizes_per_query_coarse);
     SPDLOG_INFO("Received coarse distance scores successfully");
 
     std::vector<DistanceIndexData> nearest_coarse_vectors;
-    compute_nearest_coarse_vectors(coarse_distance_scores,
-                                   coarse_vector_indexes, list_sizes_per_query,
-                                   nearest_coarse_vectors);
+    compute_nearest_coarse_vectors(
+        coarse_distance_scores, coarse_vector_indexes,
+        list_sizes_per_query_coarse, nearest_coarse_vectors);
     SPDLOG_INFO("Computed nearest coarse vectors successfully");
 
-    // std::vector<float> precise_scores;
-    // get_precise_scores(nearest_coarse_vectors_idx, precise_query,
-    //                    precise_scores);
-    // std::vector<faiss_idx_t> nearest_precise_vectors_idx;
-    // compute_nearest_precise_vectors(precise_scores,
-    //                                 nearest_precise_vectors_idx);
-    //
-    // // Get query vector results
-    // std::vector<std::array<float, PRECISE_VECTOR_DIMENSIONS>> query_results;
-    // get_precise_vectors_pir(nearest_precise_vectors_idx, query_results);
+    // Send nearest coarse vector indexes to server to compute precise scores
+    // (distances)
+    std::array<std::array<float, PRECISE_PROBE>, NQUERY> precise_scores;
+    get_precise_scores(nearest_coarse_vectors, precise_query, precise_scores);
+    SPDLOG_INFO("Received precise distance scores successfully");
+
+    std::array<std::array<DistanceIndexData, PRECISE_PROBE>, NQUERY>
+        nearest_precise_vectors;
+    compute_nearest_precise_vectors(precise_scores, nearest_coarse_vectors,
+                                    nearest_precise_vectors);
+    SPDLOG_INFO("Computed nearest precise vectors successfully");
+
+    // Get query vector results
+    std::array<std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, K>,
+               NQUERY>
+        query_results;
+    get_precise_vectors_pir(nearest_precise_vectors, query_results);
 
     return 0;
 }

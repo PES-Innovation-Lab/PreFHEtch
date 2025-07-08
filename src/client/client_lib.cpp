@@ -78,7 +78,7 @@ void sort_nearest_centroids(
 }
 
 void get_coarse_scores(
-    std::vector<DistanceIndexData> &sorted_centroids,
+    const std::vector<DistanceIndexData> &sorted_centroids,
     // Sending precise query temporarily, will be sending coarse vector in a
     // future implementation
     const std::array<float, PRECISE_VECTOR_DIMENSIONS> &precise_query,
@@ -105,7 +105,7 @@ void get_coarse_scores(
                                 cpr::Body(coarse_search_json.dump()));
 
     nlohmann::json resp = nlohmann::json::parse(r.text);
-    SPDLOG_INFO("Response = {}", resp.dump());
+    // SPDLOG_INFO("Response = {}", resp.dump());
 
     coarse_scores = resp.at("coarseDistanceScores").get<std::vector<float>>();
     coarse_vectors_idx =
@@ -133,12 +133,100 @@ void compute_nearest_coarse_vectors(
         current_vector_index += list_sizes_per_query[i];
     }
 
-    std::sort(nearest_coarse_vectors.begin(), nearest_coarse_vectors.end(), [&](const DistanceIndexData &a, const DistanceIndexData &b) {
-        return a.distance < b.distance;
-    });
+    std::sort(nearest_coarse_vectors.begin(), nearest_coarse_vectors.end(),
+              [&](const DistanceIndexData &a, const DistanceIndexData &b) {
+                  return a.distance < b.distance;
+              });
 
-    // for (const DistanceIndexData &dist_ind_data : nearest_coarse_vectors) {
-    //     SPDLOG_INFO("Distance  = {}, Coarse vector index = {}", dist_ind_data.distance,
-    //                 dist_ind_data.idx);
-    // }
+    for (const DistanceIndexData &dist_ind_data : nearest_coarse_vectors) {
+        SPDLOG_INFO("Distance  = {}, Coarse vector index = {}",
+                    dist_ind_data.distance, dist_ind_data.idx);
+    }
+}
+
+void get_precise_scores(
+    const std::vector<DistanceIndexData> &sorted_coarse_vectors,
+    const std::array<float, PRECISE_VECTOR_DIMENSIONS> &precise_query,
+    std::array<std::array<float, PRECISE_PROBE>, NQUERY> &precise_scores) {
+    SPDLOG_INFO("Sending a request to /precisesearch at {}", server_addr);
+
+    std::array<faiss_idx_t, COARSE_PROBE> nearest_coarse_vectors_id;
+
+    for (int i = 0; i < COARSE_PROBE; i++) {
+        nearest_coarse_vectors_id[i] = sorted_coarse_vectors[i].idx;
+    }
+
+    nlohmann::json coarse_search_json;
+    coarse_search_json["preciseQuery"] = precise_query;
+    coarse_search_json["nearestCoarseVectorIndexes"] =
+        nearest_coarse_vectors_id;
+
+    SPDLOG_INFO("Precise Query Request = {}", coarse_search_json.dump());
+
+    cpr::Response r = cpr::Post(cpr::Url(server_addr + "precisesearch"),
+                                cpr::Body(coarse_search_json.dump()));
+
+    nlohmann::json resp = nlohmann::json::parse(r.text);
+    SPDLOG_INFO("Response = {}", resp.dump());
+
+    precise_scores =
+        resp.at("preciseDistanceScores")
+            .get<std::array<std::array<float, PRECISE_PROBE>, NQUERY>>();
+}
+
+void compute_nearest_precise_vectors(
+    const std::array<std::array<float, PRECISE_PROBE>, NQUERY> &precise_scores,
+    const std::vector<DistanceIndexData> &nearest_coarse_vectors,
+    std::array<std::array<DistanceIndexData, PRECISE_PROBE>, NQUERY>
+        &nearest_precise_vectors) {
+    for (int i = 0; i < NQUERY; i++) {
+        for (int j = 0; j < PRECISE_PROBE; j++) {
+            nearest_precise_vectors[i][j] = DistanceIndexData{
+                precise_scores[i][j], nearest_coarse_vectors[i + j].idx};
+        }
+    }
+
+    for (auto &precise_score_query : nearest_precise_vectors) {
+        std::sort(precise_score_query.begin(), precise_score_query.end(),
+                  [&](const DistanceIndexData &a, const DistanceIndexData &b) {
+                      return a.distance < b.distance;
+                  });
+    }
+
+    for (const auto &precise_score_query : nearest_precise_vectors) {
+        SPDLOG_INFO("---NEW QUERY---");
+        for (const DistanceIndexData &dist_ind_data : precise_score_query) {
+            SPDLOG_INFO("Distance  = {}, Precise vector index = {}",
+                        dist_ind_data.distance, dist_ind_data.idx);
+        }
+    }
+}
+
+void get_precise_vectors_pir(
+    const std::array<std::array<DistanceIndexData, PRECISE_PROBE>, NQUERY>
+        &nearest_precise_vectors,
+    std::array<std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, K>,
+               NQUERY> &query_results) {
+    SPDLOG_INFO("Sending a request to /precise-vector-pir at {}", server_addr);
+
+    std::array<std::array<faiss_idx_t, K>, NQUERY> nearest_precise_vectors_idx;
+    for (int i = 0; i < NQUERY; i++) {
+        for (int j = 0; j < K; j++) {
+            nearest_precise_vectors_idx[i][j] =
+                nearest_precise_vectors[i][j].idx;
+        }
+    }
+
+    nlohmann::json precise_vector_pir_json;
+    precise_vector_pir_json["nearestPreciseVectorIndexes"] =
+        nearest_precise_vectors_idx;
+
+    SPDLOG_INFO("Precise Query PIR Request = {}",
+                precise_vector_pir_json.dump());
+
+    cpr::Response r = cpr::Post(cpr::Url(server_addr + "precise-vector-pir"),
+                                cpr::Body(precise_vector_pir_json.dump()));
+
+    nlohmann::json resp = nlohmann::json::parse(r.text);
+    SPDLOG_INFO("Response = {}", resp.dump());
 }
