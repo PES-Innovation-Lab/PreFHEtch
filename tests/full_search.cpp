@@ -15,8 +15,23 @@
 #include <algorithm>
 #include <vector>
 
+// const char* dataset_learn = "./dataset/sift1M/sift_learn.fvecs";
+// const char* dataset_base = "./dataset/sift1M/sift_base.fvecs";
+// const char* dataset_query = "./dataset/sift1M/sift_query.fvecs";
+// const char* dataset_gt = "./dataset/sift1M/sift_groundtruth.ivecs";
+//
+// const char* index_key = "IVF4096,PQ8";
+// const size_t nprobe = 20;
+// const int k_limit = 15;
+
+const char* dataset_learn = "./dataset/sift10k/siftsmall_learn.fvecs";
+const char* dataset_base = "./dataset/sift10k/siftsmall_base.fvecs";
+const char* dataset_query = "./dataset/sift10k/siftsmall_query.fvecs";
+const char* dataset_gt = "./dataset/sift10k/siftsmall_groundtruth.ivecs";
+
 const char* index_key = "IVF256,PQ8";
 const size_t nprobe = 10;
+const int k_limit = 15;
 
 void sort_floats_with_labels(float* arr, faiss::idx_t* labels, size_t n) {
     std::vector<std::pair<float, faiss::idx_t>> paired(n);
@@ -112,15 +127,18 @@ int main() {
     * AND SETTING UP THE INDEX
   ***************************/
  
-  float *x_learn = fvecs_read("./dataset/sift10k/siftsmall_learn.fvecs", &d, &n_learn);
+  float *x_learn = fvecs_read(dataset_learn, &d, &n_learn);
   printf("n_learn : %ld, d : %ld\n", n_learn, d);
   
-  float *x_base = fvecs_read("./dataset/sift10k/siftsmall_base.fvecs", &d, &n_base);
+  float *x_base = fvecs_read(dataset_base, &d, &n_base);
   printf("n_base : %ld\n", n_base);
 
-  int *gt_int = (int *) fvecs_read("./dataset/sift10k/siftsmall_groundtruth.ivecs", &k, &n_gt);
-  float *x_query = fvecs_read("./dataset/sift10k/siftsmall_query.fvecs", &d, &n_query);
+  int *gt_int = (int *) fvecs_read(dataset_gt , &k, &n_gt);
+  float *x_query = fvecs_read(dataset_query , &d, &n_query);
+  printf("n_query : %ld\n", n_query);
   printf("k : %ld\n", k);
+
+  // create the index
   index = faiss::index_factory(d, index_key);
 
   auto *ivf = dynamic_cast<faiss::IndexIVF*>(index);
@@ -132,6 +150,7 @@ int main() {
     * TRAINING AND ADDING VECTORS TO THE DATABASE 
     ************************/
 
+    printf("nlist: %ld\n", ivf->nlist);
   printf("[%.3f s] Starting Training\n", elapsed()-t0);
   ivf->train(n_learn, x_learn);
 
@@ -146,10 +165,16 @@ int main() {
 
   // ivf->nprobe = 10;
   // size_t nprobe = ivf->nprobe;
+  //
+  size_t max_list_size = 0;
+  for (size_t i = 0; i < ivf->nlist; ++i) {
+      size_t sz = ivf->invlists->list_size(i);
+        if (sz > max_list_size) max_list_size = sz;
+  }
   
   ivf->nprobe = nprobe;
-  faiss::idx_t* labels = new faiss::idx_t[n_query * nprobe * (n_base/nprobe)];
-  float* distances = new float[n_query * nprobe * (n_base/nprobe)];
+  faiss::idx_t* labels = new faiss::idx_t[n_query * nprobe * max_list_size];
+  float* distances = new float[n_query * nprobe * max_list_size];
   faiss::idx_t* centroid_indexes = new faiss::idx_t[n_query*nprobe];
 
   /************************************
@@ -179,13 +204,13 @@ int main() {
     for (int i = 0; i<nprobe; i++){
       temp_nprobe_store[i] = 1e10;
     }
-    for (int j = 0; j<256; j++) {
+    for (int j = 0; j<ivf->nlist; j++) {
       float dist = compute_distance(&centroid_values[j*d], &x_query[ith_query*d]);
       add_dist(j, nprobe, dist, temp_nprobe_store, temp_nprobe_store_indexes);
     }
 
     for (int i = 0; i<nprobe; i++){
-      assert(temp_nprobe_store_indexes[i] < 256);
+      assert(temp_nprobe_store_indexes[i] < ivf->nlist);
       centroid_indexes[ith_query * nprobe + i] = temp_nprobe_store_indexes[i];
     }
   }
@@ -247,7 +272,6 @@ int main() {
   }
 
   to_add = 0;
-  int k_limit = 15;
   int* n_k = new int[k_limit];
   for (int i = 0; i<k_limit; i++){
     n_k[i] = 0;
@@ -293,7 +317,7 @@ int main() {
 
   printf("[%.3f s] Starting fine search\n", elapsed()-t0);
 
-  x_base = fvecs_read("./dataset/sift10k/siftsmall_base.fvecs", &d, &n_base);
+  x_base = fvecs_read(dataset_base, &d, &n_base);
   double finesearchtime = elapsed();
   faiss::idx_t* closest_labels = new faiss::idx_t[n_query];
 
@@ -309,6 +333,7 @@ int main() {
       // for the query, if there are less than 100 it is set to the maximum 
       // vectors assigned to the query.
       k = (list_sizes_per_query[i] > 100)? 100:list_sizes_per_query[i];
+      // k = list_sizes_per_query[i];
       for (int j = 0; j < k; j++) {
           faiss::idx_t db_idx = labels[to_add + j];
           float* db_vector = &x_base[db_idx * d];
@@ -330,6 +355,7 @@ int main() {
   }
   
   n_1 = 0;
+  k = 100;
   for (int i = 0; i < n_query; i++){
     if (closest_labels[i] == gt_int[i*k]){
       n_1++;
