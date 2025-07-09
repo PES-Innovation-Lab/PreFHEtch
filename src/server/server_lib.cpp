@@ -31,9 +31,9 @@ Server::Server()
 }
 
 void Server::run_webserver() {
-    drogon::app().addListener("localhost", 8080);
+    drogon::app().addListener("127.0.0.1", 8080);
 
-    SPDLOG_INFO("Server listening on localhost:8080");
+    SPDLOG_INFO("Server listening on 127.0.0.1:8080");
     drogon::app().run();
 }
 
