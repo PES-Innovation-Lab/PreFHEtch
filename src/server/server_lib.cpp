@@ -35,7 +35,6 @@ Server::Server()
 
 void Server::run_webserver() {
     drogon::app().addListener(SERVER_ADDRESS, SERVER_PORT);
-
     SPDLOG_INFO("Server listening on {}:8080", SERVER_ADDRESS);
     drogon::app().run();
 }
