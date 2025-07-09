@@ -11,6 +11,12 @@ Pre-Filtering Homomorphically Encrypted queries for Triage and Candidate Handlin
     - [Drogon](https://github.com/drogonframework/drogon)
     - [cpr](https://github.com/libcpr/cpr)
 
+- Download the dataset
+
+```bash
+./dataset.sh
+```
+
 - Configure the build system
 
 ```bash
@@ -22,4 +28,25 @@ cmake -S . -B build
 
 ```bash
 cmake --build build
+```
+
+- Build with docker
+ 
+```bash 
+# to build 
+docker build -t prefhetch .
+
+# start the container in the background
+docker run -dit --name prefhetch-container -p 8080:8080 prefhetch
+
+# in one terminal (for running the PreFHEtch-server)
+# this will start a wait loop for the server.
+docker exec -it prefhetch-container bash
+cd build
+./PreFHEtch-server
+
+# in another terminal (for running the PreFHEtch-client)
+docker exec -it prefhetch-container bash
+cd build
+./PreFHEtch-client
 ```
