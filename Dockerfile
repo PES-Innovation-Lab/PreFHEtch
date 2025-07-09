@@ -1,0 +1,41 @@
+FROM debian:stable-slim
+
+RUN apt-get update
+RUN apt-get install -y \
+    git \
+    build-essential \
+    curl \
+    uuid-dev \
+    libjsoncpp-dev \
+    pkg-config \
+    zlib1g-dev \
+    libssl-dev \
+    libblas-dev \
+    liblapack-dev \
+    libcurl4-openssl-dev
+
+RUN curl -sSL https://github.com/Kitware/CMake/releases/download/v3.30.5/cmake-3.30.5-linux-x86_64.tar.gz | tar --strip-components=1 -xz -C /usr/local
+
+RUN git clone --recurse-submodules https://github.com/drogonframework/drogon.git && \
+    mkdir drogon/build && cd drogon/build && \
+    cmake .. && \
+    make -j$(nproc) && make install && \
+    cd ../.. && rm -rf drogon
+
+RUN git clone --depth=1 https://github.com/libcpr/cpr.git && \
+    mkdir cpr/build && cd cpr/build && \
+    cmake .. -DBUILD_CPR_TESTS=OFF -DCMAKE_USE_OPENSSL=ON -DCPR_USE_SYSTEM_CURL=ON && \
+    make -j$(nproc) && make install && \
+    cd ../.. && rm -rf cpr
+
+RUN apt-get clean && rm -rf /var/lib/apt/lists/*
+
+ 
+WORKDIR /PreFHEtch
+
+COPY . .
+
+RUN cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_BUILD_TYPE=Debug -B build . -DFAISS_ENABLE_PYTHON=OFF -DFAISS_ENABLE_GPU=OFF -DBUILD_TESTING=OFF
+RUN cmake --build build -- -j$(nproc)
+
+CMD ["/bin/bash"]
