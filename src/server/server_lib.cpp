@@ -105,51 +105,51 @@ void Server::init_index() {
         //                        [](const int d) { return faiss::idx_t(d); });
     }
 
-    // Result of the auto-tuning
-    std::string selected_params;
-
-    // Run auto-tuning
-    {
-        SPDLOG_INFO("Preparing auto-tune criterion 1-recall at 1 "
-                    "criterion, with k=%ld nq=%ld",
-                    k, nq);
-
-        faiss::OneRecallAtRCriterion crit(nq, 1);
-        crit.set_groundtruth(k, nullptr, gt.data());
-        crit.nnn = k; // by default, the criterion will request only 1 NN
-
-        SPDLOG_INFO("Preparing auto-tune parameters");
-
-        faiss::ParameterSpace params;
-        params.initialize(&m_Index);
-
-        SPDLOG_INFO("Auto-tuning over {} parameters ({} combinations)",
-                    params.parameter_ranges.size(), params.n_combinations());
-
-        faiss::OperatingPoints ops;
-        params.explore(&m_Index, nq, xq.data(), crit, &ops);
-
-        SPDLOG_INFO("Found the following operating points: ");
-        ops.display();
-
-        // keep the first parameter that obtains > 0.5 1-recall@1
-        for (int i = 0; i < ops.optimal_pts.size(); i++) {
-            if (ops.optimal_pts[i].perf > 0.5) {
-                selected_params = ops.optimal_pts[i].key;
-                break;
-            }
-        }
-        assert(selected_params.size() >= 0 ||
-               !"could not find good enough op point");
-    }
+    // // Result of the auto-tuning
+    // std::string selected_params;
+    //
+    // // Run auto-tuning
+    // {
+    //     SPDLOG_INFO("Preparing auto-tune criterion 1-recall at 1 "
+    //                 "criterion, with k=%ld nq=%ld",
+    //                 k, nq);
+    //
+    //     faiss::OneRecallAtRCriterion crit(nq, 1);
+    //     crit.set_groundtruth(k, nullptr, gt.data());
+    //     crit.nnn = k; // by default, the criterion will request only 1 NN
+    //
+    //     SPDLOG_INFO("Preparing auto-tune parameters");
+    //
+    //     faiss::ParameterSpace params;
+    //     params.initialize(&m_Index);
+    //
+    //     SPDLOG_INFO("Auto-tuning over {} parameters ({} combinations)",
+    //                 params.parameter_ranges.size(), params.n_combinations());
+    //
+    //     faiss::OperatingPoints ops;
+    //     params.explore(&m_Index, nq, xq.data(), crit, &ops);
+    //
+    //     SPDLOG_INFO("Found the following operating points: ");
+    //     ops.display();
+    //
+    //     // keep the first parameter that obtains > 0.5 1-recall@1
+    //     for (int i = 0; i < ops.optimal_pts.size(); i++) {
+    //         if (ops.optimal_pts[i].perf > 0.5) {
+    //             selected_params = ops.optimal_pts[i].key;
+    //             break;
+    //         }
+    //     }
+    //     assert(selected_params.size() >= 0 ||
+    //            !"could not find good enough op point");
+    // }
 
     // Use the found configuration to perform a search
     {
-        faiss::ParameterSpace params;
-
-        SPDLOG_INFO("Setting parameter configuration \"{}\" on index",
-                    selected_params.c_str());
-        params.set_index_parameters(&m_Index, selected_params.c_str());
+        // faiss::ParameterSpace params;
+        //
+        // SPDLOG_INFO("Setting parameter configuration \"{}\" on index",
+        //             selected_params.c_str());
+        // params.set_index_parameters(&m_Index, selected_params.c_str());
 
         SPDLOG_INFO("Perform a search on {} queries", nq);
 
@@ -209,8 +209,10 @@ void Server::retrieve_centroids(
 }
 
 void Server::coarseSearch(
-    const std::array<float, PRECISE_VECTOR_DIMENSIONS> &precise_query,
-    std::array<faiss::idx_t, NPROBE> &nearest_centroid_idx,
+    const std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, NQUERY>
+        &precise_query,
+    const std::array<std::array<faiss::idx_t, NPROBE>, NQUERY>
+        &nearest_centroid_idx,
     std::vector<float> &coarse_distance_scores,
     std::vector<faiss::idx_t> &coarse_distance_indexes,
     std::array<size_t, NQUERY> &list_sizes_per_query) {
@@ -222,7 +224,8 @@ void Server::coarseSearch(
     coarse_distance_indexes.resize(NBASE * NQUERY);
 
     m_Index.search_encrypted(
-        1, precise_query.data(), nearest_centroid_idx.data(),
+        NQUERY, precise_query.data()->data(),
+        const_cast<faiss::idx_t *>(nearest_centroid_idx.data()->data()),
         coarse_distance_scores.data(), coarse_distance_indexes.data(),
         list_sizes_per_query.data());
 
@@ -235,24 +238,25 @@ void Server::coarseSearch(
 }
 
 void Server::preciseSearch(
-    const std::array<float, PRECISE_VECTOR_DIMENSIONS> &precise_query,
-    const std::array<faiss::idx_t, PRECISE_PROBE> &nearest_coarse_vector_idx,
-    std::array<std::array<float, PRECISE_PROBE>, NQUERY>
+    const std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, NQUERY>
+        &precise_query,
+    const std::array<std::array<faiss::idx_t, COARSE_PROBE>, NQUERY>
+        &nearest_coarse_vector_idx,
+    std::array<std::array<float, COARSE_PROBE>, NQUERY>
         &precise_distance_scores) {
     SPDLOG_INFO("Starting precise search on the server");
 
-    float *dataset_base_ptr = m_DatasetBase.data();
+    const float *dataset_base_ptr = m_DatasetBase.data();
 
     for (int i = 0; i < NQUERY; i++) {
-        for (int j = 0; j < PRECISE_PROBE; j++) {
+        for (int j = 0; j < COARSE_PROBE; j++) {
             float dist = 0.0;
-            float *precise_vec_idx =
+            const float *precise_vec_idx =
                 dataset_base_ptr +
-                ((nearest_coarse_vector_idx[(i * PRECISE_PROBE) + j]) *
-                 PRECISE_VECTOR_DIMENSIONS);
+                (nearest_coarse_vector_idx[i][j] * PRECISE_VECTOR_DIMENSIONS);
 
             for (int k = 0; k < PRECISE_VECTOR_DIMENSIONS; k++) {
-                dist += std::pow((precise_vec_idx[k] - precise_query[k]), 2);
+                dist += std::pow((precise_vec_idx[k] - precise_query[i][k]), 2);
             }
 
             precise_distance_scores[i][j] = dist;
@@ -263,7 +267,7 @@ void Server::preciseSearch(
 }
 
 void Server::preciseVectorPIR(
-    const std::array<std::array<faiss_idx_t, K>, NQUERY>
+    const std::array<std::array<faiss_idx_t, COARSE_PROBE>, NQUERY>
         &k_nearest_precise_vectors_idx,
     std::array<std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, K>,
                NQUERY> &query_results) {
@@ -281,13 +285,10 @@ void Server::preciseVectorPIR(
                                       PRECISE_VECTOR_DIMENSIONS *
                                           sizeof(precise_vec_idx));
             for (int k = 0; k < PRECISE_VECTOR_DIMENSIONS; k++) {
-                SPDLOG_INFO("Vector {} Dimension k[{}] = {}", j, k,
-                            prec_vec[k]);
+                // SPDLOG_INFO("Vector {} Dimension k[{}] = {}", j, k,
+                // prec_vec[k]);
                 query_results[i][j][k] = prec_vec[k];
             }
-
-            // std::copy(prec_vec.begin(), prec_vec.end(),
-            //           query_results[i][j].begin());
         }
     }
 

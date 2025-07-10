@@ -29,16 +29,19 @@ class Server {
     void retrieve_centroids(
         std::vector<std::array<float, PRECISE_VECTOR_DIMENSIONS>> &centroids);
     void coarseSearch(
-        const std::array<float, PRECISE_VECTOR_DIMENSIONS> &precise_query,
-        std::array<faiss::idx_t, NPROBE> &nearest_centroid_idx,
+        const std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, NQUERY>
+            &precise_query,
+        const std::array<std::array<faiss::idx_t, NPROBE>, NQUERY>
+            &nearest_centroid_idx,
         std::vector<float> &coarse_distance_scores,
         std::vector<faiss::idx_t> &coarse_distance_indexes,
         std::array<size_t, NQUERY> &list_sizes_per_query);
     void preciseSearch(
-        const std::array<float, PRECISE_VECTOR_DIMENSIONS> &precise_query,
-        const std::array<faiss::idx_t, PRECISE_PROBE>
+        const std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, NQUERY>
+            &precise_query,
+        const std::array<std::array<faiss::idx_t, COARSE_PROBE>, NQUERY>
             &nearest_coarse_vector_idx,
-        std::array<std::array<float, PRECISE_PROBE>, NQUERY>
+        std::array<std::array<float, COARSE_PROBE>, NQUERY>
             &precise_distance_scores);
     void preciseVectorPIR(
         const std::array<std::array<faiss_idx_t, K>, NQUERY>

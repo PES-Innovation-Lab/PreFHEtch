@@ -48,12 +48,14 @@ void Query::coarse_search(
 
     nlohmann::json req_body = nlohmann::json::parse(req->body());
     SPDLOG_INFO("Request body: {}", req_body.dump());
-    const std::array<float, PRECISE_VECTOR_DIMENSIONS> precise_query =
-        req_body.at("preciseQuery")
-            .get<std::array<float, PRECISE_VECTOR_DIMENSIONS>>();
-    std::array<faiss_idx_t, NPROBE> nearest_centroids =
+    const std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, NQUERY>
+        precise_query =
+            req_body.at("preciseQuery")
+                .get<std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>,
+                                NQUERY>>();
+    std::array<std::array<faiss_idx_t, NPROBE>, NQUERY> nearest_centroids =
         req_body.at("nearestCentroidIndexes")
-            .get<std::array<faiss_idx_t, NPROBE>>();
+            .get<std::array<std::array<faiss_idx_t, NPROBE>, NQUERY>>();
 
     std::vector<float> coarse_distance_scores;
     std::vector<faiss::idx_t> coarse_vector_indexes;
@@ -85,15 +87,18 @@ void Query::precise_search(
     nlohmann::json req_body = nlohmann::json::parse(req->body());
     SPDLOG_INFO("Request body: {}", req_body.dump());
 
-    const std::array<float, PRECISE_VECTOR_DIMENSIONS> precise_query =
-        req_body.at("preciseQuery")
-            .get<std::array<float, PRECISE_VECTOR_DIMENSIONS>>();
-    const std::array<faiss_idx_t, PRECISE_PROBE> nearest_coarse_vectors_id =
-        req_body.at("nearestCoarseVectorIndexes")
-            .get<std::array<faiss_idx_t, PRECISE_PROBE>>();
+    const std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, NQUERY>
+        precise_query =
+            req_body.at("preciseQuery")
+                .get<std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>,
+                                NQUERY>>();
+    const std::array<std::array<faiss_idx_t, COARSE_PROBE>, NQUERY>
+        nearest_coarse_vectors_id =
+            req_body.at("nearestCoarseVectorIndexes")
+                .get<std::array<std::array<faiss_idx_t, COARSE_PROBE>,
+                                NQUERY>>();
 
-    std::array<std::array<float, PRECISE_PROBE>, NQUERY>
-        precise_distance_scores;
+    std::array<std::array<float, COARSE_PROBE>, NQUERY> precise_distance_scores;
 
     std::shared_ptr<Server> server = Server::getInstance();
     server->preciseSearch(precise_query, nearest_coarse_vectors_id,
