@@ -264,10 +264,9 @@ void Server::preciseSearch(
 
 void Server::preciseVectorPIR(
     const std::array<std::array<faiss_idx_t, K>, NQUERY>
-        k_nearest_precise_vectors_idx,
+        &k_nearest_precise_vectors_idx,
     std::array<std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, K>,
-               NQUERY>
-        query_results) {
+               NQUERY> &query_results) {
     SPDLOG_INFO("Starting precise vector PIR on the server");
 
     float *dataset_base_ptr = m_DatasetBase.data();
@@ -278,8 +277,17 @@ void Server::preciseVectorPIR(
                 dataset_base_ptr + (k_nearest_precise_vectors_idx[i][j] *
                                     PRECISE_VECTOR_DIMENSIONS);
 
-            memcpy(query_results[i][j].data(), precise_vec_idx,
-                   PRECISE_VECTOR_DIMENSIONS * sizeof(float));
+            std::span<float> prec_vec(precise_vec_idx,
+                                      PRECISE_VECTOR_DIMENSIONS *
+                                          sizeof(precise_vec_idx));
+            for (int k = 0; k < PRECISE_VECTOR_DIMENSIONS; k++) {
+                SPDLOG_INFO("Vector {} Dimension k[{}] = {}", j, k,
+                            prec_vec[k]);
+                query_results[i][j][k] = prec_vec[k];
+            }
+
+            // std::copy(prec_vec.begin(), prec_vec.end(),
+            //           query_results[i][j].begin());
         }
     }
 

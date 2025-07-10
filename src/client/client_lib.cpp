@@ -229,4 +229,20 @@ void get_precise_vectors_pir(
 
     nlohmann::json resp = nlohmann::json::parse(r.text);
     SPDLOG_INFO("Response = {}", resp.dump());
+
+    query_results =
+        resp.at("queryResults")
+            .get<std::array<
+                std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, K>,
+                NQUERY>>();
+
+    for (const auto &query_result : query_results) {
+        for (const auto &k : query_result) {
+            SPDLOG_INFO("NEXT K RESULT");
+            for (const float &dim : k) {
+                printf("%f, ", dim);
+            }
+            printf("\n");
+        }
+    }
 }

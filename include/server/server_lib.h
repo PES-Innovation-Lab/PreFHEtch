@@ -42,8 +42,7 @@ class Server {
             &precise_distance_scores);
     void preciseVectorPIR(
         const std::array<std::array<faiss_idx_t, K>, NQUERY>
-            k_nearest_precise_vectors_idx,
+            &k_nearest_precise_vectors_idx,
         std::array<std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, K>,
-                   NQUERY>
-            query_results);
+                   NQUERY> &query_results);
 };
