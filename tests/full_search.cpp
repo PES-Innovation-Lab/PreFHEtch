@@ -1,4 +1,4 @@
-// Just take a high dimension vector and convert it into low dimension using PQ
+;// Just take a high dimension vector and convert it into low dimension using PQ
 // should use faiss ofcourse
 #include "faiss/Index.h"
 #include "faiss/MetricType.h"
@@ -21,7 +21,7 @@
 // const char* dataset_gt = "./dataset/sift1M/sift_groundtruth.ivecs";
 //
 // const char* index_key = "IVF4096,PQ8";
-// const size_t nprobe = 20;
+// const size_t nprobe = 10;
 // const int k_limit = 15;
 
 const char* dataset_learn = "./dataset/sift10k/siftsmall_learn.fvecs";
@@ -139,6 +139,7 @@ int main() {
   printf("k : %ld\n", k);
 
   // create the index
+  printf("Creating index : %s\n", index_key);
   index = faiss::index_factory(d, index_key);
 
   auto *ivf = dynamic_cast<faiss::IndexIVF*>(index);
@@ -264,6 +265,7 @@ int main() {
     * RECALL COMPUTATION 
     ************************************/
 
+  // which percentage of the true top-k nearest neighbours were retrieved
   printf("[%.3f s] Starting recall computation\n", elapsed()-t0);
 
   faiss::idx_t* gt = new faiss::idx_t[k * n_query];
@@ -276,26 +278,56 @@ int main() {
   for (int i = 0; i<k_limit; i++){
     n_k[i] = 0;
   }
-  int n_1 = 0, n_10 = 0, n_20 = 0, n_100 = 0, n_max = 0;
+
+  int total_retrieved = 0;
+  int total_gt = k * n_query;
+
+  for (int i = 0; i < n_query; i++) {
+      faiss::idx_t query_list_size = list_sizes_per_query[i];
+      for (int j = 0; j < k; j++) {
+          int gt_nn = gt[i * k + j];
+          for (int l = 0; l < query_list_size; l++) {
+              if (labels[to_add + l] == gt_nn) {
+                  total_retrieved++;
+                  break;  // Count each gt_nn only once
+              }
+          }
+      }
+      to_add += query_list_size;
+  }
+
+  float relative_recall = float(total_retrieved) / total_gt;
+  printf("Relative Recall@%ld = %.4f\n", k, relative_recall);
+
+  // faiss::idx_t* gt = new faiss::idx_t[k * n_query];
+  // for (int i = 0; i < k * n_query; i++) {
+  //     gt[i] = gt_int[i];
+  // }
+  //
+  to_add = 0;
+  int n_1 = 0, n_10 = 0, n_100 = 0;
+  float mrr_10 = 0, mrr_100 = 0;
   for (int i = 0; i < n_query; i++) {
       // for each query find the nearest neighbour.
       int gt_nn = gt[i * k];
-      faiss::idx_t query_list_size = list_sizes_per_query[i];
-      for (int j = 0; j < query_list_size; j++) {
+      for (int j = 0; j < list_sizes_per_query[i]; j++) {
           // check if the query is within 
           // 1, 10 or 100.
           if (labels[to_add + j] == gt_nn) {
               if (j < 1)
                   n_1++;
-              if (j < 10)
+              if (j < 10){
                   n_10++;
-              if (j < 100)
+                  mrr_10 += float(1)/float(j+1);
+              }
+              if (j < 100) {
                   n_100++;
-              if (j < k_limit)
-                  n_k[j]++;
+                  mrr_100 += float(1)/float(j+1);
+              }
+              break;
           }
       }
-      to_add += query_list_size;
+      to_add += list_sizes_per_query[i];
   }
 
 
@@ -303,11 +335,8 @@ int main() {
   printf("R@10 = %.4f\n", n_10 / float(n_query));
   printf("R@100 = %.4f\n", n_100 / float(n_query));
 
-  float prev_output = 0;
-  for (int i = 0; i<k_limit; i++) {
-    prev_output +=  n_k[i]/float(n_query); 
-    printf("R@%d:%.4f\n", i+1, prev_output);
-  }
+  printf("MRR@10 = %.4f\n", mrr_10/float(n_query));
+  printf("MRR@100 = %.4f\n", mrr_100/float(n_query));
 
   printf("[%.3f s] finished recall computation\n", elapsed()-t0);
 
@@ -332,8 +361,9 @@ int main() {
       // this k will be 100 if there are 100 vectors to fine search through 
       // for the query, if there are less than 100 it is set to the maximum 
       // vectors assigned to the query.
-      k = (list_sizes_per_query[i] > 100)? 100:list_sizes_per_query[i];
+      k = (list_sizes_per_query[i] > 200) ? 200 :list_sizes_per_query[i];
       // k = list_sizes_per_query[i];
+
       for (int j = 0; j < k; j++) {
           faiss::idx_t db_idx = labels[to_add + j];
           float* db_vector = &x_base[db_idx * d];
@@ -355,15 +385,15 @@ int main() {
   }
   
   n_1 = 0;
-  k = 100;
+  int k_final = 100;
   for (int i = 0; i < n_query; i++){
-    if (closest_labels[i] == gt_int[i*k]){
+    if (closest_labels[i] == gt_int[i*k_final]){
       n_1++;
     }
   }
 
   printf("finesearchtime : %f\n", elapsed() - finesearchtime);
-  printf("R@1 IF WE DO FINE SEARCH THROUGH ALL THE SELECTED VECTORS : %f\n", n_1/float(n_query));
+  printf("R@1 IF WE DO FINE SEARCH THROUGH TOP %d (SELECTED ACROSS EACH QUERY): %f\n", 200, n_1/float(n_query));
 
   printf("[%.3f s] total number of vectors : %ld\n",elapsed()-t0,  offset);
 }
