@@ -1,6 +1,8 @@
-;// Just take a high dimension vector and convert it into low dimension using PQ
+#include <filesystem>
+// Just take a high dimension vector and convert it into low dimension using PQ
 // should use faiss ofcourse
 #include "faiss/Index.h"
+#include <faiss/index_io.h>
 #include "faiss/MetricType.h"
 #include <faiss/impl/ProductQuantizer.h>
 #include <faiss/index_factory.h>
@@ -15,25 +17,25 @@
 #include <algorithm>
 #include <vector>
 
-const char* dataset_learn = "./dataset/sift1M/sift_learn.fvecs";
-const char* dataset_base = "./dataset/sift1M/sift_base.fvecs";
-const char* dataset_query = "./dataset/sift1M/sift_query.fvecs";
-const char* dataset_gt = "./dataset/sift1M/sift_groundtruth.ivecs";
-
-const char* index_key = "IVF4096,PQ8";
-const size_t nprobe = 15;
-const int k_limit = 15;
-const int fine_k = 450;
-
-// const char* dataset_learn = "./dataset/sift10k/siftsmall_learn.fvecs";
-// const char* dataset_base = "./dataset/sift10k/siftsmall_base.fvecs";
-// const char* dataset_query = "./dataset/sift10k/siftsmall_query.fvecs";
-// const char* dataset_gt = "./dataset/sift10k/siftsmall_groundtruth.ivecs";
+// const char* dataset_learn = "./sift/sift1M/sift_learn.fvecs";
+// const char* dataset_base = "./sift/sift1M/sift_base.fvecs";
+// const char* dataset_query = "./sift/sift1M/sift_query.fvecs";
+// const char* dataset_gt = "./sift/sift1M/sift_groundtruth.ivecs";
 //
-// const char* index_key = "IVF256,PQ8";
-// const size_t nprobe = 10;
+// const char* index_key = "IVF4096,PQ8";
+// const size_t nprobe = 15;
 // const int k_limit = 15;
-// const int fine_k = 300;
+// const int fine_k = 450;
+
+const char* dataset_learn = "./sift/sift10k/siftsmall_learn.fvecs";
+const char* dataset_base = "./sift/sift10k/siftsmall_base.fvecs";
+const char* dataset_query = "./sift/sift10k/siftsmall_query.fvecs";
+const char* dataset_gt = "./sift/sift10k/siftsmall_groundtruth.ivecs";
+
+const char* index_key = "IVF256,PQ8";
+const size_t nprobe = 10;
+const int k_limit = 15;
+const int fine_k = 300;
 
 void sort_floats_with_labels(float* arr, faiss::idx_t* labels, size_t n) {
     std::vector<std::pair<float, faiss::idx_t>> paired(n);
@@ -144,27 +146,41 @@ int main() {
   printf("Creating index : %s\n", index_key);
   index = faiss::index_factory(d, index_key);
 
+  /**************************
+    * TRAINING AND ADDING VECTORS TO THE DATABASE 
+    ************************/
+
+
+  if (!(std::filesystem::exists("ivf256_pq8_index.faiss"))) {
+    printf("No cached data\n");
+    printf("[%.3f s] Starting Training\n", elapsed()-t0);
+    index->train(n_learn, x_learn);
+
+    delete[] x_learn;
+
+    printf("[%.3f s] Adding vectors into database\n", elapsed()-t0);
+    index->add(n_base, x_base);
+
+    delete[] x_base;
+
+    printf("[%.3f s] Finished Adding vectors to the database\n", elapsed()-t0);
+
+    faiss::write_index(index, "ivf256_pq8_index.faiss");
+
+    printf("Data cached successfully.\n");
+
+  } else {
+    printf("Loading cached data\n");
+    index = faiss::read_index("ivf256_pq8_index.faiss"); 
+    printf("Cached data read correctly\n");
+  }
+
   auto *ivf = dynamic_cast<faiss::IndexIVF*>(index);
   if (ivf){
     // do nothing.
   } else throw std::runtime_error("Error casting index to IVF index."); 
 
-  /**************************
-    * TRAINING AND ADDING VECTORS TO THE DATABASE 
-    ************************/
-
-    printf("nlist: %ld\n", ivf->nlist);
-  printf("[%.3f s] Starting Training\n", elapsed()-t0);
-  ivf->train(n_learn, x_learn);
-
-  delete[] x_learn;
-
-  printf("[%.3f s] Adding vectors into database\n", elapsed()-t0);
-  ivf->add(n_base, x_base);
-
-  delete[] x_base;
-
-  printf("[%.3f s] Finished Adding vectors to the database\n", elapsed()-t0);
+  printf("nlist: %ld\n", ivf->nlist);
 
   // ivf->nprobe = 10;
   // size_t nprobe = ivf->nprobe;
