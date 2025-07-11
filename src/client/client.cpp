@@ -60,9 +60,11 @@ int main() {
     std::array<std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, K>,
                NQUERY>
         query_results;
-    get_precise_vectors_pir(nearest_precise_vectors, query_results);
+    std::array<std::array<faiss_idx_t, K>, NQUERY> query_results_idx;
+    get_precise_vectors_pir(nearest_precise_vectors, query_results,
+                            query_results_idx);
 
-    benchmark_results(query_results);
+    benchmark_results(query_results_idx);
 
     return 0;
 }

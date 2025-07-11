@@ -65,9 +65,8 @@ void get_precise_vectors_pir(
     const std::array<std::array<DistanceIndexData, COARSE_PROBE>, NQUERY>
         &nearest_precise_vectors,
     std::array<std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, K>,
-               NQUERY> &query_results);
+               NQUERY> &query_results,
+    std::array<std::array<faiss_idx_t, K>, NQUERY> &query_results_idx);
 
 void benchmark_results(
-    const std::array<
-        std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, K>, NQUERY>
-        &query_results);
+    const std::array<std::array<faiss_idx_t, K>, NQUERY> &query_results_idx);
