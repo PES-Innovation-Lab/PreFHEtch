@@ -15,23 +15,25 @@
 #include <algorithm>
 #include <vector>
 
-// const char* dataset_learn = "./dataset/sift1M/sift_learn.fvecs";
-// const char* dataset_base = "./dataset/sift1M/sift_base.fvecs";
-// const char* dataset_query = "./dataset/sift1M/sift_query.fvecs";
-// const char* dataset_gt = "./dataset/sift1M/sift_groundtruth.ivecs";
+const char* dataset_learn = "./dataset/sift1M/sift_learn.fvecs";
+const char* dataset_base = "./dataset/sift1M/sift_base.fvecs";
+const char* dataset_query = "./dataset/sift1M/sift_query.fvecs";
+const char* dataset_gt = "./dataset/sift1M/sift_groundtruth.ivecs";
+
+const char* index_key = "IVF4096,PQ8";
+const size_t nprobe = 15;
+const int k_limit = 15;
+const int fine_k = 450;
+
+// const char* dataset_learn = "./dataset/sift10k/siftsmall_learn.fvecs";
+// const char* dataset_base = "./dataset/sift10k/siftsmall_base.fvecs";
+// const char* dataset_query = "./dataset/sift10k/siftsmall_query.fvecs";
+// const char* dataset_gt = "./dataset/sift10k/siftsmall_groundtruth.ivecs";
 //
-// const char* index_key = "IVF4096,PQ8";
+// const char* index_key = "IVF256,PQ8";
 // const size_t nprobe = 10;
 // const int k_limit = 15;
-
-const char* dataset_learn = "./dataset/sift10k/siftsmall_learn.fvecs";
-const char* dataset_base = "./dataset/sift10k/siftsmall_base.fvecs";
-const char* dataset_query = "./dataset/sift10k/siftsmall_query.fvecs";
-const char* dataset_gt = "./dataset/sift10k/siftsmall_groundtruth.ivecs";
-
-const char* index_key = "IVF256,PQ8";
-const size_t nprobe = 10;
-const int k_limit = 15;
+// const int fine_k = 300;
 
 void sort_floats_with_labels(float* arr, faiss::idx_t* labels, size_t n) {
     std::vector<std::pair<float, faiss::idx_t>> paired(n);
@@ -225,10 +227,10 @@ int main() {
 
   printf("[%.3f s] Starting Search\n", elapsed()-t0);
 
-  double searchtime = elapsed();
+  double start = elapsed();
   // ivf->search(n_query, x_query, k, distances, labels);
   ivf->search_encrypted(n_query, x_query,centroid_indexes, distances, labels, list_sizes_per_query);
-  searchtime = elapsed() - searchtime;
+  double searchtime = elapsed() - start;
 
   printf("Search Time : %f s\n", searchtime);
 
@@ -347,7 +349,7 @@ int main() {
   printf("[%.3f s] Starting fine search\n", elapsed()-t0);
 
   x_base = fvecs_read(dataset_base, &d, &n_base);
-  double finesearchtime = elapsed();
+  start = elapsed();
   faiss::idx_t* closest_labels = new faiss::idx_t[n_query];
 
   to_add = 0;
@@ -361,7 +363,7 @@ int main() {
       // this k will be 100 if there are 100 vectors to fine search through 
       // for the query, if there are less than 100 it is set to the maximum 
       // vectors assigned to the query.
-      k = (list_sizes_per_query[i] > 200) ? 200 :list_sizes_per_query[i];
+      k = (list_sizes_per_query[i] > fine_k) ? fine_k :list_sizes_per_query[i];
       // k = list_sizes_per_query[i];
 
       for (int j = 0; j < k; j++) {
@@ -392,8 +394,10 @@ int main() {
     }
   }
 
-  printf("finesearchtime : %f\n", elapsed() - finesearchtime);
-  printf("R@1 IF WE DO FINE SEARCH THROUGH TOP %d (SELECTED ACROSS EACH QUERY): %f\n", 200, n_1/float(n_query));
+  double finesearchtime = elapsed() - start; 
+  printf("finesearchtime : %f\n", finesearchtime);
+  printf("R@1 IF WE DO FINE SEARCH THROUGH TOP %d (SELECTED ACROSS EACH QUERY): %f\n", fine_k, n_1/float(n_query));
 
   printf("[%.3f s] total number of vectors : %ld\n",elapsed()-t0,  offset);
+  printf("Total search time : %f\n", searchtime + finesearchtime);
 }
