@@ -361,6 +361,11 @@ void benchmark_results(const std::array<std::array<faiss_idx_t, K>, NQUERY>
 
     printf("\n\n");
     SPDLOG_INFO("Total Query Benchmark Results");
+    SPDLOG_INFO("Parameters: NPROBE = {}, COARSE_PROBE = {}, K = {}", NPROBE,
+                COARSE_PROBE, K);
+    SPDLOG_INFO("Parameters: NQUERY = {}, NLIST = {}", NQUERY, NLIST);
+    SPDLOG_INFO("Parameters: SUB_QUANTIZERS = {}, SUB_VECTOR_SIZE = {}",
+                SUB_QUANTIZERS, SUB_VECTOR_SIZE);
     SPDLOG_INFO("Recall@1 = {}, Recall@10 = {}, Recall@100 = {}",
                 (float)nq_recall_1 / (1 * NQUERY),
                 (float)nq_recall_10 / (10 * NQUERY),

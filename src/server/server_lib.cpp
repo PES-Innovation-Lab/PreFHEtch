@@ -81,6 +81,15 @@ void Server::init_index() {
         size_t d2;
         vecs_read<float>(QUERY_DATASET_PATH, d2, nq, xq);
         assert(d == d2 || !"query does not have same dimension as train set");
+
+        for (int i = 0; i < NQUERY; i++) {
+            printf("Query i = %d", i + 1);
+            for (int j = 0; j < PRECISE_VECTOR_DIMENSIONS; j++) {
+                size_t idx = i * PRECISE_VECTOR_DIMENSIONS + j;
+                printf("(%d) = %f, ", idx, xq[idx]);
+            }
+            printf("\n");
+        }
     }
 
     size_t k; // nb of results per query in the GT
