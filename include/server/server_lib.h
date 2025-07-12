@@ -14,7 +14,7 @@ constexpr int SERVER_PORT = 8080;
 class Server {
   private:
     faiss::IndexFlatL2 m_Quantizer;
-    faiss::IndexIVFPQ m_Index;
+    std::unique_ptr<faiss::IndexIVFPQ> m_Index;
     std::vector<float> m_DatasetBase;
 
   public:
