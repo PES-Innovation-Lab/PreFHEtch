@@ -1,6 +1,7 @@
 #include <cstdio>
 #include <vector>
 
+#include <faiss/index_io.h>
 #include <faiss/AutoTune.h>
 #include <faiss/IndexFlat.h>
 #include <faiss/IndexIVF.h>
@@ -26,8 +27,8 @@ char const *GROUNDTRUTH_DATASET_PATH =
 
 Server::Server()
     : m_Quantizer(PRECISE_VECTOR_DIMENSIONS),
-      m_Index(&m_Quantizer, PRECISE_VECTOR_DIMENSIONS, NLIST, SUB_QUANTIZERS,
-              SUB_VECTOR_SIZE) {
+      m_Index(std::make_unique<faiss::IndexIVFPQ>(&m_Quantizer, PRECISE_VECTOR_DIMENSIONS, NLIST, SUB_QUANTIZERS,
+              SUB_VECTOR_SIZE)) {
     SPDLOG_INFO("Preparing index with precise dimension d={}",
                 PRECISE_VECTOR_DIMENSIONS);
 }
@@ -35,7 +36,7 @@ Server::Server()
 void Server::run_webserver() {
     drogon::app().addListener(SERVER_ADDRESS, SERVER_PORT);
 
-    SPDLOG_INFO("Server listening on localhost:8080");
+    SPDLOG_INFO("Server listening on {}:8080", SERVER_ADDRESS);
     drogon::app().run();
 }
 
@@ -44,32 +45,46 @@ void Server::init_index() {
     size_t d;
 
     // Training the index
-    {
-        SPDLOG_INFO("Loading train set");
+    if (!(std::filesystem::exists("test.faiss"))){
+          SPDLOG_INFO("Loading train set");
 
-        size_t nt;
-        std::vector<float> xt;
-        vecs_read<float>(TRAIN_DATASET_PATH, d, nt, xt);
+          size_t nt;
+          std::vector<float> xt;
+          vecs_read<float>(TRAIN_DATASET_PATH, d, nt, xt);
 
-        if (d != PRECISE_VECTOR_DIMENSIONS) {
-            throw std::runtime_error("Incorrect dimensions for train set, not "
-                                     "the same as PRECISE_VECTOR_DIMENSIONS");
+          if (d != PRECISE_VECTOR_DIMENSIONS) {
+              throw std::runtime_error("Incorrect dimensions for train set, not "
+                                       "the same as PRECISE_VECTOR_DIMENSIONS");
+          }
+
+          SPDLOG_INFO("Training on {} vectors", nt);
+          m_Index->train(nt, xt.data());
+
+          SPDLOG_INFO("Loading database");
+
+          size_t nb, d2;
+          vecs_read<float>(BASE_DATASET_PATH, d2, nb, m_DatasetBase);
+          assert(d == d2 || !"dataset does not have same dimension as train set");
+
+          SPDLOG_INFO("Indexing database, size {}*{}", nb, d);
+          m_Index->add(nb, m_DatasetBase.data());
+      
+      faiss::write_index(m_Index.get(), "test.faiss");
+      SPDLOG_INFO("Cached dataset");
+
+    } else {
+        SPDLOG_INFO("Reading cached data");
+
+        faiss::Index* loaded_ptr = faiss::read_index("test.faiss");
+        auto* loaded_ivfpq = dynamic_cast<faiss::IndexIVFPQ*>(loaded_ptr);
+        if (!loaded_ivfpq) {
+            throw std::runtime_error("Loaded index is not of type IndexIVFPQ");
         }
 
-        SPDLOG_INFO("Training on {} vectors", nt);
-        m_Index.train(nt, xt.data());
-    }
-
-    // Adding vectors to the index
-    {
-        SPDLOG_INFO("Loading database");
-
-        size_t nb, d2;
-        vecs_read<float>(BASE_DATASET_PATH, d2, nb, m_DatasetBase);
-        assert(d == d2 || !"dataset does not have same dimension as train set");
-
-        SPDLOG_INFO("Indexing database, size {}*{}", nb, d);
-        m_Index.add(nb, m_DatasetBase.data());
+        m_Index.reset(loaded_ivfpq);
+        d = m_Index->d;
+        
+        // delete loaded_ivfpq;
     }
 
     size_t nq;
@@ -110,63 +125,17 @@ void Server::init_index() {
             gt[i] = gt_int[i];
         }
 
-        // std::ranges::transform(gt_int, gt.begin(),
-        //                        [](const int d) { return faiss::idx_t(d); });
     }
-
-    // // Result of the auto-tuning
-    // std::string selected_params;
-    //
-    // // Run auto-tuning
-    // {
-    //     SPDLOG_INFO("Preparing auto-tune criterion 1-recall at 1 "
-    //                 "criterion, with k=%ld nq=%ld",
-    //                 k, nq);
-    //
-    //     faiss::OneRecallAtRCriterion crit(nq, 1);
-    //     crit.set_groundtruth(k, nullptr, gt.data());
-    //     crit.nnn = k; // by default, the criterion will request only 1 NN
-    //
-    //     SPDLOG_INFO("Preparing auto-tune parameters");
-    //
-    //     faiss::ParameterSpace params;
-    //     params.initialize(&m_Index);
-    //
-    //     SPDLOG_INFO("Auto-tuning over {} parameters ({} combinations)",
-    //                 params.parameter_ranges.size(), params.n_combinations());
-    //
-    //     faiss::OperatingPoints ops;
-    //     params.explore(&m_Index, nq, xq.data(), crit, &ops);
-    //
-    //     SPDLOG_INFO("Found the following operating points: ");
-    //     ops.display();
-    //
-    //     // keep the first parameter that obtains > 0.5 1-recall@1
-    //     for (int i = 0; i < ops.optimal_pts.size(); i++) {
-    //         if (ops.optimal_pts[i].perf > 0.5) {
-    //             selected_params = ops.optimal_pts[i].key;
-    //             break;
-    //         }
-    //     }
-    //     assert(selected_params.size() >= 0 ||
-    //            !"could not find good enough op point");
-    // }
 
     // Use the found configuration to perform a search
     {
-        // faiss::ParameterSpace params;
-        //
-        // SPDLOG_INFO("Setting parameter configuration \"{}\" on index",
-        //             selected_params.c_str());
-        // params.set_index_parameters(&m_Index, selected_params.c_str());
-
         SPDLOG_INFO("Perform a search on {} queries", nq);
 
         // output buffers
         faiss::idx_t *I = new faiss::idx_t[nq * k];
         float *D = new float[nq * k];
 
-        m_Index.search(nq, xq.data(), k, D, I);
+        m_Index->search(nq, xq.data(), k, D, I);
 
         int temp_k = 10;
         SPDLOG_INFO("Ground truth results of query[0] ({} nearest-neighbours):",
@@ -227,12 +196,12 @@ void Server::coarseSearch(
     std::array<size_t, NQUERY> &list_sizes_per_query) {
 
     // Reset nprobe, previously set by auto-tuning
-    m_Index.nprobe = NPROBE;
+    m_Index->nprobe = NPROBE;
 
     coarse_distance_scores.resize(NBASE * NQUERY);
     coarse_distance_indexes.resize(NBASE * NQUERY);
 
-    m_Index.search_encrypted(
+    m_Index->search_encrypted(
         NQUERY, precise_query.data()->data(),
         const_cast<faiss::idx_t *>(nearest_centroid_idx.data()->data()),
         coarse_distance_scores.data(), coarse_distance_indexes.data(),
