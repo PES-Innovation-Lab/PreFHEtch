@@ -75,6 +75,9 @@ void Server::init_index() {
     } else {
         SPDLOG_INFO("Reading cached data");
 
+        size_t nb, d2;
+        vecs_read<float>(BASE_DATASET_PATH, d2, nb, m_DatasetBase);
+
         faiss::Index* loaded_ptr = faiss::read_index("test.faiss");
         auto* loaded_ivfpq = dynamic_cast<faiss::IndexIVFPQ*>(loaded_ptr);
         if (!loaded_ivfpq) {
@@ -182,7 +185,8 @@ void Server::retrieve_centroids(
     std::vector<std::array<float, PRECISE_VECTOR_DIMENSIONS>> &centroids) {
     centroids.resize(NLIST);
     for (int i = 0; i < NLIST; i++) {
-        m_Quantizer.reconstruct(i, centroids[i].data());
+        // m_Quantizer.reconstruct(i, centroids[i].data());
+        m_Index->quantizer->reconstruct(i, centroids[i].data());
     }
 }
 
