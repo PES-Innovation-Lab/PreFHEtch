@@ -317,7 +317,7 @@ void benchmark_results(const std::array<std::array<faiss_idx_t, K>, NQUERY>
         int recall_1 = 0, recall_10 = 0, recall_100 = 0;
         for (int j = 0; j < K; j++) {
             for (int k = 0; k < K; k++) {
-                if (ground_truth[i * NQUERY + j] ==
+                if (ground_truth[i * gt_nn_per_query + j] ==
                     observed_query_results_idx[i][k]) {
                     if (k < 1)
                         recall_1++;
