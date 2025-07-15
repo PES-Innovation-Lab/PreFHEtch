@@ -4,7 +4,7 @@
 
 #include "client_server_utils.h"
 
-const std::string server_addr = "http://0.0.0.0:8080/";
+const std::string server_addr = "http://localhost:8080/";
 
 struct DistanceIndexData {
     float distance;

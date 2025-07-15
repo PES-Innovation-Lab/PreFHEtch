@@ -50,3 +50,7 @@ docker exec -it prefhetch-container bash
 cd build
 ./PreFHEtch-client
 ```
+If any changes are made, you will have to run the build command again, ie:
+```bash
+cmake --build build
+```
