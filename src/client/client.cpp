@@ -6,7 +6,10 @@
 
 int main() {
 
+    Timer precise_benchmark_timer;
     SPDLOG_INFO("Starting query");
+
+    precise_benchmark_timer.StartTimer();
 
     std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, NQUERY>
         precise_query;
@@ -48,6 +51,19 @@ int main() {
     compute_nearest_precise_vectors(precise_scores, nearest_coarse_vectors,
                                     nearest_precise_vectors);
     // SPDLOG_INFO("Computed nearest precise vectors successfully");
+
+    precise_benchmark_timer.StopTimer();
+
+    printf("\n");
+    SPDLOG_INFO("TIME");
+    SPDLOG_INFO("Start: Query, End: Computing nearest precise vectors (Does "
+                "not include PIR)");
+
+    long long time_micro = 0;
+    long long time_milli = 0;
+    precise_benchmark_timer.getDuration(time_micro, time_milli);
+    SPDLOG_INFO("Time in microseconds = {}, Time in milliseconds = {}",
+                time_micro, time_milli);
 
     // Get query vector results
     std::array<std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, K>,

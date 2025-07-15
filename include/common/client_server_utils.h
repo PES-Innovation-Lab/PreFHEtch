@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <sys/stat.h>
 
 #include <spdlog/spdlog.h>
@@ -55,3 +56,14 @@ void vecs_read(const char *fname, size_t &d_out, size_t &n_out,
 
     fclose(f);
 }
+
+class Timer {
+  public:
+    void StartTimer();
+    void StopTimer();
+    void getDuration(long long &time_micro, long long &time_milli) const;
+
+  private:
+    std::chrono::time_point<std::chrono::high_resolution_clock> m_TimerStart;
+    std::chrono::time_point<std::chrono::high_resolution_clock> m_TimerEnd;
+};
