@@ -13,20 +13,12 @@ char const *QUERY_DATASET_PATH = "../sift/siftsmall/siftsmall_query.fvecs";
 char const *GROUNDTRUTH_DATASET_PATH =
     "../sift/siftsmall/siftsmall_groundtruth.ivecs";
 
-// Test method to ping server
-void ping_server() {
-    SPDLOG_INFO("Sending a request to /ping at {}", server_addr);
-    cpr::Response r = cpr::Get(cpr::Url(server_addr + "ping"));
-    const nlohmann::json resp = nlohmann::json::parse(r.text);
-    SPDLOG_INFO("Response = {}, Status code = {}", resp.dump(), r.status_code);
-}
-
 void get_query(
     std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, NQUERY> &query) {
     size_t nq;
     std::vector<float> xq;
 
-    SPDLOG_INFO("Loading query:");
+    // SPDLOG_INFO("Loading query:");
 
     size_t d2;
     vecs_read<float>(QUERY_DATASET_PATH, d2, nq, xq);
@@ -34,26 +26,23 @@ void get_query(
            !"query does not have same dimension as train set");
 
     for (int i = 0; i < NQUERY; i++) {
-        SPDLOG_INFO("Query vector {}:", i + 1);
+        // SPDLOG_INFO("Query vector {}:", i + 1);
         for (int j = 0; j < PRECISE_VECTOR_DIMENSIONS; j++) {
             size_t idx = i * PRECISE_VECTOR_DIMENSIONS + j;
             query[i][j] = xq[idx];
-            printf("%.1f, ", xq[idx]);
+            // printf("%.1f, ", xq[idx]);
         }
-        printf("\n");
+        // printf("\n");
     }
 }
 
 void get_centroids(
     std::vector<std::array<float, PRECISE_VECTOR_DIMENSIONS>> &centroids) {
-    SPDLOG_INFO("Sending a request to /query at {}", server_addr);
     cpr::Response r = cpr::Get(cpr::Url(server_addr + "query"));
-    // SPDLOG_INFO("Response = {}, Status code = {}", r.text, r.status_code);
 
     const nlohmann::json resp = nlohmann::json::parse(r.text);
     centroids =
         resp.get<std::vector<std::array<float, PRECISE_VECTOR_DIMENSIONS>>>();
-    // SPDLOG_INFO("Retrieved centroids -> {}", resp.dump());
 }
 
 void sort_nearest_centroids(
@@ -77,10 +66,10 @@ void sort_nearest_centroids(
     }
 
     for (std::vector<DistanceIndexData> &query : nearest_centroids) {
-        std::sort(query.begin(), query.end(),
-                  [&](const DistanceIndexData &a, const DistanceIndexData &b) {
-                      return a.distance < b.distance;
-                  });
+        std::ranges::sort(
+            query, [&](const DistanceIndexData &a, const DistanceIndexData &b) {
+                return a.distance < b.distance;
+            });
     }
 
     // for (const auto &vec: nearest_centroids) {
@@ -98,7 +87,6 @@ void get_coarse_scores(
     std::vector<float> &coarse_scores,
     std::vector<faiss_idx_t> &coarse_vectors_idx,
     std::array<size_t, NQUERY> &list_sizes_per_query) {
-    SPDLOG_INFO("Sending a request to /coarsesearch at {}", server_addr);
 
     std::array<std::array<faiss_idx_t, NPROBE>, NQUERY> nearest_centroids_id;
 
@@ -158,17 +146,10 @@ void compute_nearest_coarse_vectors(
     }
 
     for (std::vector<DistanceIndexData> &query : nearest_coarse_vectors) {
-        std::sort(query.begin(), query.end(),
-                  [&](const DistanceIndexData &a, const DistanceIndexData &b) {
-                      return a.distance < b.distance;
-                  });
-    }
-
-    for (int i = 0; i < NQUERY; i++) {
-        for (const auto &[distance, idx] : nearest_coarse_vectors[i]) {
-            SPDLOG_INFO("Query = {}, Distance  = {}, Coarse vector index = {}",
-                        i + 1, distance, idx);
-        }
+        std::ranges::sort(
+            query, [&](const DistanceIndexData &a, const DistanceIndexData &b) {
+                return a.distance < b.distance;
+            });
     }
 }
 
@@ -178,7 +159,6 @@ void get_precise_scores(
     const std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, NQUERY>
         &precise_query,
     std::array<std::array<float, COARSE_PROBE>, NQUERY> &precise_scores) {
-    SPDLOG_INFO("Sending a request to /precisesearch at {}", server_addr);
 
     std::array<std::array<faiss_idx_t, COARSE_PROBE>, NQUERY>
         nearest_coarse_vectors_id;
@@ -194,13 +174,10 @@ void get_precise_scores(
     coarse_search_json["nearestCoarseVectorIndexes"] =
         nearest_coarse_vectors_id;
 
-    SPDLOG_INFO("Precise Query Request = {}", coarse_search_json.dump());
-
     cpr::Response r = cpr::Post(cpr::Url(server_addr + "precisesearch"),
                                 cpr::Body(coarse_search_json.dump()));
 
     nlohmann::json resp = nlohmann::json::parse(r.text);
-    SPDLOG_INFO("Response = {}", resp.dump());
 
     precise_scores =
         resp.at("preciseDistanceScores")
@@ -221,17 +198,10 @@ void compute_nearest_precise_vectors(
     }
 
     for (auto &precise_score_query : nearest_precise_vectors) {
-        std::sort(precise_score_query.begin(), precise_score_query.end(),
-                  [&](const DistanceIndexData &a, const DistanceIndexData &b) {
-                      return a.distance < b.distance;
-                  });
-    }
-
-    for (int i = 0; i < NQUERY; i++) {
-        for (const auto &[distance, idx] : nearest_precise_vectors[i]) {
-            SPDLOG_INFO("Query = {}, Distance  = {}, Precise vector index = {}",
-                        i + 1, distance, idx);
-        }
+        std::ranges::sort(precise_score_query, [&](const DistanceIndexData &a,
+                                                   const DistanceIndexData &b) {
+            return a.distance < b.distance;
+        });
     }
 }
 
@@ -241,7 +211,6 @@ void get_precise_vectors_pir(
     std::array<std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, K>,
                NQUERY> &query_results,
     std::array<std::array<faiss_idx_t, K>, NQUERY> &query_results_idx) {
-    SPDLOG_INFO("Sending a request to /precise-vector-pir at {}", server_addr);
 
     if constexpr (K > COARSE_PROBE) {
         SPDLOG_ERROR("K greater than COARSE_PROBE");
@@ -257,44 +226,27 @@ void get_precise_vectors_pir(
     nlohmann::json precise_vector_pir_json;
     precise_vector_pir_json["nearestPreciseVectorIndexes"] = query_results_idx;
 
-    SPDLOG_INFO("Precise Query PIR Request = {}",
-                precise_vector_pir_json.dump());
-
     cpr::Response r = cpr::Post(cpr::Url(server_addr + "precise-vector-pir"),
                                 cpr::Body(precise_vector_pir_json.dump()));
 
     nlohmann::json resp = nlohmann::json::parse(r.text);
-    SPDLOG_INFO("Response = {}", resp.dump());
 
     query_results =
         resp.at("queryResults")
             .get<std::array<
                 std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, K>,
                 NQUERY>>();
-
-    for (int i = 0; i < NQUERY; i++) {
-        for (int j = 0; j < K; j++) {
-            SPDLOG_INFO("Query Results: Query = {}, K = {}", i + 1, j + 1);
-            for (const float &dim : query_results[i][j]) {
-                printf("%f, ", dim);
-            }
-            printf("\n");
-        }
-    }
 }
 
 void benchmark_results(const std::array<std::array<faiss_idx_t, K>, NQUERY>
                            &observed_query_results_idx) {
 
-    SPDLOG_INFO("\n\n");
     SPDLOG_INFO("BENCHMARK RESULTS");
 
     size_t gt_nn_per_query;
     size_t gt_nq;
     std::vector<int> ground_truth;
     vecs_read(GROUNDTRUTH_DATASET_PATH, gt_nn_per_query, gt_nq, ground_truth);
-
-    SPDLOG_INFO("Ground truth data set - K = {}", K);
 
     // MRR considers only the position of the first result
     // MRR@10 - Results outside top 10 are irrelevant
@@ -311,9 +263,9 @@ void benchmark_results(const std::array<std::array<faiss_idx_t, K>, NQUERY>
             "truth dataset");
     }
     for (int i = 0; i < NQUERY; i++) {
-        printf("\n\n");
-        SPDLOG_INFO("QUERY BENCHMARKS Q = {}", i + 1);
-        SPDLOG_INFO("Ground truth nearest neighbours for Q = {}", i + 1);
+        // printf("\n\n");
+        // SPDLOG_INFO("QUERY BENCHMARKS Q = {}", i + 1);
+        // SPDLOG_INFO("Ground truth nearest neighbours for Q = {}", i + 1);
         int recall_1 = 0, recall_10 = 0, recall_100 = 0;
         for (int j = 0; j < K; j++) {
             for (int k = 0; k < K; k++) {
@@ -329,11 +281,11 @@ void benchmark_results(const std::array<std::array<faiss_idx_t, K>, NQUERY>
                     // Considering only 1st ground truth for MRR
                     if (j == 0) {
                         if (k < 1)
-                            mrr_1 += (float)1 / float(k + 1);
+                            mrr_1 += 1.0f / static_cast<float>(k + 1);
                         if (k < 10)
-                            mrr_10 += (float)1 / float(k + 1);
+                            mrr_10 += 1.0f / static_cast<float>(k + 1);
                         if (k < 100)
-                            mrr_100 += (float)1 / float(k + 1);
+                            mrr_100 += 1.0f / static_cast<float>(k + 1);
 
                         // SPDLOG_INFO("Updated mrr = {}, {}, {}", mrr_1,
                         // mrr_10,
@@ -342,18 +294,20 @@ void benchmark_results(const std::array<std::array<faiss_idx_t, K>, NQUERY>
                     break;
                 }
             }
-            printf("%d, ", ground_truth[i * NQUERY + j]);
+            // printf("%d, ", ground_truth[i * gt_nn_per_query + j]);
         }
-        printf("\n");
-        SPDLOG_INFO("Query Results:");
-        for (int j = 0; j < K; j++) {
-            printf("%lld, ", observed_query_results_idx[i][j]);
-        }
-        printf("\n");
+        // printf("\n");
 
-        SPDLOG_INFO("Recall@1 = {}, Recall@10 = {}, Recall@100 = {}",
-                    (float)recall_1 / 1, (float)recall_10 / 10,
-                    (float)recall_100 / 100);
+        // SPDLOG_INFO("Query Results:");
+        // for (int j = 0; j < K; j++) {
+        //     printf("%lld, ", observed_query_results_idx[i][j]);
+        // }
+        // printf("\n");
+
+        // SPDLOG_INFO("Recall@1 = {}, Recall@10 = {}, Recall@100 = {}",
+        //             static_cast<float>(recall_1) / 1,
+        //             static_cast<float>(recall_10) / 10,
+        //             static_cast<float>(recall_100) / 100);
         nq_recall_1 += recall_1;
         nq_recall_10 += recall_10;
         nq_recall_100 += recall_100;
@@ -367,9 +321,15 @@ void benchmark_results(const std::array<std::array<faiss_idx_t, K>, NQUERY>
     SPDLOG_INFO("Parameters: SUB_QUANTIZERS = {}, SUB_VECTOR_SIZE = {}",
                 SUB_QUANTIZERS, SUB_VECTOR_SIZE);
     SPDLOG_INFO("Recall@1 = {}, Recall@10 = {}, Recall@100 = {}",
-                (float)nq_recall_1 / (1 * NQUERY),
-                (float)nq_recall_10 / (10 * NQUERY),
-                (float)nq_recall_100 / (100 * NQUERY));
+                static_cast<float>(nq_recall_1) / (1 * NQUERY),
+                static_cast<float>(nq_recall_10) / (10 * NQUERY),
+                static_cast<float>(nq_recall_100) / (100 * NQUERY));
     SPDLOG_INFO("MRR@1 = {}, MRR@10 = {}, MRR@100 = {}", (float)mrr_1 / NQUERY,
                 (float)mrr_10 / NQUERY, (float)mrr_100 / NQUERY);
+
+    printf("\n\n");
+    for (int i = 0; i < 100; i++) {
+        printf("-");
+    }
+    printf("\n");
 }

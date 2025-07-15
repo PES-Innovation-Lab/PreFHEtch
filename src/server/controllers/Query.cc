@@ -7,21 +7,6 @@
 #include "client_server_utils.h"
 #include "server_lib.h"
 
-void Query::ping(
-    const HttpRequestPtr &req,
-    std::function<void(const HttpResponsePtr &)> &&callback) const {
-    SPDLOG_INFO("Received request on /ping");
-    nlohmann::json ret;
-    ret["ping"] = "pong";
-
-    const HttpResponsePtr resp = HttpResponse::newHttpResponse();
-    resp->setContentTypeString("application/json");
-    resp->setBody(ret.dump());
-
-    callback(resp);
-    SPDLOG_INFO("Exiting from ping handler");
-}
-
 void Query::query(
     const HttpRequestPtr &req,
     std::function<void(const HttpResponsePtr &)> &&callback) const {
@@ -38,16 +23,15 @@ void Query::query(
     resp->setBody(centroids_json.dump());
 
     callback(resp);
-    SPDLOG_INFO("Exiting from query handler");
+    // SPDLOG_INFO("Exiting from query handler");
 }
 
 void Query::coarse_search(
     const HttpRequestPtr &req,
     std::function<void(const HttpResponsePtr &)> &&callback) const {
-    SPDLOG_INFO("Received request on /coarsesearch");
+    // SPDLOG_INFO("Received request on /coarsesearch");
 
     nlohmann::json req_body = nlohmann::json::parse(req->body());
-    SPDLOG_INFO("Request body: {}", req_body.dump());
     const std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, NQUERY>
         precise_query =
             req_body.at("preciseQuery")
@@ -75,17 +59,16 @@ void Query::coarse_search(
     resp->setBody(response.dump());
 
     callback(resp);
-    SPDLOG_INFO("Exiting from coarse search handler");
+    // SPDLOG_INFO("Exiting from coarse search handler");
 }
 
 void Query::precise_search(
     const HttpRequestPtr &req,
     std::function<void(const HttpResponsePtr &)> &&callback) const {
 
-    SPDLOG_INFO("Received request on /precisesearch");
+    // SPDLOG_INFO("Received request on /precisesearch");
 
     nlohmann::json req_body = nlohmann::json::parse(req->body());
-    SPDLOG_INFO("Request body: {}", req_body.dump());
 
     const std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, NQUERY>
         precise_query =
@@ -111,16 +94,15 @@ void Query::precise_search(
     resp->setBody(response.dump());
 
     callback(resp);
-    SPDLOG_INFO("Exiting from precise search handler");
+    // SPDLOG_INFO("Exiting from precise search handler");
 }
 
 void Query::precise_vector_pir(
     const HttpRequestPtr &req,
     std::function<void(const HttpResponsePtr &)> &&callback) const {
-    SPDLOG_INFO("Received request on /precise-vector-pir");
+    // SPDLOG_INFO("Received request on /precise-vector-pir");
 
     nlohmann::json req_body = nlohmann::json::parse(req->body());
-    SPDLOG_INFO("Request body: {}", req_body.dump());
 
     const std::array<std::array<faiss_idx_t, K>, NQUERY>
         k_nearest_precise_vectors_id =
@@ -141,5 +123,5 @@ void Query::precise_vector_pir(
     resp->setBody(response.dump());
 
     callback(resp);
-    SPDLOG_INFO("Exiting from precise vector PIR handler");
+    // SPDLOG_INFO("Exiting from precise vector PIR handler");
 }

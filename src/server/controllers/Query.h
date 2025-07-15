@@ -8,11 +8,9 @@ class Query : public drogon::HttpController<Query> {
   public:
     METHOD_LIST_BEGIN
 
-    ADD_METHOD_TO(Query::ping, "/ping", Get);
-
     // Endpoint to start search
     // Accepts: None
-    // Returns: centroids (quantisation parameters to be implemented)
+    // Returns: centroids
     ADD_METHOD_TO(Query::query, "/query", Get);
 
     // Endpoint to perform a coarse search
@@ -33,9 +31,6 @@ class Query : public drogon::HttpController<Query> {
     ADD_METHOD_TO(Query::precise_vector_pir, "/precise-vector-pir", Post);
 
     METHOD_LIST_END
-
-    void ping(const HttpRequestPtr &req,
-              std::function<void(const HttpResponsePtr &)> &&callback) const;
 
     void query(const HttpRequestPtr &req,
                std::function<void(const HttpResponsePtr &)> &&callback) const;

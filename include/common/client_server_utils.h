@@ -13,7 +13,7 @@ constexpr int64_t NPROBE = 20;
 constexpr int64_t COARSE_PROBE = 200;
 constexpr int64_t K = 100;
 constexpr int64_t NBASE = 10000;
-constexpr int64_t NQUERY = 1;
+constexpr int64_t NQUERY = 5;
 
 // TODO: (nbase/nprobe) * nq
 constexpr int64_t NLIST = 256;
