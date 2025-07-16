@@ -26,7 +26,9 @@ WORKDIR /PreFHEtch
 
 COPY . .
 
-RUN cmake -B build . -DFAISS_ENABLE_PYTHON=OFF -DFAISS_ENABLE_GPU=OFF -DBUILD_TESTING=OFF
+RUN rm -rf build
+
+RUN cmake -B build .
 RUN cmake --build build -- -j$(nproc)
 
 CMD ["/bin/bash"]
