@@ -102,7 +102,6 @@ void Query::precise_vector_pir(
     std::function<void(const HttpResponsePtr &)> &&callback) const {
     // SPDLOG_INFO("Received request on /precise-vector-pir");
 
-    SPDLOG_INFO("Req Body: {}", req->body());
     nlohmann::json req_body = nlohmann::json::parse(req->body());
 
     const std::array<std::array<faiss_idx_t, K>, NQUERY>
