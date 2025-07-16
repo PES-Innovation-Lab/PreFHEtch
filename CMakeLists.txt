@@ -18,11 +18,18 @@ find_package(cpr CONFIG REQUIRED)
 
 include(FetchContent)
 
+FetchContent_Declare(
+        seal
+        GIT_REPOSITORY https://github.com/microsoft/SEAL.git
+        GIT_TAG 7a931d55ba84a40b85938f6ca3ac206f18654093
+)
+FetchContent_MakeAvailable(seal)
+
 # Faiss fork to incorporate custom features
 FetchContent_Declare(
         prefhetch-faiss
         GIT_REPOSITORY https://github.com/PES-Innovation-Lab/PreFHEtch-faiss
-        GIT_TAG 3115afb6e9bd886da2d083b701a8b288a049dfdb 
+        GIT_TAG 49c5b57c759e06c69447fea2342116fa521f4083
 )
 set(FAISS_ENABLE_GPU OFF CACHE BOOL "GPU support")
 set(FAISS_ENABLE_PYTHON OFF CACHE BOOL "Python bindings")
@@ -57,6 +64,7 @@ target_link_libraries(PreFHEtch_server_headers
         Drogon::Drogon
         spdlog::spdlog
         faiss
+        seal
 )
 
 add_library(PreFHEtch_server_lib
@@ -92,6 +100,7 @@ target_link_libraries(PreFHEtch_client_headers
         nlohmann_json::nlohmann_json
         cpr::cpr
         spdlog::spdlog
+        seal
 )
 
 add_library(PreFHEtch_client_lib
