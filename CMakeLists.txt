@@ -22,13 +22,20 @@ include(FetchContent)
 FetchContent_Declare(
         prefhetch-faiss
         GIT_REPOSITORY https://github.com/PES-Innovation-Lab/PreFHEtch-faiss
-        GIT_TAG 3115afb6e9bd886da2d083b701a8b288a049dfdb 
+        GIT_TAG 49c5b57c759e06c69447fea2342116fa521f4083
 )
 set(FAISS_ENABLE_GPU OFF CACHE BOOL "GPU support")
 set(FAISS_ENABLE_PYTHON OFF CACHE BOOL "Python bindings")
 set(BUILD_TESTING OFF CACHE BOOL "Tests")
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries")
 FetchContent_MakeAvailable(prefhetch-faiss)
+
+FetchContent_Declare(
+        SEAL
+        GIT_REPOSITORY https://github.com/microsoft/SEAL.git
+        GIT_TAG 7a931d55ba84a40b85938f6ca3ac206f18654093
+)
+FetchContent_MakeAvailable(SEAL)
 
 # JSON Library
 FetchContent_Declare(json
@@ -56,6 +63,7 @@ target_link_libraries(PreFHEtch_server_headers
         nlohmann_json::nlohmann_json
         Drogon::Drogon
         spdlog::spdlog
+        SEAL::seal
         faiss
 )
 
@@ -92,6 +100,7 @@ target_link_libraries(PreFHEtch_client_headers
         nlohmann_json::nlohmann_json
         cpr::cpr
         spdlog::spdlog
+        SEAL::seal
 )
 
 add_library(PreFHEtch_client_lib
