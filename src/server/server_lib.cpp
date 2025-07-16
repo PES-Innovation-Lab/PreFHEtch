@@ -26,15 +26,21 @@ char const *QUERY_DATASET_PATH = "../sift/siftsmall/siftsmall_query.fvecs";
 char const *GROUNDTRUTH_DATASET_PATH =
     "../sift/siftsmall/siftsmall_groundtruth.ivecs";
 
-// Path - build/IVF_.faiss
-const std::string INDEX_FILE =
-    std::format("IVF{}_PQ{}.faiss", NLIST, SUB_QUANTIZERS);
+// Path - build/_.faiss
+std::string INDEX_FILE;
 
 Server::Server()
     : m_Quantizer(PRECISE_VECTOR_DIMENSIONS),
       m_Index(std::make_unique<faiss::IndexIVFPQ>(
           &m_Quantizer, PRECISE_VECTOR_DIMENSIONS, NLIST, SUB_QUANTIZERS,
-          SUB_VECTOR_SIZE)) {
+          SUB_QUANTIZER_SIZE)) {
+
+    std::ostringstream oss;
+    oss << "NBASE" << NBASE << "_PRECISE_DIMENSIONS"
+        << "_IVF" << NLIST << "_PQ" << SUB_QUANTIZERS << "_SUB_QUANTIZER_SIZE"
+        << SUB_QUANTIZER_SIZE << ".faiss";
+    INDEX_FILE = oss.str();
+
     SPDLOG_INFO("Preparing index with precise dimension d={}",
                 PRECISE_VECTOR_DIMENSIONS);
 }

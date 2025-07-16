@@ -25,6 +25,8 @@ void get_query(
     assert(PRECISE_VECTOR_DIMENSIONS == d2 ||
            !"query does not have same dimension as train set");
 
+    assert(nq >= NQUERY || !"NQUERY exceeds number of queries in dataset");
+
     for (int i = 0; i < NQUERY; i++) {
         // SPDLOG_INFO("Query vector {}:", i + 1);
         for (int j = 0; j < PRECISE_VECTOR_DIMENSIONS; j++) {
@@ -319,7 +321,7 @@ void benchmark_results(const std::array<std::array<faiss_idx_t, K>, NQUERY>
                 COARSE_PROBE, K);
     SPDLOG_INFO("Parameters: NQUERY = {}, NLIST = {}", NQUERY, NLIST);
     SPDLOG_INFO("Parameters: SUB_QUANTIZERS = {}, SUB_VECTOR_SIZE = {}",
-                SUB_QUANTIZERS, SUB_VECTOR_SIZE);
+                SUB_QUANTIZERS, SUB_QUANTIZER_SIZE);
     SPDLOG_INFO("Recall@1 = {}, Recall@10 = {}, Recall@100 = {}",
                 static_cast<float>(nq_recall_1) / (1 * NQUERY),
                 static_cast<float>(nq_recall_10) / (10 * NQUERY),
