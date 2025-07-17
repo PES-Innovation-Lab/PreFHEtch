@@ -22,7 +22,7 @@ include(FetchContent)
 FetchContent_Declare(
         prefhetch-faiss
         GIT_REPOSITORY https://github.com/PES-Innovation-Lab/PreFHEtch-faiss
-        GIT_TAG 3115afb6e9bd886da2d083b701a8b288a049dfdb 
+        GIT_TAG  54d04fa175b813f1edaa8d9282caf18c9b299425
 )
 set(FAISS_ENABLE_GPU OFF CACHE BOOL "GPU support")
 set(FAISS_ENABLE_PYTHON OFF CACHE BOOL "Python bindings")
