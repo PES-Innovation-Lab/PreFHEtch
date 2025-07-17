@@ -14,16 +14,17 @@ void Query::query(
 
     std::shared_ptr<Server> srvr = Server::getInstance();
 
-    std::vector<std::array<float, PRECISE_VECTOR_DIMENSIONS>> centroids;
+    std::vector<std::vector<float>> centroids;
     srvr->retrieve_centroids(centroids);
-    const nlohmann::json centroids_json = centroids;
+    nlohmann::json centroids_json;
+    centroids_json["centroids"] = centroids;
 
     const HttpResponsePtr resp = HttpResponse::newHttpResponse();
     resp->setContentTypeString("application/json");
     resp->setBody(centroids_json.dump());
 
     callback(resp);
-    // SPDLOG_INFO("Exiting from query handler");
+    SPDLOG_INFO("Exiting from query handler");
 }
 
 void Query::coarse_search(

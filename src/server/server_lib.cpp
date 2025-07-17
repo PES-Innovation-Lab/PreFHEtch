@@ -1,7 +1,7 @@
 #include <cstdio>
 #include <vector>
 
-#include <faiss/AutoTune.h>
+#include "faiss/MetricType.h"
 #include <faiss/IndexFlat.h>
 #include <faiss/IndexIVF.h>
 #include <faiss/IndexIVFPQ.h>
@@ -14,7 +14,6 @@
 
 // Include controllers headers to register with server
 #include "controllers/Query.h"
-#include "faiss/MetricType.h"
 
 char const *SERVER_ADDRESS = "0.0.0.0";
 constexpr int SERVER_PORT = 8080;
@@ -29,23 +28,24 @@ char const *GROUNDTRUTH_DATASET_PATH =
 // Path - build/_.faiss
 std::string INDEX_FILE;
 
-Server::Server()
-    : m_Quantizer(PRECISE_VECTOR_DIMENSIONS),
-      m_Index(std::make_unique<faiss::IndexIVFPQ>(
-          &m_Quantizer, PRECISE_VECTOR_DIMENSIONS, NLIST, SUB_QUANTIZERS,
-          SUB_QUANTIZER_SIZE)) {
-
+Server::Server() : m_EncryptionParms(seal::scheme_type::bfv) {
     std::ostringstream oss;
-    oss << "NBASE" << NBASE << "_PRECISE_DIMENSIONS"
-        << "_IVF" << NLIST << "_PQ" << SUB_QUANTIZERS << "_SUB_QUANTIZER_SIZE"
-        << SUB_QUANTIZER_SIZE << ".faiss";
+    oss << "IVF" << m_Nlist << "_PQ" << m_SubQuantizers << "_SUB_QUANTIZER_SIZE"
+        << m_SubQuantizerSize << ".faiss";
     INDEX_FILE = oss.str();
 
-    SPDLOG_INFO("Preparing index with precise dimension d={}",
-                PRECISE_VECTOR_DIMENSIONS);
+    m_PolyModulusDegree = 4096;
+    // Setting to same size as float 32 to prevent overflow
+    m_PlaintextModulusSize = 32;
+
+    m_EncryptionParms.set_poly_modulus_degree(m_PolyModulusDegree);
+    m_EncryptionParms.set_coeff_modulus(
+        seal::CoeffModulus::BFVDefault(m_PolyModulusDegree));
+    m_EncryptionParms.set_plain_modulus(seal::PlainModulus::Batching(
+        m_PolyModulusDegree, m_PlaintextModulusSize));
 }
 
-void Server::run_webserver() {
+void Server::run_webserver() const {
     drogon::app().addListener(SERVER_ADDRESS, SERVER_PORT);
 
     SPDLOG_INFO("Server listening on {}:{}", SERVER_ADDRESS, SERVER_PORT);
@@ -57,26 +57,28 @@ void Server::init_index() {
     if (!(std::filesystem::exists(INDEX_FILE))) {
         SPDLOG_INFO("Loading train set");
 
-        size_t d;
-        size_t nt;
-        std::vector<float> xt;
-        vecs_read<float>(TRAIN_DATASET_PATH, d, nt, xt);
+        size_t parsed_training_count;
+        std::vector<float> parsed_train_set;
+        vecs_read<float>(TRAIN_DATASET_PATH, m_PreciseVectorDimensions,
+                         parsed_training_count, parsed_train_set);
 
-        if (d != PRECISE_VECTOR_DIMENSIONS) {
-            throw std::runtime_error("Incorrect dimensions for train set, not "
-                                     "the same as PRECISE_VECTOR_DIMENSIONS");
-        }
+        m_Quantizer = faiss::IndexFlatL2(m_PreciseVectorDimensions);
+        m_Index = std::make_unique<faiss::IndexIVFPQ>(
+            &m_Quantizer, m_PreciseVectorDimensions, m_Nlist, m_SubQuantizers,
+            m_SubQuantizerSize);
 
-        SPDLOG_INFO("Training on {} vectors", nt);
-        m_Index->train(nt, xt.data());
+        SPDLOG_INFO("Training on {} vectors", parsed_training_count);
+        m_Index->train(parsed_training_count, parsed_train_set.data());
 
         SPDLOG_INFO("Loading database");
 
         size_t nb, d2;
         vecs_read<float>(BASE_DATASET_PATH, d2, nb, m_DatasetBase);
-        assert(d == d2 || !"dataset does not have same dimension as train set");
+        assert(m_PreciseVectorDimensions == d2 ||
+               !"dataset does not have same dimension as train set");
 
-        SPDLOG_INFO("Indexing database, Records = {}, Dimensions = {}", nb, d);
+        SPDLOG_INFO("Indexing database, Records = {}, Dimensions = {}", nb,
+                    m_PreciseVectorDimensions);
         m_Index->add(nb, m_DatasetBase.data());
 
         faiss::write_index(m_Index.get(), INDEX_FILE.c_str());
@@ -85,8 +87,8 @@ void Server::init_index() {
     } else {
         SPDLOG_INFO("Reading cached data from index file - {}", INDEX_FILE);
 
-        size_t nb, d2;
-        vecs_read<float>(BASE_DATASET_PATH, d2, nb, m_DatasetBase);
+        vecs_read<float>(BASE_DATASET_PATH, m_PreciseVectorDimensions, m_NBase,
+                         m_DatasetBase);
 
         faiss::Index *loaded_ptr = faiss::read_index(INDEX_FILE.c_str());
         auto *loaded_ivfpq = dynamic_cast<faiss::IndexIVFPQ *>(loaded_ptr);
@@ -99,12 +101,13 @@ void Server::init_index() {
 }
 
 void Server::retrieve_centroids(
-    std::vector<std::array<float, PRECISE_VECTOR_DIMENSIONS>> &centroids)
-    const {
-    centroids.resize(NLIST);
-    for (int i = 0; i < NLIST; i++) {
-        // m_Quantizer.reconstruct(i, centroids[i].data());
-        m_Index->quantizer->reconstruct(i, centroids[i].data());
+    std::vector<std::vector<float>> &centroids) const {
+    centroids.reserve(m_Nlist);
+
+    for (int i = 0; i < m_Nlist; i++) {
+        std::vector<float> centroid(m_PreciseVectorDimensions);
+        m_Index->quantizer->reconstruct(i, centroid.data());
+        centroids.push_back(centroid);
     }
 }
 
@@ -116,7 +119,6 @@ void Server::coarseSearch(
     std::vector<float> &coarse_distance_scores,
     std::vector<faiss::idx_t> &coarse_distance_indexes,
     std::array<size_t, NQUERY> &list_sizes_per_query) const {
-
     // Reset nprobe, previously set by auto-tuning
     m_Index->nprobe = NPROBE;
 
