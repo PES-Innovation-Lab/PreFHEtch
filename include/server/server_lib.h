@@ -5,15 +5,26 @@
 
 #include <faiss/IndexFlat.h>
 #include <faiss/IndexIVFPQ.h>
+#include <seal/seal.h>
 
 #include "client_server_utils.h"
 
 // Singleton class pattern for static access across all controllers
 class Server {
   private:
+    const size_t m_Nlist = 256;
+    const size_t m_SubQuantizers = 32;
+    const size_t m_SubQuantizerSize = 8;
+    size_t m_PreciseVectorDimensions;
+    size_t m_NBase;
+
     faiss::IndexFlatL2 m_Quantizer;
     std::unique_ptr<faiss::IndexIVFPQ> m_Index;
     std::vector<float> m_DatasetBase;
+
+    size_t m_PolyModulusDegree;
+    size_t m_PlaintextModulusSize;
+    seal::EncryptionParameters m_EncryptionParms;
 
   public:
     Server();
@@ -23,10 +34,8 @@ class Server {
     }
 
     void init_index();
-    void run_webserver();
-    void retrieve_centroids(
-        std::vector<std::array<float, PRECISE_VECTOR_DIMENSIONS>> &centroids)
-        const;
+    void run_webserver() const;
+    void retrieve_centroids(std::vector<std::vector<float>> &centroids) const;
     void coarseSearch(
         const std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, NQUERY>
             &precise_query,

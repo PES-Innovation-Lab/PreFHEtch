@@ -13,70 +13,106 @@ char const *QUERY_DATASET_PATH = "../sift/siftsmall/siftsmall_query.fvecs";
 char const *GROUNDTRUTH_DATASET_PATH =
     "../sift/siftsmall/siftsmall_groundtruth.ivecs";
 
-void get_query(
-    std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, NQUERY> &query) {
-    size_t nq;
-    std::vector<float> xq;
+void Client::set_num_queries(size_t num_queries) { m_NumQueries = num_queries; }
 
-    // SPDLOG_INFO("Loading query:");
+void Client::get_query(std::vector<std::vector<float>> &precise_queries) {
+    size_t parsed_num_queries;
+    std::vector<float> parsed_precise_queries;
 
-    size_t d2;
-    vecs_read<float>(QUERY_DATASET_PATH, d2, nq, xq);
-    assert(PRECISE_VECTOR_DIMENSIONS == d2 ||
-           !"query does not have same dimension as train set");
+    vecs_read<float>(QUERY_DATASET_PATH, m_PreciseVectorDimensions,
+                     parsed_num_queries, parsed_precise_queries);
 
-    assert(nq >= NQUERY || !"NQUERY exceeds number of queries in dataset");
-
-    for (int i = 0; i < NQUERY; i++) {
-        // SPDLOG_INFO("Query vector {}:", i + 1);
-        for (int j = 0; j < PRECISE_VECTOR_DIMENSIONS; j++) {
-            size_t idx = i * PRECISE_VECTOR_DIMENSIONS + j;
-            query[i][j] = xq[idx];
-            // printf("%.1f, ", xq[idx]);
-        }
-        // printf("\n");
+    if (m_NumQueries > parsed_num_queries) {
+        SPDLOG_ERROR("insufficient queries present in dataset");
+        throw std::runtime_error("insufficient queries present in dataset");
     }
+
+    precise_queries.reserve(m_NumQueries);
+
+    for (int i = 0; i < m_NumQueries; i++) {
+        std::vector<float> query;
+        query.reserve(m_PreciseVectorDimensions);
+
+        for (int j = 0; j < m_PreciseVectorDimensions; j++) {
+            size_t idx = i * m_PreciseVectorDimensions + j;
+            query.push_back(parsed_precise_queries[idx]);
+        }
+
+        precise_queries.push_back(query);
+    }
+
+    // SPDLOG_INFO("Printing parsed num_queries = {}", num_queries);
+    // for (const auto &query : precise_queries) {
+    //     printf("Next Query:");
+    //     for (const auto &dim : query) {
+    //         printf("%f, ", dim);
+    //     }
+    //     printf("\n");
+    // }
 }
 
-void get_centroids(
-    std::vector<std::array<float, PRECISE_VECTOR_DIMENSIONS>> &centroids) {
+void Client::get_centroids(std::vector<std::vector<float>> &centroids) const {
     cpr::Response r = cpr::Get(cpr::Url(server_addr + "query"));
 
     const nlohmann::json resp = nlohmann::json::parse(r.text);
-    centroids =
-        resp.get<std::vector<std::array<float, PRECISE_VECTOR_DIMENSIONS>>>();
+    centroids = resp.at("centroids").get<std::vector<std::vector<float>>>();
+
+    SPDLOG_INFO("Centroids = {}", resp.dump());
 }
 
-void sort_nearest_centroids(
-    const std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, NQUERY>
-        &precise_query,
-    const std::vector<std::array<float, PRECISE_VECTOR_DIMENSIONS>> &centroids,
-    std::array<std::vector<DistanceIndexData>, NQUERY> &nearest_centroids) {
+void Client::sort_nearest_centroids(
+    const std::vector<std::vector<float>> &precise_queries,
+    const std::vector<std::vector<float>> &centroids,
+    std::vector<std::vector<faiss_idx_t>> &computed_nearest_centroids_idx)
+    const {
+    computed_nearest_centroids_idx.reserve(m_NumQueries);
 
-    for (int i = 0; i < NQUERY; i++) {
-        nearest_centroids[i].reserve(centroids.size());
+    std::vector<std::vector<DistanceIndexData>> nquery_centroids_distance;
+    nquery_centroids_distance.reserve(m_NumQueries);
+
+    for (int i = 0; i < m_NumQueries; i++) {
+        std::vector<DistanceIndexData> centroid_distances;
+        centroid_distances.reserve(centroids.size());
+
         for (int j = 0; j < centroids.size(); j++) {
             float distance = 0.0;
-            for (int k = 0; k < PRECISE_VECTOR_DIMENSIONS; k++) {
-                distance += std::pow(precise_query[i][k] - centroids[j][k], 2);
+            for (int k = 0; k < m_PreciseVectorDimensions; k++) {
+                distance +=
+                    std::pow(precise_queries[i][k] - centroids[j][k], 2);
             }
-            nearest_centroids[i].push_back(DistanceIndexData{
+            centroid_distances.push_back(DistanceIndexData{
                 distance,
                 j,
             });
         }
+
+        nquery_centroids_distance.push_back(centroid_distances);
     }
 
-    for (std::vector<DistanceIndexData> &query : nearest_centroids) {
+    for (std::vector<DistanceIndexData> &query : nquery_centroids_distance) {
         std::ranges::sort(
             query, [&](const DistanceIndexData &a, const DistanceIndexData &b) {
                 return a.distance < b.distance;
             });
     }
 
-    // for (const auto &vec: nearest_centroids) {
-    //     SPDLOG_INFO("distance = {}, centroid = {}", vec.distance,
-    //     vec.nearest_centroid_idx);
+    for (const auto &query : nquery_centroids_distance) {
+        std::vector<faiss_idx_t> nearest_centroids;
+        nearest_centroids.reserve(centroids.size());
+
+        for (const DistanceIndexData &distance : query) {
+            nearest_centroids.push_back(distance.idx);
+        }
+
+        computed_nearest_centroids_idx.push_back(nearest_centroids);
+    }
+
+    // for (const auto &query : nquery_centroids_distance) {
+    //     SPDLOG_INFO("Next Query");
+    //     for (const auto &centroid_distance : query) {
+    //         SPDLOG_INFO("distance = {}, centroid = {}",
+    //                     centroid_distance.distance, centroid_distance.idx);
+    //     }
     // }
 }
 
@@ -130,10 +166,10 @@ void compute_nearest_coarse_vectors(
 
     for (int i = 0; i < NQUERY; i++) {
         if (list_sizes_per_query[i] < COARSE_PROBE) {
-            SPDLOG_ERROR(
-                "Number of computed coarse scores is lesser than COARSE_PROBE");
-            throw std::runtime_error(
-                "Number of computed coarse scores is lesser than COARSE_PROBE");
+            SPDLOG_ERROR("Number of computed coarse scores is lesser than "
+                         "COARSE_PROBE");
+            throw std::runtime_error("Number of computed coarse scores is "
+                                     "lesser than COARSE_PROBE");
         }
         nearest_coarse_vectors[i].reserve(list_sizes_per_query[i]);
 
