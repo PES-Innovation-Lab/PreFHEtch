@@ -16,23 +16,25 @@ class Client {
     size_t m_PreciseVectorDimensions;
     size_t m_NumQueries;
 
+    size_t m_Nlist;
+
   public:
-    void set_num_queries(size_t num_queries);
+    explicit Client(size_t num_queries);
 
-    void get_query(std::vector<std::vector<float>> &queries);
+    std::vector<float> get_query();
+    void encrypt_query();
 
-    void get_centroids(std::vector<std::vector<float>> &centroids) const;
-    void sort_nearest_centroids(
-        const std::vector<std::vector<float>> &precise_queries,
-        const std::vector<std::vector<float>> &centroids,
-        std::vector<std::vector<faiss_idx_t>> &computed_nearest_centroids_idx)
-        const;
+    // Returns NLIST * NQUERY centroids
+    std::vector<float> get_centroids();
 
-    void get_coarse_scores(
-        const std::array<std::vector<DistanceIndexData>, NQUERY>
-            &sorted_centroids,
-        // TODO: Sending precise query temporarily, will be sending coarse
-        // vector in a future implementation
+    // Return sorted NLIST centroids for each of the NQUERY queries
+    std::vector<faiss_idx_t>
+    sort_nearest_centroids(std::vector<float> &precise_queries,
+                           std::vector<float> &centroids) const;
+
+    void get_encrypted_coarse_scores(
+        const std::vector<std::vector<faiss_idx_t>>
+            &computed_nearest_centroids_idx,
         const std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, NQUERY>
             &precise_query,
         std::vector<float> &coarse_scores,

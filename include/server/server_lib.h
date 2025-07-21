@@ -34,8 +34,12 @@ class Server {
     }
 
     void init_index();
-    void run_webserver() const;
-    void retrieve_centroids(std::vector<std::vector<float>> &centroids) const;
+    static void run_webserver();
+
+    // Returns NLIST centroids of PRECISE_DIMENSIONS each
+    std::vector<float> retrieve_centroids() const;
+    std::vector<seal::seal_byte> serialise_parms() const;
+
     void coarseSearch(
         const std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, NQUERY>
             &precise_query,
@@ -44,6 +48,7 @@ class Server {
         std::vector<float> &coarse_distance_scores,
         std::vector<faiss::idx_t> &coarse_distance_indexes,
         std::array<size_t, NQUERY> &list_sizes_per_query) const;
+
     void preciseSearch(
         const std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, NQUERY>
             &precise_query,
@@ -51,6 +56,7 @@ class Server {
             &nearest_coarse_vector_idx,
         std::array<std::array<float, COARSE_PROBE>, NQUERY>
             &precise_distance_scores) const;
+
     void preciseVectorPIR(
         const std::array<std::array<faiss_idx_t, K>, NQUERY>
             &k_nearest_precise_vectors_idx,

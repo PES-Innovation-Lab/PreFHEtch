@@ -5,37 +5,39 @@
 #include "client_lib.h"
 
 int main() {
-    Client client;
-    client.set_num_queries(7);
+    Client client(7);
     Timer precise_benchmark_timer;
 
     SPDLOG_INFO("Starting query");
     precise_benchmark_timer.StartTimer();
 
-    std::vector<std::vector<float>> precise_queries;
-    client.get_query(precise_queries);
+    // Future TODO: Parallelise query retrieval while fetching and
+    // computing nearest centroids
+    // INFO: Encryption params are sent from the server, so can be computed only
+    // after initial query to server
+
+    std::vector<float> precise_queries = client.get_query();
     SPDLOG_INFO("Query vectors obtained successfully");
 
-    // Get centroids from server
-    std::vector<std::vector<float>> centroids;
-    client.get_centroids(centroids);
+    // std::vector<> encrypted_precise_queries;
+    // TODO
+
+    std::vector<float> centroids = client.get_centroids();
     SPDLOG_INFO("Fetched centroids from server successfully");
 
-    // Compute nearest centroids per query
-    std::vector<std::vector<faiss_idx_t>> computed_nearest_centroids_idx;
-    client.sort_nearest_centroids(precise_queries, centroids,
-                                  computed_nearest_centroids_idx);
+    std::vector<faiss_idx_t> computed_nearest_centroids_idx =
+        client.sort_nearest_centroids(precise_queries, centroids);
     SPDLOG_INFO("Computed nearest centroids successfully");
 
-    // // Send nearest centroids to server to compute coarse scores (distances)
-    // std::vector<float> coarse_distance_scores;
-    // std::vector<faiss_idx_t> coarse_vector_indexes;
-    // std::array<size_t, NQUERY> list_sizes_per_query_coarse;
+    // Send nearest centroids to server to compute coarse scores (distances)
+    // std::vector<std::vector<float>> coarse_distance_scores;
+    // std::vector<std::vector<faiss_idx_t>> coarse_vector_indexes;
+    // std::vector<size_t> list_sizes_per_query_coarse;
     // get_coarse_scores(nearest_centroids, precise_query,
     // coarse_distance_scores,
     //                   coarse_vector_indexes, list_sizes_per_query_coarse);
-    // // SPDLOG_INFO("Received coarse distance scores successfully");
-    //
+    // SPDLOG_INFO("Received coarse distance scores successfully");
+
     // std::array<std::vector<DistanceIndexData>, NQUERY>
     // nearest_coarse_vectors; compute_nearest_coarse_vectors(
     //     coarse_distance_scores, coarse_vector_indexes,

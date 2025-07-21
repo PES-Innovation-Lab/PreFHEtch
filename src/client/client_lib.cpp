@@ -13,9 +13,9 @@ char const *QUERY_DATASET_PATH = "../sift/siftsmall/siftsmall_query.fvecs";
 char const *GROUNDTRUTH_DATASET_PATH =
     "../sift/siftsmall/siftsmall_groundtruth.ivecs";
 
-void Client::set_num_queries(size_t num_queries) { m_NumQueries = num_queries; }
+Client::Client(size_t num_queries) { m_NumQueries = num_queries; }
 
-void Client::get_query(std::vector<std::vector<float>> &precise_queries) {
+std::vector<float> Client::get_query() {
     size_t parsed_num_queries;
     std::vector<float> parsed_precise_queries;
 
@@ -27,93 +27,72 @@ void Client::get_query(std::vector<std::vector<float>> &precise_queries) {
         throw std::runtime_error("insufficient queries present in dataset");
     }
 
-    precise_queries.reserve(m_NumQueries);
-
-    for (int i = 0; i < m_NumQueries; i++) {
-        std::vector<float> query;
-        query.reserve(m_PreciseVectorDimensions);
-
-        for (int j = 0; j < m_PreciseVectorDimensions; j++) {
-            size_t idx = i * m_PreciseVectorDimensions + j;
-            query.push_back(parsed_precise_queries[idx]);
-        }
-
-        precise_queries.push_back(query);
-    }
-
-    // SPDLOG_INFO("Printing parsed num_queries = {}", num_queries);
-    // for (const auto &query : precise_queries) {
-    //     printf("Next Query:");
-    //     for (const auto &dim : query) {
-    //         printf("%f, ", dim);
-    //     }
-    //     printf("\n");
-    // }
+    return parsed_precise_queries;
 }
 
-void Client::get_centroids(std::vector<std::vector<float>> &centroids) const {
+std::vector<float> Client::get_centroids() {
     cpr::Response r = cpr::Get(cpr::Url(server_addr + "query"));
 
     const nlohmann::json resp = nlohmann::json::parse(r.text);
-    centroids = resp.at("centroids").get<std::vector<std::vector<float>>>();
+    std::vector<float> centroids =
+        resp.at("centroids").get<std::vector<float>>();
 
-    SPDLOG_INFO("Centroids = {}", resp.dump());
+    m_Nlist = centroids.size() / m_PreciseVectorDimensions;
+    return centroids;
 }
 
-void Client::sort_nearest_centroids(
-    const std::vector<std::vector<float>> &precise_queries,
-    const std::vector<std::vector<float>> &centroids,
-    std::vector<std::vector<faiss_idx_t>> &computed_nearest_centroids_idx)
-    const {
-    computed_nearest_centroids_idx.reserve(m_NumQueries);
+std::vector<faiss_idx_t>
+Client::sort_nearest_centroids(std::vector<float> &precise_queries,
+                               std::vector<float> &centroids) const {
+    std::vector<faiss_idx_t> computed_nearest_centroids_idx;
+    computed_nearest_centroids_idx.reserve(m_Nlist * m_NumQueries);
 
-    std::vector<std::vector<DistanceIndexData>> nquery_centroids_distance;
-    nquery_centroids_distance.reserve(m_NumQueries);
+    std::vector<DistanceIndexData> nquery_centroids_distance;
+    nquery_centroids_distance.reserve(m_Nlist * m_NumQueries);
 
+    // Iterating over nqueries
     for (int i = 0; i < m_NumQueries; i++) {
-        std::vector<DistanceIndexData> centroid_distances;
-        centroid_distances.reserve(centroids.size());
+        std::span<float> precise_query_view(precise_queries.data() +
+                                                (i * m_PreciseVectorDimensions),
+                                            m_PreciseVectorDimensions);
 
-        for (int j = 0; j < centroids.size(); j++) {
+        // Distance wrt each centroid
+        for (int j = 0; j < m_Nlist; j++) {
+            std::span<float> centroid_view(centroids.data() +
+                                               (j * m_PreciseVectorDimensions),
+                                           m_PreciseVectorDimensions);
             float distance = 0.0;
+
             for (int k = 0; k < m_PreciseVectorDimensions; k++) {
                 distance +=
-                    std::pow(precise_queries[i][k] - centroids[j][k], 2);
+                    std::pow(precise_query_view[k] - centroid_view[k], 2);
             }
-            centroid_distances.push_back(DistanceIndexData{
+            nquery_centroids_distance.push_back(DistanceIndexData{
                 distance,
                 j,
             });
         }
-
-        nquery_centroids_distance.push_back(centroid_distances);
     }
 
-    for (std::vector<DistanceIndexData> &query : nquery_centroids_distance) {
-        std::ranges::sort(
-            query, [&](const DistanceIndexData &a, const DistanceIndexData &b) {
-                return a.distance < b.distance;
-            });
-    }
+    for (size_t i = 0; i < m_NumQueries; i++) {
+        std::span<DistanceIndexData> query_centroid_view(
+            nquery_centroids_distance.data() + (i * m_Nlist), m_Nlist);
 
-    for (const auto &query : nquery_centroids_distance) {
-        std::vector<faiss_idx_t> nearest_centroids;
-        nearest_centroids.reserve(centroids.size());
+        std::ranges::sort(query_centroid_view, [&](const DistanceIndexData &a,
+                                                   const DistanceIndexData &b) {
+            return a.distance < b.distance;
+        });
 
-        for (const DistanceIndexData &distance : query) {
-            nearest_centroids.push_back(distance.idx);
+        // SPDLOG_INFO("\n\n QUERY = {}", i);
+        for (const DistanceIndexData &query_centroid : query_centroid_view) {
+            computed_nearest_centroids_idx.push_back(query_centroid.idx);
+            // SPDLOG_INFO("Centroid idx={}, distance = {}", query_centroid.idx,
+            //             query_centroid.distance);
         }
-
-        computed_nearest_centroids_idx.push_back(nearest_centroids);
     }
 
-    // for (const auto &query : nquery_centroids_distance) {
-    //     SPDLOG_INFO("Next Query");
-    //     for (const auto &centroid_distance : query) {
-    //         SPDLOG_INFO("distance = {}, centroid = {}",
-    //                     centroid_distance.distance, centroid_distance.idx);
-    //     }
-    // }
+    SPDLOG_INFO("Returning from sort nearest centroids");
+    return computed_nearest_centroids_idx;
 }
 
 void get_coarse_scores(

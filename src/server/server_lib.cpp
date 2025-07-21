@@ -45,7 +45,7 @@ Server::Server() : m_EncryptionParms(seal::scheme_type::bfv) {
         m_PolyModulusDegree, m_PlaintextModulusSize));
 }
 
-void Server::run_webserver() const {
+void Server::run_webserver() {
     drogon::app().addListener(SERVER_ADDRESS, SERVER_PORT);
 
     SPDLOG_INFO("Server listening on {}:{}", SERVER_ADDRESS, SERVER_PORT);
@@ -100,15 +100,21 @@ void Server::init_index() {
     }
 }
 
-void Server::retrieve_centroids(
-    std::vector<std::vector<float>> &centroids) const {
-    centroids.reserve(m_Nlist);
+std::vector<float> Server::retrieve_centroids() const {
+    std::vector<float> centroids;
+    centroids.resize(m_Nlist * m_PreciseVectorDimensions);
 
     for (int i = 0; i < m_Nlist; i++) {
-        std::vector<float> centroid(m_PreciseVectorDimensions);
-        m_Index->quantizer->reconstruct(i, centroid.data());
-        centroids.push_back(centroid);
+        m_Index->quantizer->reconstruct(i, centroids.data() +
+                                               (i * m_PreciseVectorDimensions));
     }
+
+    return centroids;
+}
+
+std::vector<seal::seal_byte> Server::serialise_parms() const {
+    std::vector<seal::seal_byte> serde_parms;
+    return serde_parms;
 }
 
 void Server::coarseSearch(

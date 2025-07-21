@@ -14,8 +14,9 @@ void Query::query(
 
     std::shared_ptr<Server> srvr = Server::getInstance();
 
-    std::vector<std::vector<float>> centroids;
-    srvr->retrieve_centroids(centroids);
+    std::vector<float> centroids = srvr->retrieve_centroids();
+    std::vector<seal::seal_byte> serde_parms = srvr->serialise_parms();
+
     nlohmann::json centroids_json;
     centroids_json["centroids"] = centroids;
 
