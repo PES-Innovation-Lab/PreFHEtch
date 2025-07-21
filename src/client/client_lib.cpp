@@ -91,7 +91,6 @@ Client::sort_nearest_centroids(std::vector<float> &precise_queries,
         }
     }
 
-    SPDLOG_INFO("Returning from sort nearest centroids");
     return computed_nearest_centroids_idx;
 }
 

@@ -6,28 +6,44 @@
 
 int main() {
     Client client(7);
-    Timer precise_benchmark_timer;
 
-    SPDLOG_INFO("Starting query");
-    precise_benchmark_timer.StartTimer();
+    Timer complete_search_timer;
+    Timer get_query_timer;
+    Timer get_centroids_timer;
+    Timer sort_centroids_timer;
+
+    SPDLOG_INFO("Starting query and timers");
+
+    complete_search_timer.StartTimer();
 
     // Future TODO: Parallelise query retrieval while fetching and
     // computing nearest centroids
-    // INFO: Encryption params are sent from the server, so can be computed only
-    // after initial query to server
+    // INFO: Encryption params are sent from the server, so query encryption
+    // only after initial query to server
 
+    get_query_timer.StartTimer();
     std::vector<float> precise_queries = client.get_query();
-    SPDLOG_INFO("Query vectors obtained successfully");
+    get_query_timer.StopTimer();
+    SPDLOG_INFO("Query vectors obtained successfully, time(microseconds) = {}",
+                get_query_timer.getDurationMicroseconds());
 
     // std::vector<> encrypted_precise_queries;
     // TODO
 
+    get_centroids_timer.StartTimer();
     std::vector<float> centroids = client.get_centroids();
-    SPDLOG_INFO("Fetched centroids from server successfully");
+    get_centroids_timer.StopTimer();
+    SPDLOG_INFO(
+        "Fetched centroids from server successfully, time(microseconds) = {}",
+        get_centroids_timer.getDurationMicroseconds());
 
+    sort_centroids_timer.StartTimer();
     std::vector<faiss_idx_t> computed_nearest_centroids_idx =
         client.sort_nearest_centroids(precise_queries, centroids);
-    SPDLOG_INFO("Computed nearest centroids successfully");
+    sort_centroids_timer.StopTimer();
+    SPDLOG_INFO(
+        "Computed nearest centroids successfully, time(microseconds) = {}",
+        sort_centroids_timer.getDurationMicroseconds());
 
     // Send nearest centroids to server to compute coarse scores (distances)
     // std::vector<std::vector<float>> coarse_distance_scores;

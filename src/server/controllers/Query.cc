@@ -10,12 +10,22 @@
 void Query::query(
     const HttpRequestPtr &req,
     std::function<void(const HttpResponsePtr &)> &&callback) const {
+    Timer query_handler_timer;
+    Timer retrieve_centroids_timer;
+    Timer serde_parms_timer;
+
     SPDLOG_INFO("Received request on /query");
+    query_handler_timer.StartTimer();
 
     std::shared_ptr<Server> srvr = Server::getInstance();
 
+    retrieve_centroids_timer.StartTimer();
     std::vector<float> centroids = srvr->retrieve_centroids();
+    retrieve_centroids_timer.StopTimer();
+
+    serde_parms_timer.StartTimer();
     std::vector<seal::seal_byte> serde_parms = srvr->serialise_parms();
+    serde_parms_timer.StopTimer();
 
     nlohmann::json centroids_json;
     centroids_json["centroids"] = centroids;
@@ -25,7 +35,14 @@ void Query::query(
     resp->setBody(centroids_json.dump());
 
     callback(resp);
-    SPDLOG_INFO("Exiting from query handler");
+    query_handler_timer.StopTimer();
+
+    SPDLOG_INFO("Retrieve centroids(microseconds) = {}",
+                retrieve_centroids_timer.getDurationMicroseconds());
+    SPDLOG_INFO("Serialise parms(microseconds) = {}",
+                serde_parms_timer.getDurationMicroseconds());
+    SPDLOG_INFO("Exiting from query handler, time(microseconds) = {}",
+                query_handler_timer.getDurationMicroseconds());
 }
 
 void Query::coarse_search(
