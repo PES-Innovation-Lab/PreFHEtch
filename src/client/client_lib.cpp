@@ -7,11 +7,19 @@
 
 #include "client_lib.h"
 
+#include "../../build/_deps/prefhetch-faiss-src/faiss/utils/bf16.h"
 #include "client_server_utils.h"
 
 char const *QUERY_DATASET_PATH = "../sift/siftsmall/siftsmall_query.fvecs";
 char const *GROUNDTRUTH_DATASET_PATH =
     "../sift/siftsmall/siftsmall_groundtruth.ivecs";
+
+Encryption::Encryption(seal::EncryptionParameters encrypt_parms,
+                       const seal::SEALContext &seal_ctx)
+    : EncryptedParms(std::move(encrypt_parms)), KeyGen(seal_ctx),
+      SecretKey(KeyGen.secret_key()), SerRelinKeys(KeyGen.create_relin_keys()),
+      Encryptor(seal_ctx, SecretKey), Decryptor(seal_ctx, SecretKey),
+      BatchEncoder(seal_ctx) {}
 
 Client::Client(size_t num_queries) { m_NumQueries = num_queries; }
 
@@ -27,18 +35,122 @@ std::vector<float> Client::get_query() {
         throw std::runtime_error("insufficient queries present in dataset");
     }
 
+    // for (const float &ele : parsed_precise_queries) {
+    //     printf("%f, ", ele);
+    // }
+    // printf("\n");
+
     return parsed_precise_queries;
 }
 
-std::vector<float> Client::get_centroids() {
+std::pair<std::vector<float>, std::vector<seal::seal_byte>>
+Client::get_centroids_encrypted_parms() {
     cpr::Response r = cpr::Get(cpr::Url(server_addr + "query"));
 
     const nlohmann::json resp = nlohmann::json::parse(r.text);
     std::vector<float> centroids =
         resp.at("centroids").get<std::vector<float>>();
+    std::vector<seal::seal_byte> encrypted_parms =
+        resp.at("encryptedParms").get<std::vector<seal::seal_byte>>();
+    m_Subquantizers = resp.at("subquantizers").get<size_t>();
 
     m_Nlist = centroids.size() / m_PreciseVectorDimensions;
-    return centroids;
+
+    // SPDLOG_INFO("Fetched query parms-> m_Subquantizers = {}",
+    // m_Subquantizers);
+
+    return {centroids, encrypted_parms};
+}
+
+void Client::init_client_encrypt_parms(
+    const std::vector<seal::seal_byte> &serde_encrypt_parms) {
+
+    seal::EncryptionParameters encrypt_parms;
+    encrypt_parms.load(
+        reinterpret_cast<const seal::seal_byte *>(serde_encrypt_parms.data()),
+        serde_encrypt_parms.size());
+    seal::SEALContext seal_ctx(encrypt_parms);
+
+    m_OptEncryption.emplace(encrypt_parms, seal_ctx);
+
+    // SPDLOG_INFO("Encrypted parms: Poly modulus degree = {}",
+    //             m_OptEncryption->m_EncryptedParms.poly_modulus_degree());
+}
+
+std::vector<
+    std::pair<std::vector<seal::seal_byte>, std::vector<seal::seal_byte>>>
+Client::compute_encrypted_subvector_components(
+    std::vector<float> &precise_queries) const {
+    std::vector<
+        std::pair<std::vector<seal::seal_byte>, std::vector<seal::seal_byte>>>
+        serde_subvectors;
+    serde_subvectors.reserve(m_NumQueries * m_Subquantizers);
+
+    if (!m_OptEncryption.has_value()) {
+        SPDLOG_ERROR("Encryption uninitialised");
+        throw std::runtime_error("Encryption uninitialised");
+    }
+
+    size_t elements_per_subvector = m_PreciseVectorDimensions / m_Subquantizers;
+    if (elements_per_subvector >
+        m_OptEncryption.value().EncryptedParms.poly_modulus_degree()) {
+        SPDLOG_ERROR("Elements per subvector exceeds poly modulus degree");
+        throw std::runtime_error(
+            "Elements per subvector exceeds poly modulus degree");
+    }
+
+    std::vector<uint64_t> int_query_subvector(elements_per_subvector, 0ULL);
+
+    for (int i = 0; i < m_Subquantizers * m_NumQueries; i++) {
+        std::span<float> query_subvector_view(precise_queries.data() +
+                                                  i * elements_per_subvector,
+                                              elements_per_subvector);
+
+        float subvector_len_squared = 0;
+        for (int j = 0; j < elements_per_subvector; j++) {
+            int_query_subvector[j] = static_cast<uint64_t>(
+                query_subvector_view[j] * BFV_SCALING_FACTOR);
+            subvector_len_squared += (std::pow(query_subvector_view[j], 2));
+        }
+        subvector_len_squared *= BFV_SCALING_FACTOR;
+
+        seal::Plaintext pt_query_subvector;
+        m_OptEncryption.value().BatchEncoder.encode(int_query_subvector,
+                                                    pt_query_subvector);
+        int_query_subvector.clear();
+
+        seal::Serializable<seal::Ciphertext> encrypted_query_subvector =
+            m_OptEncryption.value().Encryptor.encrypt_symmetric(
+                pt_query_subvector);
+
+        std::vector<seal::seal_byte> serde_query_subvector;
+        serde_query_subvector.resize(
+            static_cast<size_t>(encrypted_query_subvector.save_size()));
+        encrypted_query_subvector.save(
+            reinterpret_cast<seal::seal_byte *>(serde_query_subvector.data()),
+            serde_query_subvector.size());
+
+        uint64_t u64_subvector_len =
+            static_cast<uint64_t>(subvector_len_squared);
+        seal::Plaintext pt_subvector_len_squared(
+            seal::util::uint_to_hex_string(&u64_subvector_len, std::size_t(1)));
+        seal::Serializable<seal::Ciphertext> encrypted_subvector_len_squared =
+            m_OptEncryption.value().Encryptor.encrypt_symmetric(
+                pt_subvector_len_squared);
+
+        std::vector<seal::seal_byte> serde_subvector_len_squared;
+        serde_subvector_len_squared.resize(
+            static_cast<size_t>(encrypted_subvector_len_squared.save_size()));
+        encrypted_subvector_len_squared.save(
+            reinterpret_cast<seal::seal_byte *>(
+                serde_subvector_len_squared.data()),
+            serde_subvector_len_squared.size());
+
+        serde_subvectors.push_back(
+            {serde_query_subvector, serde_subvector_len_squared});
+    }
+
+    return serde_subvectors;
 }
 
 std::vector<faiss_idx_t>

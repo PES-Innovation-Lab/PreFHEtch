@@ -19,16 +19,16 @@ void Query::query(
 
     std::shared_ptr<Server> srvr = Server::getInstance();
 
+    nlohmann::json centroids_json;
     retrieve_centroids_timer.StartTimer();
-    std::vector<float> centroids = srvr->retrieve_centroids();
+    centroids_json["centroids"] = srvr->retrieve_centroids();
     retrieve_centroids_timer.StopTimer();
 
     serde_parms_timer.StartTimer();
-    std::vector<seal::seal_byte> serde_parms = srvr->serialise_parms();
+    centroids_json["encryptedParms"] = srvr->serialise_parms();
     serde_parms_timer.StopTimer();
 
-    nlohmann::json centroids_json;
-    centroids_json["centroids"] = centroids;
+    centroids_json["subquantizers"] = srvr->SubQuantizers;
 
     const HttpResponsePtr resp = HttpResponse::newHttpResponse();
     resp->setContentTypeString("application/json");
