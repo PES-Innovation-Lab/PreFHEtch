@@ -30,8 +30,8 @@ std::string INDEX_FILE;
 
 Server::Server() : m_EncryptionParms(seal::scheme_type::bfv) {
     std::ostringstream oss;
-    oss << "IVF" << m_Nlist << "_PQ" << m_SubQuantizers << "_SUB_QUANTIZER_SIZE"
-        << m_SubQuantizerSize << ".faiss";
+    oss << "IVF" << Nlist << "_PQ" << SubQuantizers << "_SUB_QUANTIZER_SIZE"
+        << SubQuantizerSize << ".faiss";
     INDEX_FILE = oss.str();
 
     m_PolyModulusDegree = 4096;
@@ -64,8 +64,8 @@ void Server::init_index() {
 
         m_Quantizer = faiss::IndexFlatL2(m_PreciseVectorDimensions);
         m_Index = std::make_unique<faiss::IndexIVFPQ>(
-            &m_Quantizer, m_PreciseVectorDimensions, m_Nlist, m_SubQuantizers,
-            m_SubQuantizerSize);
+            &m_Quantizer, m_PreciseVectorDimensions, Nlist, SubQuantizers,
+            SubQuantizerSize);
 
         SPDLOG_INFO("Training on {} vectors", parsed_training_count);
         m_Index->train(parsed_training_count, parsed_train_set.data());
@@ -102,9 +102,9 @@ void Server::init_index() {
 
 std::vector<float> Server::retrieve_centroids() const {
     std::vector<float> centroids;
-    centroids.resize(m_Nlist * m_PreciseVectorDimensions);
+    centroids.resize(Nlist * m_PreciseVectorDimensions);
 
-    for (int i = 0; i < m_Nlist; i++) {
+    for (int i = 0; i < Nlist; i++) {
         m_Index->quantizer->reconstruct(i, centroids.data() +
                                                (i * m_PreciseVectorDimensions));
     }
@@ -114,6 +114,11 @@ std::vector<float> Server::retrieve_centroids() const {
 
 std::vector<seal::seal_byte> Server::serialise_parms() const {
     std::vector<seal::seal_byte> serde_parms;
+    serde_parms.resize(static_cast<size_t>(m_EncryptionParms.save_size()));
+    m_EncryptionParms.save(
+        reinterpret_cast<seal::seal_byte *>(serde_parms.data()),
+        serde_parms.size());
+
     return serde_parms;
 }
 

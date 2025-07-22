@@ -2,6 +2,8 @@
 
 #include <vector>
 
+#include <seal/seal.h>
+
 #include "client_server_utils.h"
 
 const std::string server_addr = "http://localhost:8080/";
@@ -11,12 +13,31 @@ struct DistanceIndexData {
     faiss_idx_t idx;
 };
 
+class Encryption {
+  public:
+    seal::EncryptionParameters EncryptedParms;
+    seal::KeyGenerator KeyGen;
+    // Use secret key mode to improve efficiency
+    seal::SecretKey SecretKey;
+    seal::Serializable<seal::RelinKeys> SerRelinKeys;
+
+    seal::Encryptor Encryptor;
+    seal::Decryptor Decryptor;
+    seal::BatchEncoder BatchEncoder;
+
+    Encryption(seal::EncryptionParameters encrypt_parms,
+               const seal::SEALContext &context);
+};
+
 class Client {
   private:
     size_t m_PreciseVectorDimensions;
     size_t m_NumQueries;
 
     size_t m_Nlist;
+    size_t m_Subquantizers;
+
+    std::optional<Encryption> m_OptEncryption;
 
   public:
     explicit Client(size_t num_queries);
@@ -25,12 +46,25 @@ class Client {
     void encrypt_query();
 
     // Returns NLIST * NQUERY centroids
-    std::vector<float> get_centroids();
+    std::pair<std::vector<float>, std::vector<seal::seal_byte>>
+    get_centroids_encrypted_parms();
+
+    void init_client_encrypt_parms(
+        const std::vector<seal::seal_byte> &serde_encrypt_parms);
 
     // Return sorted NLIST centroids for each of the NQUERY queries
     std::vector<faiss_idx_t>
     sort_nearest_centroids(std::vector<float> &precise_queries,
                            std::vector<float> &centroids) const;
+
+    // Returns a vector (NQUERY x SUBQUANTIZER) of pairs of serialized
+    // ciphertexts
+    // Pair.1 - encrypted precise subvector
+    // Pair.2 - encrypted subvector squared length
+    std::vector<
+        std::pair<std::vector<seal::seal_byte>, std::vector<seal::seal_byte>>>
+    compute_encrypted_subvector_components(
+        std::vector<float> &precise_queries) const;
 
     void get_encrypted_coarse_scores(
         const std::vector<std::vector<faiss_idx_t>>

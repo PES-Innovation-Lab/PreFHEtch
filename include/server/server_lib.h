@@ -11,10 +11,12 @@
 
 // Singleton class pattern for static access across all controllers
 class Server {
+  public:
+    const size_t Nlist = 6;
+    const size_t SubQuantizers = 32;
+    const size_t SubQuantizerSize = 8;
+
   private:
-    const size_t m_Nlist = 256;
-    const size_t m_SubQuantizers = 32;
-    const size_t m_SubQuantizerSize = 8;
     size_t m_PreciseVectorDimensions;
     size_t m_NBase;
 

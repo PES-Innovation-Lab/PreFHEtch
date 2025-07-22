@@ -11,6 +11,7 @@ int main() {
     Timer get_query_timer;
     Timer get_centroids_timer;
     Timer sort_centroids_timer;
+    Timer encrypt_query_subvector_lens_timer;
 
     SPDLOG_INFO("Starting query and timers");
 
@@ -27,15 +28,14 @@ int main() {
     SPDLOG_INFO("Query vectors obtained successfully, time(microseconds) = {}",
                 get_query_timer.getDurationMicroseconds());
 
-    // std::vector<> encrypted_precise_queries;
-    // TODO
-
     get_centroids_timer.StartTimer();
-    std::vector<float> centroids = client.get_centroids();
+    auto [centroids, encrypted_parms] = client.get_centroids_encrypted_parms();
     get_centroids_timer.StopTimer();
     SPDLOG_INFO(
         "Fetched centroids from server successfully, time(microseconds) = {}",
         get_centroids_timer.getDurationMicroseconds());
+
+    client.init_client_encrypt_parms(encrypted_parms);
 
     sort_centroids_timer.StartTimer();
     std::vector<faiss_idx_t> computed_nearest_centroids_idx =
@@ -44,6 +44,13 @@ int main() {
     SPDLOG_INFO(
         "Computed nearest centroids successfully, time(microseconds) = {}",
         sort_centroids_timer.getDurationMicroseconds());
+
+    encrypt_query_subvector_lens_timer.StartTimer();
+    auto test = client.compute_encrypted_subvector_components(precise_queries);
+    encrypt_query_subvector_lens_timer.StopTimer();
+    SPDLOG_INFO("Computed encrypted subvector and squared lengths, "
+                "time(microseconds) = {}",
+                encrypt_query_subvector_lens_timer.getDurationMicroseconds());
 
     // Send nearest centroids to server to compute coarse scores (distances)
     // std::vector<std::vector<float>> coarse_distance_scores;
