@@ -77,14 +77,14 @@ void Client::init_client_encrypt_parms(
     //             m_OptEncryption->m_EncryptedParms.poly_modulus_degree());
 }
 
-std::vector<
-    std::pair<std::vector<seal::seal_byte>, std::vector<seal::seal_byte>>>
+std::pair<std::vector<std::vector<seal::seal_byte>>,
+          std::vector<std::vector<seal::seal_byte>>>
 Client::compute_encrypted_subvector_components(
     std::vector<float> &precise_queries) const {
-    std::vector<
-        std::pair<std::vector<seal::seal_byte>, std::vector<seal::seal_byte>>>
-        serde_subvectors;
+    std::vector<std::vector<seal::seal_byte>> serde_subvectors;
+    std::vector<std::vector<seal::seal_byte>> serde_subvectors_squared;
     serde_subvectors.reserve(m_NumQueries * m_Subquantizers);
+    serde_subvectors_squared.reserve(m_NumQueries * m_Subquantizers);
 
     if (!m_OptEncryption.has_value()) {
         SPDLOG_ERROR("Encryption uninitialised");
@@ -124,11 +124,9 @@ Client::compute_encrypted_subvector_components(
                 pt_query_subvector);
 
         std::vector<seal::seal_byte> serde_query_subvector;
-        serde_query_subvector.resize(
-            static_cast<size_t>(encrypted_query_subvector.save_size()));
-        encrypted_query_subvector.save(
-            reinterpret_cast<seal::seal_byte *>(serde_query_subvector.data()),
-            serde_query_subvector.size());
+        serde_query_subvector.resize(encrypted_query_subvector.save_size());
+        encrypted_query_subvector.save(serde_query_subvector.data(),
+                                       serde_query_subvector.size());
 
         uint64_t u64_subvector_len =
             static_cast<uint64_t>(subvector_len_squared);
@@ -140,17 +138,16 @@ Client::compute_encrypted_subvector_components(
 
         std::vector<seal::seal_byte> serde_subvector_len_squared;
         serde_subvector_len_squared.resize(
-            static_cast<size_t>(encrypted_subvector_len_squared.save_size()));
+            encrypted_subvector_len_squared.save_size());
         encrypted_subvector_len_squared.save(
-            reinterpret_cast<seal::seal_byte *>(
-                serde_subvector_len_squared.data()),
+            (serde_subvector_len_squared.data()),
             serde_subvector_len_squared.size());
 
-        serde_subvectors.push_back(
-            {serde_query_subvector, serde_subvector_len_squared});
+        serde_subvectors.push_back(serde_query_subvector);
+        serde_subvectors_squared.push_back(serde_subvector_len_squared);
     }
 
-    return serde_subvectors;
+    return {serde_subvectors, serde_subvectors_squared};
 }
 
 std::vector<faiss_idx_t>
@@ -206,43 +203,39 @@ Client::sort_nearest_centroids(std::vector<float> &precise_queries,
     return computed_nearest_centroids_idx;
 }
 
-void get_coarse_scores(
-    const std::array<std::vector<DistanceIndexData>, NQUERY> &sorted_centroids,
-    // Sending precise query temporarily, will be sending coarse vector in a
-    // future implementation
-    const std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, NQUERY>
-        &precise_query,
+void Client::get_encrypted_coarse_scores(
+    std::vector<std::vector<seal::seal_byte>> &encrypted_subvectors,
+    std::vector<std::vector<seal::seal_byte>> &encrypted_subvectors_square,
     std::vector<float> &coarse_scores,
     std::vector<faiss_idx_t> &coarse_vectors_idx,
-    std::array<size_t, NQUERY> &list_sizes_per_query) {
+    std::vector<size_t> &list_sizes_per_query_coarse) {
 
-    std::array<std::array<faiss_idx_t, NPROBE>, NQUERY> nearest_centroids_id;
+    std::vector<seal::seal_byte> sk(
+        m_OptEncryption.value().SecretKey.save_size());
 
-    for (int i = 0; i < NQUERY; i++) {
-        if (NPROBE > sorted_centroids[i].size()) {
-            SPDLOG_ERROR("Centroids count is not equal to NPROBE");
-            throw std::runtime_error("Centroids count is not equal to NPROBE");
-        }
-        for (int j = 0; j < NPROBE; j++) {
-            nearest_centroids_id[i][j] = sorted_centroids[i][j].idx;
-        }
-    }
+    m_OptEncryption.value().SecretKey.save(sk.data(), sk.size());
 
     nlohmann::json coarse_search_json;
-    coarse_search_json["preciseQuery"] = precise_query;
-    coarse_search_json["nearestCentroidIndexes"] = nearest_centroids_id;
+    coarse_search_json["numQueries"] = m_NumQueries;
+    coarse_search_json["subvectors"] = encrypted_subvectors;
+    coarse_search_json["subvectorsSquared"] = encrypted_subvectors_square;
+    coarse_search_json["secretKey"] = sk;
+
+    SPDLOG_INFO("Size of the coarse search request = {}",
+                coarse_search_json.dump().size());
 
     cpr::Response r = cpr::Post(cpr::Url(server_addr + "coarsesearch"),
                                 cpr::Body(coarse_search_json.dump()));
 
     nlohmann::json resp = nlohmann::json::parse(r.text);
-    // SPDLOG_INFO("Response = {}", resp.dump());
-
-    coarse_scores = resp.at("coarseDistanceScores").get<std::vector<float>>();
-    coarse_vectors_idx =
-        resp.at("coarseVectorIndexes").get<std::vector<faiss_idx_t>>();
-    list_sizes_per_query =
-        resp.at("listSizesPerQuery").get<std::array<size_t, NQUERY>>();
+    SPDLOG_INFO("Response = {}", resp.dump());
+    //
+    // coarse_scores =
+    // resp.at("coarseDistanceScores").get<std::vector<float>>();
+    // coarse_vectors_idx =
+    //     resp.at("coarseVectorIndexes").get<std::vector<faiss_idx_t>>();
+    // list_sizes_per_query =
+    //     resp.at("listSizesPerQuery").get<std::array<size_t, NQUERY>>();
 }
 
 void compute_nearest_coarse_vectors(

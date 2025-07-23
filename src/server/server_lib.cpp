@@ -43,9 +43,15 @@ Server::Server() : m_EncryptionParms(seal::scheme_type::bfv) {
         seal::CoeffModulus::BFVDefault(m_PolyModulusDegree));
     m_EncryptionParms.set_plain_modulus(seal::PlainModulus::Batching(
         m_PolyModulusDegree, m_PlaintextModulusSize));
+
+    seal::SEALContext seal_ctx(m_EncryptionParms);
+    SPDLOG_ERROR("Encryption params errors = {}",
+                 seal_ctx.parameter_error_message());
 }
 
 void Server::run_webserver() {
+    // TODO: Look into this
+    drogon::app().setClientMaxBodySize(500 * 1024 * 1024);
     drogon::app().addListener(SERVER_ADDRESS, SERVER_PORT);
 
     SPDLOG_INFO("Server listening on {}:{}", SERVER_ADDRESS, SERVER_PORT);
@@ -121,34 +127,37 @@ std::vector<seal::seal_byte> Server::serialise_parms() const {
 
     return serde_parms;
 }
-
-void Server::coarseSearch(
-    const std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, NQUERY>
-        &precise_query,
-    const std::array<std::array<faiss::idx_t, NPROBE>, NQUERY>
-        &nearest_centroid_idx,
-    std::vector<float> &coarse_distance_scores,
-    std::vector<faiss::idx_t> &coarse_distance_indexes,
-    std::array<size_t, NQUERY> &list_sizes_per_query) const {
-    // Reset nprobe, previously set by auto-tuning
-    m_Index->nprobe = NPROBE;
-
-    coarse_distance_scores.resize(NBASE * NQUERY);
-    coarse_distance_indexes.resize(NBASE * NQUERY);
-
-    m_Index->search_encrypted(
-        NQUERY, precise_query.data()->data(),
-        const_cast<faiss::idx_t *>(nearest_centroid_idx.data()->data()),
-        coarse_distance_scores.data(), coarse_distance_indexes.data(),
-        list_sizes_per_query.data());
-
-    size_t coarse_vectors_count = std::accumulate(
-        list_sizes_per_query.begin(), list_sizes_per_query.end(), 0);
-    coarse_distance_scores.resize(coarse_vectors_count);
-    coarse_distance_indexes.resize(coarse_vectors_count);
-
-    // SPDLOG_INFO("Coarse search complete");
-}
+//
+// void Server::coarseSearch(
+//     std::vector<float> precise_queries,
+//     std::vector<faiss::idx_t> nearest_centroids,
+//     std::vector<float> &coarse_distance_scores,
+//     std::vector<faiss::idx_t> &coarse_distance_indexes,
+//     std::array<size_t, NQUERY> &list_sizes_per_query) const {
+//
+//     // Reset nprobe, previously set by auto-tuning
+//     // m_Index->nprobe = NPROBE;
+//
+//     if (m_Index->nprobe != NPROBE) {
+//         SPDLOG_ERROR("m_Index->nprobe != NPROBE");
+//         throw std::runtime_error("m_Index->nprobe != NPROBE");
+//     }
+//
+//     coarse_distance_scores.resize(NBASE * NQUERY);
+//     coarse_distance_indexes.resize(NBASE * NQUERY);
+//
+//     m_Index->search_encrypted(
+//         NQUERY, precise_queries.data(), nearest_centroids.data(),
+//         coarse_distance_scores.data(), coarse_distance_indexes.data(),
+//         list_sizes_per_query.data());
+//
+//     size_t coarse_vectors_count = std::accumulate(
+//         list_sizes_per_query.begin(), list_sizes_per_query.end(), 0);
+//     coarse_distance_scores.resize(coarse_vectors_count);
+//     coarse_distance_indexes.resize(coarse_vectors_count);
+//
+//     SPDLOG_INFO("Coarse search complete");
+// }
 
 void Server::preciseSearch(
     const std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, NQUERY>
@@ -206,4 +215,68 @@ void Server::preciseVectorPIR(
     }
 
     // SPDLOG_INFO("Precise vector PIR completed");
+}
+
+std::vector<faiss::idx_t> Server::decrypt_centroids(
+    std::vector<seal::seal_byte> &serde_encrypted_centroids,
+    std::vector<seal::seal_byte> &enc_sk) const {
+
+    seal::SEALContext seal_ctx(m_EncryptionParms);
+    seal::BatchEncoder batch_encoder(seal_ctx);
+    seal::SecretKey sk;
+    sk.load(seal_ctx, enc_sk.data(), enc_sk.size());
+
+    seal::Decryptor decryptor(seal_ctx, sk);
+    seal::BatchEncoder encoder(seal_ctx);
+
+    seal::Ciphertext encrypted_centroids;
+    seal::Plaintext decrypted_centroids;
+    std::vector<faiss::idx_t> nearest_centroids;
+    encrypted_centroids.load(
+        seal_ctx,
+        reinterpret_cast<seal::seal_byte *>(serde_encrypted_centroids.data()),
+        serde_encrypted_centroids.size());
+    decryptor.decrypt(encrypted_centroids, decrypted_centroids);
+    encoder.decode(decrypted_centroids, nearest_centroids);
+
+    return nearest_centroids;
+}
+
+std::vector<float> Server::decrypt_subvectors(
+    std::vector<std::vector<seal::seal_byte>> &serde_encrypted_subvectors,
+    std::vector<std::vector<seal::seal_byte>>
+        &serde_encrypted_subvectors_squared,
+    std::vector<seal::seal_byte> &enc_sk, size_t numQueries) const {
+
+    std::vector<float> precise_queries;
+
+    seal::SEALContext seal_ctx(m_EncryptionParms);
+    seal::BatchEncoder batch_encoder(seal_ctx);
+    seal::SecretKey sk;
+    sk.load(seal_ctx, enc_sk.data(), enc_sk.size());
+
+    seal::Decryptor decryptor(seal_ctx, sk);
+    seal::BatchEncoder encoder(seal_ctx);
+
+    for (std::vector<seal::seal_byte> &subvector : serde_encrypted_subvectors) {
+        seal::Ciphertext encrypted_subvector;
+        seal::Plaintext decrypted_subvector;
+        std::vector<uint64_t> decoded_subvector;
+        encrypted_subvector.load(seal_ctx, subvector.data(), subvector.size());
+        decryptor.decrypt(encrypted_subvector, decrypted_subvector);
+        encoder.decode(decrypted_subvector, decoded_subvector);
+
+        precise_queries.insert(precise_queries.end(), decoded_subvector.begin(),
+                               decoded_subvector.end());
+    }
+
+    for (int k = 0; k < numQueries; k++) {
+        for (int i = 0; i < m_PreciseVectorDimensions; i++) {
+            printf("%f, ", precise_queries[k * m_PreciseVectorDimensions + i]);
+        }
+        printf("\n");
+    }
+    printf("\n");
+
+    return precise_queries;
 }

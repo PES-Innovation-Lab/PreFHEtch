@@ -57,23 +57,21 @@ class Client {
     sort_nearest_centroids(std::vector<float> &precise_queries,
                            std::vector<float> &centroids) const;
 
-    // Returns a vector (NQUERY x SUBQUANTIZER) of pairs of serialized
+    // Returns (NQUERY x SUBQUANTIZER) pairs of serialized
     // ciphertexts
-    // Pair.1 - encrypted precise subvector
-    // Pair.2 - encrypted subvector squared length
-    std::vector<
-        std::pair<std::vector<seal::seal_byte>, std::vector<seal::seal_byte>>>
+    // Pair.1 - vector of encrypted subvectors
+    // Pair.2 - vector of encrypted squared length of subvectors
+    std::pair<std::vector<std::vector<seal::seal_byte>>,
+              std::vector<std::vector<seal::seal_byte>>>
     compute_encrypted_subvector_components(
         std::vector<float> &precise_queries) const;
 
     void get_encrypted_coarse_scores(
-        const std::vector<std::vector<faiss_idx_t>>
-            &computed_nearest_centroids_idx,
-        const std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, NQUERY>
-            &precise_query,
+        std::vector<std::vector<seal::seal_byte>> &encrypted_subvectors,
+        std::vector<std::vector<seal::seal_byte>> &encrypted_subvectors_square,
         std::vector<float> &coarse_scores,
         std::vector<faiss_idx_t> &coarse_vectors_idx,
-        std::array<size_t, NQUERY> &list_sizes_per_query_coarse);
+        std::vector<size_t> &list_sizes_per_query_coarse);
 
     void compute_nearest_coarse_vectors(
         const std::vector<float> &coarse_distance_scores,
