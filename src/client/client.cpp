@@ -46,20 +46,22 @@ int main() {
         sort_centroids_timer.getDurationMicroseconds());
 
     encrypt_query_subvector_lens_timer.StartTimer();
-    auto test = client.compute_encrypted_subvector_components(precise_queries);
+    auto [encrypted_subvectors, encrypted_subvectors_squared] =
+        client.compute_encrypted_subvector_components(precise_queries);
     encrypt_query_subvector_lens_timer.StopTimer();
     SPDLOG_INFO("Computed encrypted subvector and squared lengths, "
                 "time(microseconds) = {}",
                 encrypt_query_subvector_lens_timer.getDurationMicroseconds());
 
     // Send nearest centroids to server to compute coarse scores (distances)
-    // std::vector<std::vector<float>> coarse_distance_scores;
-    // std::vector<std::vector<faiss_idx_t>> coarse_vector_indexes;
-    // std::vector<size_t> list_sizes_per_query_coarse;
-    // get_coarse_scores(nearest_centroids, precise_query,
-    // coarse_distance_scores,
-    //                   coarse_vector_indexes, list_sizes_per_query_coarse);
-    // SPDLOG_INFO("Received coarse distance scores successfully");
+    std::vector<float> coarse_distance_scores;
+    std::vector<faiss_idx_t> coarse_vector_indexes;
+    std::vector<size_t> list_sizes_per_query_coarse;
+    client.get_encrypted_coarse_scores(
+        encrypted_subvectors, encrypted_subvectors_squared,
+        coarse_distance_scores, coarse_vector_indexes,
+        list_sizes_per_query_coarse);
+    SPDLOG_INFO("Received coarse distance scores successfully");
 
     // std::array<std::vector<DistanceIndexData>, NQUERY>
     // nearest_coarse_vectors; compute_nearest_coarse_vectors(

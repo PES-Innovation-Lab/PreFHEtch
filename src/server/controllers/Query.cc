@@ -48,37 +48,48 @@ void Query::query(
 void Query::coarse_search(
     const HttpRequestPtr &req,
     std::function<void(const HttpResponsePtr &)> &&callback) const {
-    // SPDLOG_INFO("Received request on /coarsesearch");
+    SPDLOG_INFO("Received request on /coarsesearch");
 
     nlohmann::json req_body = nlohmann::json::parse(req->body());
-    const std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, NQUERY>
-        precise_query =
-            req_body.at("preciseQuery")
-                .get<std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>,
-                                NQUERY>>();
-    std::array<std::array<faiss_idx_t, NPROBE>, NQUERY> nearest_centroids =
-        req_body.at("nearestCentroidIndexes")
-            .get<std::array<std::array<faiss_idx_t, NPROBE>, NQUERY>>();
+    size_t numQueries = req_body["numQueries"].get<size_t>();
+    auto encrypted_subvectors =
+        req_body["subvectors"].get<std::vector<std::vector<seal::seal_byte>>>();
+    auto encrypted_subvectors_squared =
+        req_body["subvectorsSquared"]
+            .get<std::vector<std::vector<seal::seal_byte>>>();
+    // auto encrypted_centroids =
+    //     req_body["centroids"].get<std::vector<seal::seal_byte>>();
 
-    std::vector<float> coarse_distance_scores;
-    std::vector<faiss::idx_t> coarse_vector_indexes;
-    std::array<size_t, NQUERY> list_sizes_per_query;
+    auto secret_key = req_body["secretKey"].get<std::vector<seal::seal_byte>>();
 
     std::shared_ptr<Server> server = Server::getInstance();
-    server->coarseSearch(precise_query, nearest_centroids,
-                         coarse_distance_scores, coarse_vector_indexes,
-                         list_sizes_per_query);
+    // Decrypting data temporarily until PreFHEtch-faiss updated to handle
+    // encrypted data
+    // std::vector<faiss::idx_t> nearest_centroids =
+    //     server->decrypt_centroids(encrypted_centroids, secret_key);
+    std::vector<float> precise_queries = server->decrypt_subvectors(
+        encrypted_subvectors, encrypted_subvectors_squared, secret_key,
+        numQueries);
+
+    // std::vector<float> coarse_distance_scores;
+    // std::vector<faiss::idx_t> coarse_vector_indexes;
+    // std::array<size_t, NQUERY> list_sizes_per_query;
+    //
+    // server->coarseSearch(precise_queries, nearest_centroids,
+    //                      coarse_distance_scores, coarse_vector_indexes,
+    //                      list_sizes_per_query);
 
     nlohmann::json response;
-    response["coarseDistanceScores"] = coarse_distance_scores;
-    response["coarseVectorIndexes"] = coarse_vector_indexes;
-    response["listSizesPerQuery"] = list_sizes_per_query;
+    // response["coarseDistanceScores"] = coarse_distance_scores;
+    // response["coarseVectorIndexes"] = coarse_vector_indexes;
+    // response["listSizesPerQuery"] = list_sizes_per_query;
+    response["response"] = "ok";
     const HttpResponsePtr resp = HttpResponse::newHttpResponse();
     resp->setContentTypeString("application/json");
     resp->setBody(response.dump());
 
     callback(resp);
-    // SPDLOG_INFO("Exiting from coarse search handler");
+    SPDLOG_INFO("Exiting from coarse search handler");
 }
 
 void Query::precise_search(

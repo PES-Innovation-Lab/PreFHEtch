@@ -12,7 +12,7 @@
 // Singleton class pattern for static access across all controllers
 class Server {
   public:
-    const size_t Nlist = 6;
+    const size_t Nlist = 256;
     const size_t SubQuantizers = 32;
     const size_t SubQuantizerSize = 8;
 
@@ -42,15 +42,13 @@ class Server {
     std::vector<float> retrieve_centroids() const;
     std::vector<seal::seal_byte> serialise_parms() const;
 
-    void coarseSearch(
-        const std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, NQUERY>
-            &precise_query,
-        const std::array<std::array<faiss::idx_t, NPROBE>, NQUERY>
-            &nearest_centroid_idx,
-        std::vector<float> &coarse_distance_scores,
-        std::vector<faiss::idx_t> &coarse_distance_indexes,
-        std::array<size_t, NQUERY> &list_sizes_per_query) const;
-
+    // void Server::coarseSearch(
+    //     std::vector<float> precise_queries,
+    //     std::vector<faiss::idx_t> nearest_centroids,
+    //     std::vector<float> &coarse_distance_scores,
+    //     std::vector<faiss::idx_t> &coarse_distance_indexes,
+    //     std::array<size_t, NQUERY> &list_sizes_per_query) const;
+    //
     void preciseSearch(
         const std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, NQUERY>
             &precise_query,
@@ -64,4 +62,13 @@ class Server {
             &k_nearest_precise_vectors_idx,
         std::array<std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, K>,
                    NQUERY> &query_results);
+
+    // Temp
+    std::vector<faiss::idx_t>
+    decrypt_centroids(std::vector<seal::seal_byte> &,
+                      std::vector<seal::seal_byte> &) const;
+    std::vector<float>
+    decrypt_subvectors(std::vector<std::vector<seal::seal_byte>> &,
+                       std::vector<std::vector<seal::seal_byte>> &,
+                       std::vector<seal::seal_byte> &, size_t) const;
 };
