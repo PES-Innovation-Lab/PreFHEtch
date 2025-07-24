@@ -31,16 +31,17 @@ class Encryption {
 
 class Client {
   private:
-    size_t m_PreciseVectorDimensions;
     size_t m_NumQueries;
+    size_t m_NProbe;
 
+    size_t m_PreciseVectorDimensions;
     size_t m_Nlist;
     size_t m_Subquantizers;
 
     std::optional<Encryption> m_OptEncryption;
 
   public:
-    explicit Client(size_t num_queries);
+    explicit Client(size_t num_queries, size_t nprobe);
 
     std::vector<float> get_query();
     void encrypt_query();
@@ -52,23 +53,27 @@ class Client {
     void init_client_encrypt_parms(
         const std::vector<seal::seal_byte> &serde_encrypt_parms);
 
-    // Return sorted NLIST centroids for each of the NQUERY queries
-    std::vector<faiss_idx_t>
+    // Return sorted NLIST centroids for each of the NQUERY queries and sorted
+    // NPROBE centroids for each of the NQUERIES
+    std::pair<std::vector<faiss_idx_t>, std::vector<faiss_idx_t>>
     sort_nearest_centroids(std::vector<float> &precise_queries,
                            std::vector<float> &centroids) const;
 
-    // Returns (NQUERY x SUBQUANTIZER) pairs of serialized
-    // ciphertexts
-    // Pair.1 - vector of encrypted subvectors
-    // Pair.2 - vector of encrypted squared length of subvectors
-    std::pair<std::vector<std::vector<seal::seal_byte>>,
-              std::vector<std::vector<seal::seal_byte>>>
-    compute_encrypted_subvector_components(
-        std::vector<float> &precise_queries) const;
+    // Returns NQUERY pairs of serialize ciphertexts
+    // Pair.1 - vector of encrypted residual queries for nqueries
+    // Pair.2 - vector of encrypted residual squared lengths for nqueries
+    std::pair<std::vector<std::vector<std::vector<seal::seal_byte>>>,
+              std::vector<std::vector<std::vector<seal::seal_byte>>>>
+    compute_encrypted_coarse_search_parms(
+        std::vector<float> &precise_queries, std::vector<float> &centroids,
+        std::vector<faiss_idx_t> &nearest_centroids_idx) const;
 
     void get_encrypted_coarse_scores(
-        std::vector<std::vector<seal::seal_byte>> &encrypted_subvectors,
-        std::vector<std::vector<seal::seal_byte>> &encrypted_subvectors_square,
+        std::vector<std::vector<std::vector<seal::seal_byte>>>
+            &serde_encrypted_vecs,
+        std::vector<std::vector<std::vector<seal::seal_byte>>>
+            &serde_encrypted_vecs_squared,
+        std::vector<faiss_idx_t> &nprobe_nearest_centroids_idx,
         std::vector<float> &coarse_scores,
         std::vector<faiss_idx_t> &coarse_vectors_idx,
         std::vector<size_t> &list_sizes_per_query_coarse);

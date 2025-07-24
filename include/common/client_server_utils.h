@@ -19,7 +19,7 @@ constexpr int64_t NLIST = 256;
 constexpr int64_t SUB_QUANTIZERS = 32;
 constexpr int64_t SUB_QUANTIZER_SIZE = 8;
 
-constexpr int64_t BFV_SCALING_FACTOR = 1000;
+constexpr int64_t BFV_SCALING_FACTOR = 100;
 using faiss_idx_t = int64_t;
 
 template <typename T>

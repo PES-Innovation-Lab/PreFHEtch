@@ -51,25 +51,26 @@ void Query::coarse_search(
     SPDLOG_INFO("Received request on /coarsesearch");
 
     nlohmann::json req_body = nlohmann::json::parse(req->body());
-    size_t numQueries = req_body["numQueries"].get<size_t>();
-    auto encrypted_subvectors =
-        req_body["subvectors"].get<std::vector<std::vector<seal::seal_byte>>>();
-    auto encrypted_subvectors_squared =
-        req_body["subvectorsSquared"]
-            .get<std::vector<std::vector<seal::seal_byte>>>();
-    // auto encrypted_centroids =
-    //     req_body["centroids"].get<std::vector<seal::seal_byte>>();
+    size_t num_queries = req_body["numQueries"].get<size_t>();
+    auto encrypted_residual_vectors =
+        req_body["residualVecs"]
+            .get<std::vector<std::vector<std::vector<seal::seal_byte>>>>();
+    auto encrypted_residual_vectors_squared =
+        req_body["residualVecsSquared"]
+            .get<std::vector<std::vector<std::vector<seal::seal_byte>>>>();
+    auto nprobe_centroids =
+        req_body["nearestCentroids"].get<std::vector<faiss::idx_t>>();
 
     auto secret_key = req_body["secretKey"].get<std::vector<seal::seal_byte>>();
 
     std::shared_ptr<Server> server = Server::getInstance();
     // Decrypting data temporarily until PreFHEtch-faiss updated to handle
     // encrypted data
-    // std::vector<faiss::idx_t> nearest_centroids =
-    //     server->decrypt_centroids(encrypted_centroids, secret_key);
-    std::vector<float> precise_queries = server->decrypt_subvectors(
-        encrypted_subvectors, encrypted_subvectors_squared, secret_key,
-        numQueries);
+    std::vector<float> precise_queries = server->decrypt_vectors(
+        encrypted_residual_vectors, encrypted_residual_vectors_squared,
+        secret_key, num_queries);
+
+    server->display_nprobe_centroids(nprobe_centroids, num_queries);
 
     // std::vector<float> coarse_distance_scores;
     // std::vector<faiss::idx_t> coarse_vector_indexes;

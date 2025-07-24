@@ -21,7 +21,10 @@ Encryption::Encryption(seal::EncryptionParameters encrypt_parms,
       Encryptor(seal_ctx, SecretKey), Decryptor(seal_ctx, SecretKey),
       BatchEncoder(seal_ctx) {}
 
-Client::Client(size_t num_queries) { m_NumQueries = num_queries; }
+Client::Client(size_t num_queries, size_t nprobe) {
+    m_NumQueries = num_queries;
+    m_NProbe = nprobe;
+}
 
 std::vector<float> Client::get_query() {
     size_t parsed_num_queries;
@@ -56,6 +59,11 @@ Client::get_centroids_encrypted_parms() {
 
     m_Nlist = centroids.size() / m_PreciseVectorDimensions;
 
+    if (m_NProbe > m_Nlist) {
+        SPDLOG_ERROR("NProbe is greater than Nlist");
+        throw std::runtime_error("NProbe is greater than Nlist");
+    }
+
     // SPDLOG_INFO("Fetched query parms-> m_Subquantizers = {}",
     // m_Subquantizers);
 
@@ -66,9 +74,7 @@ void Client::init_client_encrypt_parms(
     const std::vector<seal::seal_byte> &serde_encrypt_parms) {
 
     seal::EncryptionParameters encrypt_parms;
-    encrypt_parms.load(
-        reinterpret_cast<const seal::seal_byte *>(serde_encrypt_parms.data()),
-        serde_encrypt_parms.size());
+    encrypt_parms.load(serde_encrypt_parms.data(), serde_encrypt_parms.size());
     seal::SEALContext seal_ctx(encrypt_parms);
 
     m_OptEncryption.emplace(encrypt_parms, seal_ctx);
@@ -77,87 +83,17 @@ void Client::init_client_encrypt_parms(
     //             m_OptEncryption->m_EncryptedParms.poly_modulus_degree());
 }
 
-std::pair<std::vector<std::vector<seal::seal_byte>>,
-          std::vector<std::vector<seal::seal_byte>>>
-Client::compute_encrypted_subvector_components(
-    std::vector<float> &precise_queries) const {
-    std::vector<std::vector<seal::seal_byte>> serde_subvectors;
-    std::vector<std::vector<seal::seal_byte>> serde_subvectors_squared;
-    serde_subvectors.reserve(m_NumQueries * m_Subquantizers);
-    serde_subvectors_squared.reserve(m_NumQueries * m_Subquantizers);
-
-    if (!m_OptEncryption.has_value()) {
-        SPDLOG_ERROR("Encryption uninitialised");
-        throw std::runtime_error("Encryption uninitialised");
-    }
-
-    size_t elements_per_subvector = m_PreciseVectorDimensions / m_Subquantizers;
-    if (elements_per_subvector >
-        m_OptEncryption.value().EncryptedParms.poly_modulus_degree()) {
-        SPDLOG_ERROR("Elements per subvector exceeds poly modulus degree");
-        throw std::runtime_error(
-            "Elements per subvector exceeds poly modulus degree");
-    }
-
-    std::vector<uint64_t> int_query_subvector(elements_per_subvector, 0ULL);
-
-    for (int i = 0; i < m_Subquantizers * m_NumQueries; i++) {
-        std::span<float> query_subvector_view(precise_queries.data() +
-                                                  i * elements_per_subvector,
-                                              elements_per_subvector);
-
-        float subvector_len_squared = 0;
-        for (int j = 0; j < elements_per_subvector; j++) {
-            int_query_subvector[j] = static_cast<uint64_t>(
-                query_subvector_view[j] * BFV_SCALING_FACTOR);
-            subvector_len_squared += (std::pow(query_subvector_view[j], 2));
-        }
-        subvector_len_squared *= BFV_SCALING_FACTOR;
-
-        seal::Plaintext pt_query_subvector;
-        m_OptEncryption.value().BatchEncoder.encode(int_query_subvector,
-                                                    pt_query_subvector);
-        int_query_subvector.clear();
-
-        seal::Serializable<seal::Ciphertext> encrypted_query_subvector =
-            m_OptEncryption.value().Encryptor.encrypt_symmetric(
-                pt_query_subvector);
-
-        std::vector<seal::seal_byte> serde_query_subvector;
-        serde_query_subvector.resize(encrypted_query_subvector.save_size());
-        encrypted_query_subvector.save(serde_query_subvector.data(),
-                                       serde_query_subvector.size());
-
-        uint64_t u64_subvector_len =
-            static_cast<uint64_t>(subvector_len_squared);
-        seal::Plaintext pt_subvector_len_squared(
-            seal::util::uint_to_hex_string(&u64_subvector_len, std::size_t(1)));
-        seal::Serializable<seal::Ciphertext> encrypted_subvector_len_squared =
-            m_OptEncryption.value().Encryptor.encrypt_symmetric(
-                pt_subvector_len_squared);
-
-        std::vector<seal::seal_byte> serde_subvector_len_squared;
-        serde_subvector_len_squared.resize(
-            encrypted_subvector_len_squared.save_size());
-        encrypted_subvector_len_squared.save(
-            (serde_subvector_len_squared.data()),
-            serde_subvector_len_squared.size());
-
-        serde_subvectors.push_back(serde_query_subvector);
-        serde_subvectors_squared.push_back(serde_subvector_len_squared);
-    }
-
-    return {serde_subvectors, serde_subvectors_squared};
-}
-
-std::vector<faiss_idx_t>
+std::pair<std::vector<faiss_idx_t>, std::vector<faiss_idx_t>>
 Client::sort_nearest_centroids(std::vector<float> &precise_queries,
                                std::vector<float> &centroids) const {
+
     std::vector<faiss_idx_t> computed_nearest_centroids_idx;
-    computed_nearest_centroids_idx.reserve(m_Nlist * m_NumQueries);
+    computed_nearest_centroids_idx.reserve(m_NumQueries * m_Nlist);
+    std::vector<faiss_idx_t> nprobe_nearest_centroids_idx;
+    nprobe_nearest_centroids_idx.reserve(m_NumQueries * m_NProbe);
 
     std::vector<DistanceIndexData> nquery_centroids_distance;
-    nquery_centroids_distance.reserve(m_Nlist * m_NumQueries);
+    nquery_centroids_distance.reserve(m_NumQueries * m_Nlist);
 
     // Iterating over nqueries
     for (int i = 0; i < m_NumQueries; i++) {
@@ -192,20 +128,160 @@ Client::sort_nearest_centroids(std::vector<float> &precise_queries,
             return a.distance < b.distance;
         });
 
-        // SPDLOG_INFO("\n\n QUERY = {}", i);
+        SPDLOG_INFO("\n\n QUERY = {}", i);
         for (const DistanceIndexData &query_centroid : query_centroid_view) {
             computed_nearest_centroids_idx.push_back(query_centroid.idx);
-            // SPDLOG_INFO("Centroid idx={}, distance = {}", query_centroid.idx,
-            //             query_centroid.distance);
+            SPDLOG_INFO("Centroid idx={}, distance = {}", query_centroid.idx,
+                        query_centroid.distance);
         }
+
+        std::span<faiss_idx_t> nprobe_query_centroids(
+            computed_nearest_centroids_idx.data() + i * m_Nlist, m_NProbe);
+        nprobe_nearest_centroids_idx.insert(nprobe_nearest_centroids_idx.end(),
+                                            nprobe_query_centroids.begin(),
+                                            nprobe_query_centroids.end());
     }
 
-    return computed_nearest_centroids_idx;
+    return {computed_nearest_centroids_idx, nprobe_nearest_centroids_idx};
+}
+
+std::pair<std::vector<std::vector<std::vector<seal::seal_byte>>>,
+          std::vector<std::vector<std::vector<seal::seal_byte>>>>
+Client::compute_encrypted_coarse_search_parms(
+    std::vector<float> &precise_queries, std::vector<float> &centroids,
+    std::vector<faiss_idx_t> &nearest_centroids_idx) const {
+
+    SPDLOG_INFO("Computing encrypted coarse search parms");
+    std::vector<std::vector<std::vector<seal::seal_byte>>>
+        serde_nqueries_residual_vectors;
+    serde_nqueries_residual_vectors.reserve(m_NumQueries);
+    std::vector<std::vector<std::vector<seal::seal_byte>>>
+        serde_nqueries_residual_vectors_squared;
+    serde_nqueries_residual_vectors_squared.reserve(m_NumQueries);
+
+    if (!m_OptEncryption.has_value()) {
+        SPDLOG_ERROR("Encryption uninitialised");
+        throw std::runtime_error("Encryption uninitialised");
+    }
+
+    if (m_PreciseVectorDimensions >
+        m_OptEncryption.value().EncryptedParms.poly_modulus_degree()) {
+        SPDLOG_ERROR("Elements per vector exceeds poly modulus degree");
+        throw std::runtime_error(
+            "Elements per vector exceeds poly modulus degree");
+    }
+
+    for (int i = 0; i < m_NumQueries; i++) {
+        std::span<float> query_vector(precise_queries.data() +
+                                          i * m_PreciseVectorDimensions,
+                                      m_PreciseVectorDimensions);
+        std::vector<std::vector<seal::seal_byte>> serde_residual_vectors;
+        serde_residual_vectors.reserve(m_NProbe);
+        std::vector<std::vector<seal::seal_byte>>
+            serde_residual_vectors_squared;
+        serde_nqueries_residual_vectors.reserve(m_NProbe);
+
+        // SPDLOG_INFO("\n\n Query num = {}", i);
+        // SPDLOG_INFO("Printing Query");
+        // for (int temp = 0; temp < m_PreciseVectorDimensions; temp++) {
+        //     printf("%f, ", query_vector[temp]);
+        // }
+        // printf("\n");
+
+        for (int k = 0; k < m_NProbe; k++) {
+            std::span<float> centroid_view(
+                // i * m_Nlist - offset for nth query
+                // k - nprobe for each query
+                centroids.data() + nearest_centroids_idx[i * m_Nlist + k] *
+                                       m_PreciseVectorDimensions,
+                m_PreciseVectorDimensions);
+            std::vector<int64_t> int_residual_query_vector(
+                m_PreciseVectorDimensions, 0ULL);
+
+            // SPDLOG_INFO("Query num = {}, nprobe = {}, nearest centroid = {}",
+            // i,
+            //             k, nearest_centroids_idx[k]);
+            // SPDLOG_INFO("Printing Centroid");
+            // for (int temp = 0; temp < m_PreciseVectorDimensions; temp++) {
+            //     printf("%f, ", centroid_view[temp]);
+            // }
+            // printf("\n");
+
+            std::vector<float> residual_query_vector;
+            residual_query_vector.reserve(m_PreciseVectorDimensions);
+            std::transform(query_vector.begin(), query_vector.end(),
+                           centroid_view.begin(), residual_query_vector.begin(),
+                           std::minus<float>());
+
+            float residual_vector_squared = 0;
+            for (int k = 0; k < m_PreciseVectorDimensions; k++) {
+                int_residual_query_vector[k] = static_cast<int64_t>(
+                    residual_query_vector[k] * BFV_SCALING_FACTOR);
+                residual_vector_squared +=
+                    (std::pow(residual_query_vector[k], 2));
+            }
+            // SPDLOG_INFO("Printing computed residual, square = {}",
+            //             residual_vector_squared);
+            // for (int temp = 0; temp < m_PreciseVectorDimensions; temp++) {
+            //     printf("%f -> %lld, ", residual_query_vector[temp],
+            //            int_residual_query_vector[temp]);
+            // }
+            // printf("\n\n");
+
+            seal::Plaintext pt_residual_query_vector;
+            m_OptEncryption.value().BatchEncoder.encode(
+                int_residual_query_vector, pt_residual_query_vector);
+
+            seal::Serializable<seal::Ciphertext>
+                encrypted_residual_query_vector =
+                    m_OptEncryption.value().Encryptor.encrypt_symmetric(
+                        pt_residual_query_vector);
+
+            std::vector<seal::seal_byte> serde_residual_ind_vector;
+            serde_residual_ind_vector.resize(
+                encrypted_residual_query_vector.save_size());
+            encrypted_residual_query_vector.save(
+                serde_residual_ind_vector.data(),
+                serde_residual_ind_vector.size());
+
+            uint64_t u64_residual_vector_squared = residual_vector_squared *
+                                                   BFV_SCALING_FACTOR *
+                                                   BFV_SCALING_FACTOR;
+            seal::Plaintext pt_residual_vector_squared(
+                seal::util::uint_to_hex_string(
+                    &u64_residual_vector_squared,
+                    static_cast<uint64_t>(std::size_t(1))));
+            seal::Serializable<seal::Ciphertext> encrypted_vector_ind_squared =
+                m_OptEncryption.value().Encryptor.encrypt_symmetric(
+                    pt_residual_vector_squared);
+
+            std::vector<seal::seal_byte> serde_residual_ind_vector_squared;
+            serde_residual_ind_vector_squared.resize(
+                encrypted_vector_ind_squared.save_size());
+            encrypted_vector_ind_squared.save(
+                (serde_residual_ind_vector_squared.data()),
+                serde_residual_ind_vector_squared.size());
+
+            serde_residual_vectors.push_back(serde_residual_ind_vector);
+            serde_residual_vectors_squared.push_back(
+                serde_residual_ind_vector_squared);
+        }
+
+        serde_nqueries_residual_vectors.push_back(serde_residual_vectors);
+        serde_nqueries_residual_vectors_squared.push_back(
+            serde_residual_vectors_squared);
+    }
+
+    return {serde_nqueries_residual_vectors,
+            serde_nqueries_residual_vectors_squared};
 }
 
 void Client::get_encrypted_coarse_scores(
-    std::vector<std::vector<seal::seal_byte>> &encrypted_subvectors,
-    std::vector<std::vector<seal::seal_byte>> &encrypted_subvectors_square,
+    std::vector<std::vector<std::vector<seal::seal_byte>>>
+        &serde_encrypted_vecs,
+    std::vector<std::vector<std::vector<seal::seal_byte>>>
+        &serde_encrypted_vecs_squared,
+    std::vector<faiss_idx_t> &nprobe_nearest_centroids_idx,
     std::vector<float> &coarse_scores,
     std::vector<faiss_idx_t> &coarse_vectors_idx,
     std::vector<size_t> &list_sizes_per_query_coarse) {
@@ -217,10 +293,14 @@ void Client::get_encrypted_coarse_scores(
 
     nlohmann::json coarse_search_json;
     coarse_search_json["numQueries"] = m_NumQueries;
-    coarse_search_json["subvectors"] = encrypted_subvectors;
-    coarse_search_json["subvectorsSquared"] = encrypted_subvectors_square;
+    coarse_search_json["residualVecs"] = serde_encrypted_vecs;
+    coarse_search_json["residualVecsSquared"] = serde_encrypted_vecs_squared;
+    coarse_search_json["nearestCentroids"] = nprobe_nearest_centroids_idx;
     coarse_search_json["secretKey"] = sk;
 
+    // SPDLOG_INFO("residualVecs Size = {}, residualVecsSquared Size = {}",
+    //             coarse_search_json["residualVecs"].dump().size(),
+    //             coarse_search_json["residualVecsSquared"].dump().size());
     SPDLOG_INFO("Size of the coarse search request = {}",
                 coarse_search_json.dump().size());
 
@@ -229,7 +309,7 @@ void Client::get_encrypted_coarse_scores(
 
     nlohmann::json resp = nlohmann::json::parse(r.text);
     SPDLOG_INFO("Response = {}", resp.dump());
-    //
+
     // coarse_scores =
     // resp.at("coarseDistanceScores").get<std::vector<float>>();
     // coarse_vectors_idx =

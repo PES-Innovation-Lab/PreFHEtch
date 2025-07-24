@@ -63,12 +63,13 @@ class Server {
         std::array<std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, K>,
                    NQUERY> &query_results);
 
-    // Temp
-    std::vector<faiss::idx_t>
-    decrypt_centroids(std::vector<seal::seal_byte> &,
-                      std::vector<seal::seal_byte> &) const;
+    // Decrypting data temporarily until PreFHEtch-faiss updated to handle
+    // encrypted data
+    void
+    display_nprobe_centroids(const std::vector<faiss::idx_t> &nprobe_centroids,
+                             size_t num_queries) const;
     std::vector<float>
-    decrypt_subvectors(std::vector<std::vector<seal::seal_byte>> &,
-                       std::vector<std::vector<seal::seal_byte>> &,
-                       std::vector<seal::seal_byte> &, size_t) const;
+    decrypt_vectors(std::vector<std::vector<std::vector<seal::seal_byte>>> &,
+                    std::vector<std::vector<std::vector<seal::seal_byte>>> &,
+                    std::vector<seal::seal_byte> &, size_t) const;
 };

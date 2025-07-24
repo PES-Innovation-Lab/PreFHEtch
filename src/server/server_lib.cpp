@@ -45,8 +45,8 @@ Server::Server() : m_EncryptionParms(seal::scheme_type::bfv) {
         m_PolyModulusDegree, m_PlaintextModulusSize));
 
     seal::SEALContext seal_ctx(m_EncryptionParms);
-    SPDLOG_ERROR("Encryption params errors = {}",
-                 seal_ctx.parameter_error_message());
+    SPDLOG_INFO("Encryption params errors = {}",
+                seal_ctx.parameter_error_message());
 }
 
 void Server::run_webserver() {
@@ -217,36 +217,28 @@ void Server::preciseVectorPIR(
     // SPDLOG_INFO("Precise vector PIR completed");
 }
 
-std::vector<faiss::idx_t> Server::decrypt_centroids(
-    std::vector<seal::seal_byte> &serde_encrypted_centroids,
-    std::vector<seal::seal_byte> &enc_sk) const {
+void Server::display_nprobe_centroids(
+    const std::vector<faiss::idx_t> &nprobe_centroids,
+    size_t num_queries) const {
 
-    seal::SEALContext seal_ctx(m_EncryptionParms);
-    seal::BatchEncoder batch_encoder(seal_ctx);
-    seal::SecretKey sk;
-    sk.load(seal_ctx, enc_sk.data(), enc_sk.size());
+    size_t nprobe = nprobe_centroids.size() / num_queries;
 
-    seal::Decryptor decryptor(seal_ctx, sk);
-    seal::BatchEncoder encoder(seal_ctx);
-
-    seal::Ciphertext encrypted_centroids;
-    seal::Plaintext decrypted_centroids;
-    std::vector<faiss::idx_t> nearest_centroids;
-    encrypted_centroids.load(
-        seal_ctx,
-        reinterpret_cast<seal::seal_byte *>(serde_encrypted_centroids.data()),
-        serde_encrypted_centroids.size());
-    decryptor.decrypt(encrypted_centroids, decrypted_centroids);
-    encoder.decode(decrypted_centroids, nearest_centroids);
-
-    return nearest_centroids;
+    SPDLOG_INFO("\nDisplaying centroids, nprobe = {}\n", nprobe);
+    for (int i = 0; i < num_queries; i++) {
+        for (int j = 0; j < nprobe; j++) {
+            printf("%lld, ", nprobe_centroids[i * nprobe + j]);
+        }
+        printf("\n");
+    }
 }
 
-std::vector<float> Server::decrypt_subvectors(
-    std::vector<std::vector<seal::seal_byte>> &serde_encrypted_subvectors,
-    std::vector<std::vector<seal::seal_byte>>
-        &serde_encrypted_subvectors_squared,
-    std::vector<seal::seal_byte> &enc_sk, size_t numQueries) const {
+std::vector<float>
+Server::decrypt_vectors(std::vector<std::vector<std::vector<seal::seal_byte>>>
+                            &serde_encrypted_residual_vectors,
+                        std::vector<std::vector<std::vector<seal::seal_byte>>>
+                            &serde_encrypted_residual_vectors_squared,
+                        std::vector<seal::seal_byte> &enc_sk,
+                        size_t numQueries) const {
 
     std::vector<float> precise_queries;
 
@@ -256,27 +248,53 @@ std::vector<float> Server::decrypt_subvectors(
     sk.load(seal_ctx, enc_sk.data(), enc_sk.size());
 
     seal::Decryptor decryptor(seal_ctx, sk);
-    seal::BatchEncoder encoder(seal_ctx);
 
-    for (std::vector<seal::seal_byte> &subvector : serde_encrypted_subvectors) {
-        seal::Ciphertext encrypted_subvector;
-        seal::Plaintext decrypted_subvector;
-        std::vector<uint64_t> decoded_subvector;
-        encrypted_subvector.load(seal_ctx, subvector.data(), subvector.size());
-        decryptor.decrypt(encrypted_subvector, decrypted_subvector);
-        encoder.decode(decrypted_subvector, decoded_subvector);
+    SPDLOG_INFO("\n\nDecrypting coarse search parms on server temporarily\n\n");
+    for (int i = 0; i < numQueries; i++) {
+        for (int j = 0; j < serde_encrypted_residual_vectors[i].size(); j++) {
 
-        precise_queries.insert(precise_queries.end(), decoded_subvector.begin(),
-                               decoded_subvector.end());
-    }
+            seal::Ciphertext encrypted_residual_vector;
+            seal::Plaintext decrypted_residual_vector;
+            std::vector<int64_t> decoded_residual_vector;
 
-    for (int k = 0; k < numQueries; k++) {
-        for (int i = 0; i < m_PreciseVectorDimensions; i++) {
-            printf("%f, ", precise_queries[k * m_PreciseVectorDimensions + i]);
+            encrypted_residual_vector.load(
+                seal_ctx, serde_encrypted_residual_vectors[i][j].data(),
+                serde_encrypted_residual_vectors[i][j].size());
+            decryptor.decrypt(encrypted_residual_vector,
+                              decrypted_residual_vector);
+            batch_encoder.decode(decrypted_residual_vector,
+                                 decoded_residual_vector);
+            std::for_each(decoded_residual_vector.begin(),
+                          decoded_residual_vector.end(),
+                          [](int64_t &n) { n /= BFV_SCALING_FACTOR; });
+
+            seal::Ciphertext encrypted_residual_vector_sq;
+            seal::Plaintext decrypted_residual_vector_sq;
+
+            encrypted_residual_vector_sq.load(
+                seal_ctx, serde_encrypted_residual_vectors_squared[i][j].data(),
+                serde_encrypted_residual_vectors_squared[i][j].size());
+            decryptor.decrypt(encrypted_residual_vector_sq,
+                              decrypted_residual_vector_sq);
+            uint64_t decrypted_u64_residual_vector_squared;
+            seal::util::hex_string_to_uint(
+                decrypted_residual_vector_sq.to_string().c_str(),
+                decrypted_residual_vector_sq.to_string().length(), 1,
+                &decrypted_u64_residual_vector_squared);
+            decrypted_u64_residual_vector_squared /=
+                (BFV_SCALING_FACTOR * BFV_SCALING_FACTOR);
+
+            SPDLOG_INFO("Nquery = {}, Nprobe = {}, vec size = {}, squared val "
+                        "= {}, printing "
+                        "residual vector",
+                        i, j, decoded_residual_vector.size(),
+                        decrypted_u64_residual_vector_squared);
+            for (int k = 0; k < m_PreciseVectorDimensions; k++) {
+                printf("%lld, ", decoded_residual_vector[k]);
+            }
+            printf("\n");
         }
-        printf("\n");
     }
-    printf("\n");
 
     return precise_queries;
 }
