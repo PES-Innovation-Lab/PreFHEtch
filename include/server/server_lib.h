@@ -42,13 +42,34 @@ class Server {
     std::vector<float> retrieve_centroids() const;
     std::vector<seal::seal_byte> serialise_parms() const;
 
-    // void Server::coarseSearch(
-    //     std::vector<float> precise_queries,
-    //     std::vector<faiss::idx_t> nearest_centroids,
-    //     std::vector<float> &coarse_distance_scores,
-    //     std::vector<faiss::idx_t> &coarse_distance_indexes,
-    //     std::array<size_t, NQUERY> &list_sizes_per_query) const;
-    //
+    std::tuple<std::vector<std::vector<seal::Ciphertext>>,
+               std::vector<std::vector<seal::Ciphertext>>, seal::RelinKeys,
+               seal::GaloisKeys>
+    deserialise_coarse_search_parms(
+        const std::vector<std::vector<std::vector<seal::seal_byte>>>
+            &serde_encrypted_residual_vectors,
+        const std::vector<std::vector<std::vector<seal::seal_byte>>>
+            &serde_encrypted_residual_vectors_squared,
+        const std::vector<seal::seal_byte> &serde_relin_keys,
+        const std::vector<seal::seal_byte> &serde_galois_keys,
+        // TODO: remove secret key, used for debugging
+        const std::vector<seal::seal_byte> &sk) const;
+
+    std::vector<std::vector<std::vector<seal::seal_byte>>>
+    serialise_encrypted_coarse_distances(
+        const std::vector<std::vector<seal::Ciphertext>>
+            &encrypted_coarse_distances) const;
+
+    std::pair<std::vector<std::vector<seal::Ciphertext>>,
+              std::vector<std::vector<faiss::idx_t>>>
+    coarseSearch(
+        std::vector<faiss::idx_t> nprobe_centroids,
+        std::vector<std::vector<seal::Ciphertext>> &encrypted_residual_queries,
+        std::vector<std::vector<seal::Ciphertext>>
+            &encrypted_residual_queries_squared,
+        size_t num_queries, size_t nprobe, seal::RelinKeys relin_keys,
+        seal::GaloisKeys galois_keys) const;
+
     void preciseSearch(
         const std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, NQUERY>
             &precise_query,
@@ -63,13 +84,8 @@ class Server {
         std::array<std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, K>,
                    NQUERY> &query_results);
 
-    // Decrypting data temporarily until PreFHEtch-faiss updated to handle
-    // encrypted data
+    // helper for debugging
     void
     display_nprobe_centroids(const std::vector<faiss::idx_t> &nprobe_centroids,
                              size_t num_queries) const;
-    std::vector<float>
-    decrypt_vectors(std::vector<std::vector<std::vector<seal::seal_byte>>> &,
-                    std::vector<std::vector<std::vector<seal::seal_byte>>> &,
-                    std::vector<seal::seal_byte> &, size_t) const;
 };

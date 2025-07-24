@@ -19,7 +19,8 @@ class Encryption {
     seal::KeyGenerator KeyGen;
     // Use secret key mode to improve efficiency
     seal::SecretKey SecretKey;
-    seal::Serializable<seal::RelinKeys> SerRelinKeys;
+    seal::Serializable<seal::RelinKeys> SerdeRelinKeys;
+    seal::Serializable<seal::GaloisKeys> SerdeGaloisKeys;
 
     seal::Encryptor Encryptor;
     seal::Decryptor Decryptor;
@@ -59,31 +60,42 @@ class Client {
     sort_nearest_centroids(std::vector<float> &precise_queries,
                            std::vector<float> &centroids) const;
 
-    // Returns NQUERY pairs of serialize ciphertexts
-    // Pair.1 - vector of encrypted residual queries for nqueries
-    // Pair.2 - vector of encrypted residual squared lengths for nqueries
-    std::pair<std::vector<std::vector<std::vector<seal::seal_byte>>>,
-              std::vector<std::vector<std::vector<seal::seal_byte>>>>
+    // Returns NQUERY pairs of serialize ciphertexts and the relinearization
+    // and galois keys
+
+    // tuple.1 - vector of encrypted residual queries for nqueries
+
+    // tuple.2 - vector of encrypted residual squared lengths for nqueries
+
+    // tuple.3 - relinearization keys
+
+    // tuple.4 - galois keys
+    std::tuple<std::vector<std::vector<std::vector<seal::seal_byte>>>,
+               std::vector<std::vector<std::vector<seal::seal_byte>>>,
+               std::vector<seal::seal_byte>, std::vector<seal::seal_byte>>
     compute_encrypted_coarse_search_parms(
         std::vector<float> &precise_queries, std::vector<float> &centroids,
         std::vector<faiss_idx_t> &nearest_centroids_idx) const;
 
-    void get_encrypted_coarse_scores(
+    std::pair<std::vector<std::vector<std::vector<seal::seal_byte>>>,
+              std::vector<std::vector<faiss_idx_t>>>
+    get_encrypted_coarse_scores(
         std::vector<std::vector<std::vector<seal::seal_byte>>>
             &serde_encrypted_vecs,
         std::vector<std::vector<std::vector<seal::seal_byte>>>
             &serde_encrypted_vecs_squared,
         std::vector<faiss_idx_t> &nprobe_nearest_centroids_idx,
-        std::vector<float> &coarse_scores,
-        std::vector<faiss_idx_t> &coarse_vectors_idx,
-        std::vector<size_t> &list_sizes_per_query_coarse);
+        std::vector<seal::seal_byte> &serde_relin_keys,
+        std::vector<seal::seal_byte> &serde_galois_keys) const;
 
-    void compute_nearest_coarse_vectors(
-        const std::vector<float> &coarse_distance_scores,
-        const std::vector<faiss_idx_t> &coarse_vector_indexes,
-        const std::array<size_t, NQUERY> &list_sizes_per_query_coarse,
-        std::array<std::vector<DistanceIndexData>, NQUERY>
-            &nearest_coarse_vectors_idx);
+    std::vector<std::vector<float>> deserialise_decrypt_coarse_distances(
+        const std::vector<std::vector<std::vector<seal::seal_byte>>>
+            &serde_encrypted_coarse_distances);
+
+    std::vector<std::vector<faiss_idx_t>> compute_nearest_coarse_vectors_idx(
+        const std::vector<std::vector<float>> &decrypted_coarse_distance_scores,
+        const std::vector<std::vector<faiss_idx_t>> &coarse_vector_labels,
+        const size_t num_queries, const size_t coarse_probe) const;
 
     void get_precise_scores(
         const std::array<std::vector<DistanceIndexData>, NQUERY>
