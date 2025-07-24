@@ -5,7 +5,8 @@
 #include "client_lib.h"
 
 int main() {
-    Client client(7, 10);
+    size_t num_queries = 10, nprobe = 10, coarse_probe = 200;
+    Client client(num_queries, nprobe);
 
     Timer complete_search_timer;
     Timer get_query_timer;
@@ -46,7 +47,8 @@ int main() {
         sort_centroids_timer.getDurationMicroseconds());
 
     encrypt_query_subvector_lens_timer.StartTimer();
-    auto [encrypted_subvectors, encrypted_subvectors_squared] =
+    auto [encrypted_subvectors, encrypted_subvectors_squared, serde_relin_keys,
+          serde_galois_keys] =
         client.compute_encrypted_coarse_search_parms(
             precise_queries, centroids, sort_nearest_centroids_idx);
     encrypt_query_subvector_lens_timer.StopTimer();
@@ -54,23 +56,21 @@ int main() {
                 "time(microseconds) = {}",
                 encrypt_query_subvector_lens_timer.getDurationMicroseconds());
 
-    // Send nearest centroids to server to compute coarse scores (distances)
+    auto [serde_encrypted_coarse_distances, coarse_vector_labels] =
+        client.get_encrypted_coarse_scores(
+            encrypted_subvectors, encrypted_subvectors_squared,
+            nprobe_nearest_centroids_idx, serde_relin_keys, serde_galois_keys);
+    SPDLOG_INFO("Received encrypted coarse distances successfully");
 
-    std::vector<float> coarse_distance_scores;
-    std::vector<faiss_idx_t> coarse_vector_indexes;
-    std::vector<size_t> list_sizes_per_query_coarse;
-    client.get_encrypted_coarse_scores(
-        encrypted_subvectors, encrypted_subvectors_squared,
-        nprobe_nearest_centroids_idx, coarse_distance_scores,
-        coarse_vector_indexes, list_sizes_per_query_coarse);
-    SPDLOG_INFO("Received coarse distance scores successfully");
+    auto decrypted_coarse_distances =
+        client.deserialise_decrypt_coarse_distances(
+            serde_encrypted_coarse_distances);
+    SPDLOG_INFO("Deserialised and decrypted coarse distances successfully");
 
-    // std::array<std::vector<DistanceIndexData>, NQUERY>
-    // nearest_coarse_vectors; compute_nearest_coarse_vectors(
-    //     coarse_distance_scores, coarse_vector_indexes,
-    //     list_sizes_per_query_coarse, nearest_coarse_vectors);
-    // // SPDLOG_INFO("Computed nearest coarse vectors successfully");
-    //
+    auto sorted_coarse_labels = client.compute_nearest_coarse_vectors_idx(
+        decrypted_coarse_distances, coarse_vector_labels, nprobe, coarse_probe);
+    SPDLOG_INFO("Computed nearest coarse vectors successfully");
+
     // // Send nearest coarse vector indexes to server to compute precise scores
     // // (distances)
     // std::array<std::array<float, COARSE_PROBE>, NQUERY> precise_scores;

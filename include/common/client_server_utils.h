@@ -9,17 +9,17 @@
 
 constexpr int64_t PRECISE_VECTOR_DIMENSIONS = 128;
 
-constexpr int64_t NPROBE = 20;
+constexpr int64_t NPROBE = 10;
 constexpr int64_t COARSE_PROBE = 200;
 constexpr int64_t K = 100;
 constexpr int64_t NBASE = 10000;
-constexpr int64_t NQUERY = 7;
+constexpr int64_t NQUERY = 10;
 
 constexpr int64_t NLIST = 256;
 constexpr int64_t SUB_QUANTIZERS = 32;
 constexpr int64_t SUB_QUANTIZER_SIZE = 8;
 
-constexpr int64_t BFV_SCALING_FACTOR = 100;
+constexpr int64_t BFV_SCALING_FACTOR = 10;
 using faiss_idx_t = int64_t;
 
 template <typename T>
@@ -54,6 +54,18 @@ void vecs_read(const char *fname, size_t &d_out, size_t &n_out,
                 d * sizeof(T));
 
     fclose(f);
+}
+
+template <typename T>
+std::size_t
+getTotalSize(const std::vector<std::vector<std::vector<T>>> &vec3d) {
+    std::size_t total = 0;
+    for (const auto &vec2d : vec3d) {
+        for (const auto &vec1d : vec2d) {
+            total += vec1d.size();
+        }
+    }
+    return total;
 }
 
 class Timer {

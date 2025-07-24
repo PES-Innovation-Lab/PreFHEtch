@@ -50,41 +50,73 @@ void Query::coarse_search(
     std::function<void(const HttpResponsePtr &)> &&callback) const {
     SPDLOG_INFO("Received request on /coarsesearch");
 
+    Timer serde_coarse_search_params_timer;
+    Timer coarse_search_timer;
+    Timer serde_coarse_search_results_timer;
+
     nlohmann::json req_body = nlohmann::json::parse(req->body());
     size_t num_queries = req_body["numQueries"].get<size_t>();
-    auto encrypted_residual_vectors =
+    auto serde_encrypted_residual_vectors =
         req_body["residualVecs"]
             .get<std::vector<std::vector<std::vector<seal::seal_byte>>>>();
-    auto encrypted_residual_vectors_squared =
+    auto serde_encrypted_residual_vectors_squared =
         req_body["residualVecsSquared"]
             .get<std::vector<std::vector<std::vector<seal::seal_byte>>>>();
     auto nprobe_centroids =
         req_body["nearestCentroids"].get<std::vector<faiss::idx_t>>();
+    auto serde_relin_keys =
+        req_body["relinKeys"].get<std::vector<seal::seal_byte>>();
+    auto serde_galois_keys =
+        req_body["galoisKeys"].get<std::vector<seal::seal_byte>>();
 
-    auto secret_key = req_body["secretKey"].get<std::vector<seal::seal_byte>>();
+    auto serde_sk = req_body["sk"].get<std::vector<seal::seal_byte>>();
+
+    size_t nprobe = nprobe_centroids.size() / num_queries;
 
     std::shared_ptr<Server> server = Server::getInstance();
-    // Decrypting data temporarily until PreFHEtch-faiss updated to handle
-    // encrypted data
-    std::vector<float> precise_queries = server->decrypt_vectors(
-        encrypted_residual_vectors, encrypted_residual_vectors_squared,
-        secret_key, num_queries);
+    // server->display_nprobe_centroids(nprobe_centroids, num_queries);
 
-    server->display_nprobe_centroids(nprobe_centroids, num_queries);
+    serde_coarse_search_params_timer.StartTimer();
+    auto [encrypted_residual_vectors, encrypted_residual_vectors_squared,
+          relin_keys, galois_keys] =
+        server->deserialise_coarse_search_parms(
+            serde_encrypted_residual_vectors,
+            serde_encrypted_residual_vectors_squared, serde_relin_keys,
+            serde_galois_keys, serde_sk);
+    serde_coarse_search_params_timer.StopTimer();
 
-    // std::vector<float> coarse_distance_scores;
-    // std::vector<faiss::idx_t> coarse_vector_indexes;
-    // std::array<size_t, NQUERY> list_sizes_per_query;
-    //
-    // server->coarseSearch(precise_queries, nearest_centroids,
-    //                      coarse_distance_scores, coarse_vector_indexes,
-    //                      list_sizes_per_query);
+    SPDLOG_INFO("Time to deserialise coarse search params = {}(microseconds)",
+                serde_coarse_search_params_timer.getDurationMicroseconds());
+
+    coarse_search_timer.StartTimer();
+    auto [encrypted_coarse_distances, coarse_vector_labels] =
+        server->coarseSearch(nprobe_centroids, encrypted_residual_vectors,
+                             encrypted_residual_vectors_squared, num_queries,
+                             nprobe, relin_keys, galois_keys);
+    coarse_search_timer.StopTimer();
+
+    SPDLOG_INFO("Time to perform coarse search = {}(microseconds)",
+                coarse_search_timer.getDurationMicroseconds());
+
+    serde_coarse_search_results_timer.StartTimer();
+    std::vector<std::vector<std::vector<seal::seal_byte>>>
+        serde_encrypted_coarse_distances =
+            server->serialise_encrypted_coarse_distances(
+                encrypted_coarse_distances);
+    serde_coarse_search_results_timer.StopTimer();
+
+    SPDLOG_INFO("Size of the unserialised encrypted data = {}",
+                getTotalSize(serde_encrypted_coarse_distances));
+
+    SPDLOG_INFO("Time to serialise coarse search results = {}(microseconds)",
+                serde_coarse_search_results_timer.getDurationMicroseconds());
 
     nlohmann::json response;
-    // response["coarseDistanceScores"] = coarse_distance_scores;
-    // response["coarseVectorIndexes"] = coarse_vector_indexes;
-    // response["listSizesPerQuery"] = list_sizes_per_query;
-    response["response"] = "ok";
+    response["encryptedCoarseDistances"] = serde_encrypted_coarse_distances;
+    response["coarseVectorLabels"] = coarse_vector_labels;
+    SPDLOG_INFO("Size of the serialised encrypted data = {}",
+                response.dump().size());
+
     const HttpResponsePtr resp = HttpResponse::newHttpResponse();
     resp->setContentTypeString("application/json");
     resp->setBody(response.dump());
