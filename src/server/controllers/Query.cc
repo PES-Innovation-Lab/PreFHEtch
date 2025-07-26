@@ -95,8 +95,7 @@ void Query::coarse_search(
     auto [encrypted_coarse_distances, coarse_vector_labels] =
         server->coarseSearch(nprobe_centroids, encrypted_residual_vectors,
                              encrypted_residual_vectors_squared, num_queries,
-                             nprobe, relin_keys, galois_keys);
-    coarse_search_timer.StopTimer();
+                             nprobe, relin_keys, galois_keys, serde_sk);
 
     SPDLOG_INFO("Time to perform coarse search = {}(microseconds)",
                 coarse_search_timer.getDurationMicroseconds());

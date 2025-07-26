@@ -35,8 +35,8 @@ Server::Server() : m_EncryptionParms(seal::scheme_type::bfv) {
         << SubQuantizerSize << ".faiss";
     INDEX_FILE = oss.str();
 
-    m_PolyModulusDegree = 8192;
-    m_PlaintextModulusSize = 48;
+    m_PolyModulusDegree = 4096;
+    m_PlaintextModulusSize = 64;
 
     m_EncryptionParms.set_poly_modulus_degree(m_PolyModulusDegree);
     m_EncryptionParms.set_coeff_modulus(
@@ -280,7 +280,7 @@ Server::coarseSearch(
     std::vector<std::vector<seal::Ciphertext>>
         &encrypted_residual_queries_squared,
     size_t num_queries, size_t nprobe, seal::RelinKeys relin_keys,
-    seal::GaloisKeys galois_keys) const {
+    seal::GaloisKeys galois_keys, std::vector<seal::seal_byte> sk) const {
 
     m_Index->nprobe = nprobe;
     if (m_Index->nprobe != nprobe) {
@@ -306,6 +306,28 @@ Server::coarseSearch(
         encrypted_coarse_distances, coarse_distance_labels);
 
     SPDLOG_INFO("Coarse search complete");
+
+    seal::SecretKey secret_key;
+    secret_key.load(seal_ctx, sk.data(), sk.size());
+    seal::Decryptor decryptor(seal_ctx, secret_key);
+
+    std::vector<int64_t> plain_result;
+    plain_result.resize(batch_encoder.slot_count());
+
+    for (size_t ith_query = 0; ith_query < num_queries; ++ith_query) {
+        for (size_t j = 0; j < encrypted_coarse_distances[ith_query].size(); ++j) {
+            SPDLOG_INFO("Query {} List Entry {}", ith_query, j);
+            SPDLOG_INFO("Label: {}", coarse_distance_labels[ith_query][j]);
+
+            seal::Plaintext decrypted;
+            decryptor.decrypt(encrypted_coarse_distances[ith_query][j], decrypted);
+            batch_encoder.decode(decrypted, plain_result);
+
+            float corrected_value = static_cast<float>(plain_result[0]) / (BFV_SCALING_FACTOR * BFV_SCALING_FACTOR);
+
+            SPDLOG_INFO("Decrypted Distance: {}", corrected_value);
+        }
+    }
 
     return {encrypted_coarse_distances, coarse_distance_labels};
 }

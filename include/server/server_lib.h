@@ -8,6 +8,7 @@
 #include <seal/seal.h>
 
 #include "client_server_utils.h"
+#include "seal/util/defines.h"
 
 // Singleton class pattern for static access across all controllers
 class Server {
@@ -68,7 +69,7 @@ class Server {
         std::vector<std::vector<seal::Ciphertext>>
             &encrypted_residual_queries_squared,
         size_t num_queries, size_t nprobe, seal::RelinKeys relin_keys,
-        seal::GaloisKeys galois_keys) const;
+        seal::GaloisKeys galois_keys, std::vector<seal::seal_byte> sk) const;
 
     void preciseSearch(
         const std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, NQUERY>
