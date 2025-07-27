@@ -22,6 +22,11 @@ constexpr int64_t SUB_QUANTIZER_SIZE = 8;
 constexpr int64_t BFV_SCALING_FACTOR = 10;
 using faiss_idx_t = int64_t;
 
+struct DistanceIndexData {
+    float distance;
+    faiss_idx_t idx;
+};
+
 template <typename T>
 void vecs_read(const char *fname, size_t &d_out, size_t &n_out,
                std::vector<T> &vecs) {

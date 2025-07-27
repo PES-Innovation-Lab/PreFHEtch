@@ -3,6 +3,10 @@
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 
+#include <seal/decryptor.h>
+#include <seal/encryptionparams.h>
+#include <seal/secretkey.h>
+
 #include "Query.h"
 #include "client_server_utils.h"
 #include "server_lib.h"
@@ -111,11 +115,22 @@ void Query::coarse_search(
     SPDLOG_INFO("Time to serialise coarse search results = {}(microseconds)",
                 serde_coarse_search_results_timer.getDurationMicroseconds());
 
+    // TODO: Deserialising and decrypting coarse search results
+    SPDLOG_INFO("Deserialising and decrypting coarse search results");
+    auto deser_Vecs = server->deserialise_decrypt_coarse_distances(
+        serde_encrypted_coarse_distances, serde_sk);
+
+    SPDLOG_INFO("Computing nearest coarse_probe vectors");
+    server->compute_nearest_coarse_vectors_idx(deser_Vecs, coarse_vector_labels,
+                                               num_queries, 20);
+
     nlohmann::json response;
-    response["encryptedCoarseDistances"] = serde_encrypted_coarse_distances;
-    response["coarseVectorLabels"] = coarse_vector_labels;
-    SPDLOG_INFO("Size of the serialised encrypted data = {}",
-                response.dump().size());
+    // response["encryptedCoarseDistances"] = serde_encrypted_coarse_distances;
+    // response["coarseVectorLabels"] = coarse_vector_labels;
+    // SPDLOG_INFO("Size of the serialised encrypted data = {}",
+    // response.dump().size());
+
+    response["response"] = "ok";
 
     const HttpResponsePtr resp = HttpResponse::newHttpResponse();
     resp->setContentTypeString("application/json");

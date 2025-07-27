@@ -6,7 +6,6 @@
 #include <spdlog/spdlog.h>
 
 #include "client_lib.h"
-
 #include "client_server_utils.h"
 
 char const *QUERY_DATASET_PATH = "../sift/siftsmall/siftsmall_query.fvecs";
@@ -325,13 +324,18 @@ Client::get_encrypted_coarse_scores(
 
     nlohmann::json resp = nlohmann::json::parse(r.text);
 
-    auto encrypted_coarse_scores =
-        resp.at("encryptedCoarseDistances")
-            .get<std::vector<std::vector<std::vector<seal::seal_byte>>>>();
+    SPDLOG_INFO("resp ={}", resp.dump());
+    std::vector<std::vector<std::vector<seal::seal_byte>>>
+        encrypted_coarse_scores;
+    std::vector<std::vector<faiss_idx_t>> coarse_vector_labels;
 
-    auto coarse_vector_labels =
-        resp.at("coarseVectorLabels")
-            .get<std::vector<std::vector<faiss_idx_t>>>();
+    // auto encrypted_coarse_scores =
+    //     resp.at("encryptedCoarseDistances")
+    //         .get<std::vector<std::vector<std::vector<seal::seal_byte>>>>();
+    //
+    // auto coarse_vector_labels =
+    //     resp.at("coarseVectorLabels")
+    //         .get<std::vector<std::vector<faiss_idx_t>>>();
 
     return {encrypted_coarse_scores, coarse_vector_labels};
 }

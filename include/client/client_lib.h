@@ -8,11 +8,6 @@
 
 const std::string server_addr = "http://localhost:8080/";
 
-struct DistanceIndexData {
-    float distance;
-    faiss_idx_t idx;
-};
-
 class Encryption {
   public:
     seal::EncryptionParameters EncryptedParms;

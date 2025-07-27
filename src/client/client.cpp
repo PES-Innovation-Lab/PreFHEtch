@@ -62,14 +62,15 @@ int main() {
             nprobe_nearest_centroids_idx, serde_relin_keys, serde_galois_keys);
     SPDLOG_INFO("Received encrypted coarse distances successfully");
 
-    auto decrypted_coarse_distances =
-        client.deserialise_decrypt_coarse_distances(
-            serde_encrypted_coarse_distances);
-    SPDLOG_INFO("Deserialised and decrypted coarse distances successfully");
-
-    auto sorted_coarse_labels = client.compute_nearest_coarse_vectors_idx(
-        decrypted_coarse_distances, coarse_vector_labels, nprobe, coarse_probe);
-    SPDLOG_INFO("Computed nearest coarse vectors successfully");
+    // auto decrypted_coarse_distances =
+    //     client.deserialise_decrypt_coarse_distances(
+    //         serde_encrypted_coarse_distances);
+    // SPDLOG_INFO("Deserialised and decrypted coarse distances successfully");
+    //
+    // auto sorted_coarse_labels = client.compute_nearest_coarse_vectors_idx(
+    //     decrypted_coarse_distances, coarse_vector_labels, nprobe,
+    //     coarse_probe);
+    // SPDLOG_INFO("Computed nearest coarse vectors successfully");
 
     // // Send nearest coarse vector indexes to server to compute precise scores
     // // (distances)
