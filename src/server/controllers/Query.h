@@ -23,9 +23,9 @@ class Query : public drogon::HttpController<Query> {
     void query(const HttpRequestPtr &req,
                std::function<void(const HttpResponsePtr &)> &&callback) const;
 
-    void coarse_search(
+    void coarseSearch(
         const HttpRequestPtr &req,
-        std::function<void(const HttpResponsePtr &)> &&callback) const;
+        std::function<void(const HttpResponsePtr &)> &&callback);
 
     void precise_search(
         const HttpRequestPtr &req,

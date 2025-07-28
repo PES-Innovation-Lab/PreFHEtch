@@ -1,13 +1,14 @@
 #include <memory>
 #include <vector>
 
-#include <nlohmann/json.hpp>
 #include <seal/seal.h>
 #include <spdlog/spdlog.h>
 
 #include "Query.h"
 #include "client_server_utils.h"
 #include "server_lib.h"
+#include "prefhetch.pb.h"
+#include "protobuf_utils.h"
 
 void Query::query(
     const HttpRequestPtr &req,
@@ -21,20 +22,24 @@ void Query::query(
 
     std::shared_ptr<Server> srvr = Server::getInstance();
 
-    nlohmann::json centroids_json;
-    retrieve_centroids_timer.StartTimer();
-    centroids_json["centroids"] = srvr->retrieve_centroids();
-    retrieve_centroids_timer.StopTimer();
+    prefhetch::QueryResponse response;
+    prefhetch_utils::vector_to_repeated(srvr->retrieve_centroids(), response.mutable_centroids());
 
-    serde_parms_timer.StartTimer();
-    centroids_json["encryptedParms"] = srvr->serialise_parms();
-    serde_parms_timer.StopTimer();
+    // serialise_parms() returns std::vector<seal::seal_byte>
+    const auto& parms = srvr->serialise_parms();
+    response.set_encrypted_parms(parms.data(), parms.size());
+    response.set_subquantizers(srvr->SubQuantizers);
 
-    centroids_json["subquantizers"] = srvr->SubQuantizers;
+    std::string serialized_response;
+    auto start_ser = std::chrono::high_resolution_clock::now();
+    response.SerializeToString(&serialized_response);
+    auto end_ser = std::chrono::high_resolution_clock::now();
+    auto ser_time = std::chrono::duration_cast<std::chrono::microseconds>(end_ser - start_ser).count();
+    SPDLOG_INFO("QueryResponse serialization size: {} bytes, time: {} us", serialized_response.size(), ser_time);
 
     const HttpResponsePtr resp = HttpResponse::newHttpResponse();
-    resp->setContentTypeString("application/json");
-    resp->setBody(centroids_json.dump());
+    resp->setContentTypeString("application/x-protobuf");
+    resp->setBody(serialized_response);
 
     callback(resp);
     query_handler_timer.StopTimer();
@@ -47,9 +52,9 @@ void Query::query(
                 query_handler_timer.getDurationMicroseconds());
 }
 
-void Query::coarse_search(
+void Query::coarseSearch(
     const HttpRequestPtr &req,
-    std::function<void(const HttpResponsePtr &)> &&callback) const {
+    std::function<void(const HttpResponsePtr &)> &&callback) {
     Timer coarse_search_handler_timer;
     Timer serde_coarse_search_params_timer;
     Timer coarse_search_timer;
@@ -77,17 +82,26 @@ void Query::coarse_search(
 
     size_t nprobe = nprobe_centroids.size() / num_queries;
 
-    std::shared_ptr<Server> server = Server::getInstance();
-    // server->display_nprobe_centroids(nprobe_centroids, num_queries);
+        std::shared_ptr<Server> server = Server::getInstance();
+        if (!server) {
+            SPDLOG_ERROR("Failed to get Server instance");
+            auto resp = HttpResponse::newHttpResponse();
+            resp->setStatusCode(k500InternalServerError);
+            callback(resp);
+            return;
+        }
 
-    serde_coarse_search_params_timer.StartTimer();
-    auto [encrypted_residual_vectors, encrypted_residual_vectors_squared,
-          relin_keys, galois_keys] =
-        server->deserialise_coarse_search_parms(
-            serde_encrypted_residual_vectors,
-            serde_encrypted_residual_vectors_squared, serde_relin_keys,
-            serde_galois_keys, serde_sk);
-    serde_coarse_search_params_timer.StopTimer();
+        // Deserialize parameters
+        serde_coarse_search_params_timer.StartTimer();
+        auto [encrypted_residual_vectors, encrypted_residual_vectors_squared,
+              relin_keys, galois_keys] = server->deserialise_coarse_search_parms(
+            serde_residual_vecs,
+            serde_residual_vecs_squared,
+            serde_relin_keys,
+            serde_galois_keys,
+            serde_sk
+        );
+        serde_coarse_search_params_timer.StopTimer();
 
     coarse_search_timer.StartTimer();
     auto [encrypted_coarse_distances, coarse_vector_labels] =
@@ -283,6 +297,70 @@ void Query::single_phase_search(
     const HttpResponsePtr resp = HttpResponse::newHttpResponse();
     resp->setContentTypeString("application/json");
     resp->setBody(response.dump());
+        // Prepare response
+        prefhetch::CoarseSearchResponse response;
+       
+        // Serialize encrypted distances
+        serde_coarse_search_results_timer.StartTimer();
+        for (const auto& query_distances : encrypted_coarse_distances) {
+            for (const auto& ciphertext : query_distances) {
+                const size_t save_size = ciphertext.save_size();
+                if (save_size == 0) {
+                    SPDLOG_ERROR("Invalid ciphertext: save_size is 0");
+                    auto resp = HttpResponse::newHttpResponse();
+                    resp->setStatusCode(k500InternalServerError);
+                    callback(resp);
+                    return;
+                }
+                
+                std::vector<seal::seal_byte> byte_vec(save_size);
+                const size_t actual_size = ciphertext.save(
+                    byte_vec.data(), 
+                    byte_vec.size()
+                );
+                
+                if (actual_size == 0 || actual_size > save_size) {
+                    SPDLOG_ERROR("Ciphertext save failed: actual_size = {}, expected <= {}", 
+                               actual_size, save_size);
+                    auto resp = HttpResponse::newHttpResponse();
+                    resp->setStatusCode(k500InternalServerError);
+                    callback(resp);
+                    return;
+                }
+                
+                byte_vec.resize(actual_size);
+                response.add_encrypted_coarse_distances(
+                    byte_vec.data(), 
+                    byte_vec.size()
+                );
+            }
+        }
+        
+        // Add labels
+        for (const auto& label_vec : coarse_vector_labels) {
+            for (const auto& label : label_vec) {
+                response.add_coarse_vector_labels(static_cast<uint64_t>(label));
+            }
+        }
+        serde_coarse_search_results_timer.StopTimer();
+        // Serialize and send response
+        auto start_ser = std::chrono::high_resolution_clock::now();
+        std::string serialized_response;
+        if (!response.SerializeToString(&serialized_response)) {
+            SPDLOG_ERROR("Failed to serialize CoarseSearchResponse");
+            auto resp = HttpResponse::newHttpResponse();
+            resp->setStatusCode(k500InternalServerError);
+            callback(resp);
+            return;
+        }
+        auto end_ser = std::chrono::high_resolution_clock::now();
+        auto ser_time = std::chrono::duration_cast<std::chrono::microseconds>(end_ser - start_ser).count();
+        SPDLOG_INFO("CoarseSearchResponse serialization size: {} bytes, time: {} us", serialized_response.size(), ser_time);
+        
+        const HttpResponsePtr resp = HttpResponse::newHttpResponse();
+        resp->setStatusCode(k200OK);
+        resp->setContentTypeString("application/x-protobuf");
+        resp->setBody(std::move(serialized_response));
 
     callback(resp);
     single_phase_search_handler_timer.StopTimer();

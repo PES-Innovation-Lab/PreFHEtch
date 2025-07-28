@@ -15,6 +15,8 @@ find_package(jsoncpp CONFIG REQUIRED)
 find_package(Drogon REQUIRED)
 # Library to make HTTP requests
 find_package(cpr CONFIG REQUIRED)
+# Protocol Buffers
+find_package(Protobuf REQUIRED)
 
 find_package(Boost REQUIRED COMPONENTS program_options)
 
@@ -45,6 +47,9 @@ FetchContent_Declare(json
 )
 FetchContent_MakeAvailable(json)
 
+# Generate protobuf files
+protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS proto/prefhetch.proto)
+
 FetchContent_Declare(
         spdlog
         GIT_REPOSITORY https://github.com/gabime/spdlog
@@ -59,6 +64,7 @@ target_include_directories(PreFHEtch_server_headers
         INTERFACE
         ${CMAKE_CURRENT_SOURCE_DIR}/include/server
         ${CMAKE_CURRENT_SOURCE_DIR}/include/common
+        ${CMAKE_CURRENT_BINARY_DIR}
 )
 target_link_libraries(PreFHEtch_server_headers
         INTERFACE
@@ -67,6 +73,7 @@ target_link_libraries(PreFHEtch_server_headers
         spdlog::spdlog
         SEAL::seal
         faiss
+        protobuf::libprotobuf
         Boost::program_options
 )
 
@@ -76,6 +83,9 @@ add_library(PreFHEtch_server_lib
         src/server/controllers/Query.h
         src/server/controllers/Query.cc
         src/common/client_server_utils.cpp
+        src/common/protobuf_utils.cpp
+        ${PROTO_SRCS}
+        ${PROTO_HDRS}
 )
 target_link_libraries(PreFHEtch_server_lib
         PUBLIC
@@ -97,6 +107,7 @@ target_include_directories(PreFHEtch_client_headers
         INTERFACE
         ${CMAKE_CURRENT_SOURCE_DIR}/include/client
         ${CMAKE_CURRENT_SOURCE_DIR}/include/common
+        ${CMAKE_CURRENT_BINARY_DIR}
 )
 target_link_libraries(PreFHEtch_client_headers
         INTERFACE
@@ -104,6 +115,7 @@ target_link_libraries(PreFHEtch_client_headers
         cpr::cpr
         spdlog::spdlog
         SEAL::seal
+        protobuf::libprotobuf
         Boost::program_options
 )
 
@@ -111,6 +123,9 @@ add_library(PreFHEtch_client_lib
         src/client/client_lib.cpp
         src/client/client_utils.cpp
         src/common/client_server_utils.cpp
+        src/common/protobuf_utils.cpp
+        ${PROTO_SRCS}
+        ${PROTO_HDRS}
 )
 target_link_libraries(PreFHEtch_client_lib
         PUBLIC
