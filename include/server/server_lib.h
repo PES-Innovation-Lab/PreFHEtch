@@ -88,15 +88,4 @@ class Server {
     void
     display_nprobe_centroids(const std::vector<faiss::idx_t> &nprobe_centroids,
                              size_t num_queries) const;
-
-    std::vector<std::vector<float>> deserialise_decrypt_coarse_distances(
-        const std::vector<std::vector<std::vector<seal::seal_byte>>>
-            &serde_encrypted_coarse_distances,
-        // TODO: Temp Param
-        std::vector<seal::seal_byte> serde_sk);
-
-    std::vector<std::vector<faiss_idx_t>> compute_nearest_coarse_vectors_idx(
-        const std::vector<std::vector<float>> &decrypted_coarse_distance_scores,
-        const std::vector<std::vector<faiss_idx_t>> &coarse_vector_labels,
-        const size_t num_queries, const size_t coarse_probe) const;
 };

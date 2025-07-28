@@ -9,11 +9,11 @@
 
 constexpr int64_t PRECISE_VECTOR_DIMENSIONS = 128;
 
-constexpr int64_t NPROBE = 10;
+constexpr int64_t NPROBE = 1;
 constexpr int64_t COARSE_PROBE = 200;
 constexpr int64_t K = 100;
 constexpr int64_t NBASE = 10000;
-constexpr int64_t NQUERY = 10;
+constexpr int64_t NQUERY = 1;
 
 constexpr int64_t NLIST = 256;
 constexpr int64_t SUB_QUANTIZERS = 32;
