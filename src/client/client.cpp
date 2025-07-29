@@ -4,6 +4,8 @@
 #include <spdlog/spdlog.h>
 
 #include "client_lib.h"
+#include "client_server_utils.h"
+#include "seal/util/defines.h"
 
 namespace po = boost::program_options;
 
@@ -50,6 +52,9 @@ int main(int argc, char *argv[]) {
     Timer coarse_search_timer;
     Timer deserialise_coarse_search_results_timer;
     Timer compute_nearest_nprobe_coarse_search_timer;
+    Timer precise_search_timer;
+    Timer deserialise_precise_search_results_timer;
+    Timer compute_k_nearest_precise_timer;
 
     SPDLOG_INFO("Starting query and timers");
     SPDLOG_INFO("num_queries = {}, nprobe = {}, coarse_probe = {}", num_queries,
@@ -64,13 +69,13 @@ int main(int argc, char *argv[]) {
     get_query_timer.StartTimer();
     std::vector<float> precise_queries = client.get_query();
     get_query_timer.StopTimer();
-    SPDLOG_INFO("Query vectors obtained successfully, time(us) = {}",
+    SPDLOG_INFO("Query vectors obtained successfully, time = {}(us)",
                 get_query_timer.getDurationMicroseconds());
 
     get_centroids_timer.StartTimer();
     auto [centroids, encrypted_parms] = client.get_centroids_encrypted_parms();
     get_centroids_timer.StopTimer();
-    SPDLOG_INFO("Fetched centroids from server successfully, time(us) = {}",
+    SPDLOG_INFO("Fetched centroids from server successfully, time = {}(us)",
                 get_centroids_timer.getDurationMicroseconds());
 
     client.init_client_encrypt_parms(encrypted_parms);
@@ -79,27 +84,29 @@ int main(int argc, char *argv[]) {
     auto [sort_nearest_centroids_idx, nprobe_nearest_centroids_idx] =
         client.sort_nearest_centroids(precise_queries, centroids);
     sort_centroids_timer.StopTimer();
-    SPDLOG_INFO("Computed nearest centroids successfully, time(us) = {}",
+    SPDLOG_INFO("Computed nearest centroids successfully, time = {}(us)",
                 sort_centroids_timer.getDurationMicroseconds());
 
     encrypt_coarse_search_params_timer.StartTimer();
-    auto [encrypted_subvectors, encrypted_subvectors_squared, serde_relin_keys,
-          serde_galois_keys] =
-        client.compute_encrypted_coarse_search_parms(
-            precise_queries, centroids, sort_nearest_centroids_idx);
+    auto [serde_encrypted_residual_queries,
+          serde_encrypted_residual_queries_squared, serde_relin_keys,
+          serde_galois_keys, serde_encrypted_precise_queries] =
+        client.compute_encrypted_search_parms(precise_queries, centroids,
+                                              sort_nearest_centroids_idx);
     encrypt_coarse_search_params_timer.StopTimer();
-    SPDLOG_INFO("Computed encrypted subvector and squared lengths, "
-                "time(us) = {}",
+    SPDLOG_INFO("Computed encrypted precise queries and squared lengths, "
+                "time = {}(us)",
                 encrypt_coarse_search_params_timer.getDurationMicroseconds());
 
     coarse_search_timer.StartTimer();
     auto [serde_encrypted_coarse_distances, coarse_vector_labels] =
         client.get_encrypted_coarse_scores(
-            encrypted_subvectors, encrypted_subvectors_squared,
+            serde_encrypted_residual_queries,
+            serde_encrypted_residual_queries_squared,
             nprobe_nearest_centroids_idx, serde_relin_keys, serde_galois_keys);
     coarse_search_timer.StopTimer();
     SPDLOG_INFO("Received encrypted coarse distances successfully, "
-                "time(us) = {}",
+                "time = {}(us)",
                 coarse_search_timer.getDurationMicroseconds());
 
     deserialise_coarse_search_results_timer.StartTimer();
@@ -109,32 +116,50 @@ int main(int argc, char *argv[]) {
     deserialise_coarse_search_results_timer.StopTimer();
     SPDLOG_INFO(
         "Deserialised and decrypted coarse distances successfully, "
-        "time(us) = {}",
+        "time = {}(us)",
         deserialise_coarse_search_results_timer.getDurationMicroseconds());
 
     compute_nearest_nprobe_coarse_search_timer.StartTimer();
-    auto sorted_coarse_labels = client.compute_nearest_coarse_vectors_idx(
-        decrypted_coarse_distances, coarse_vector_labels, nprobe, coarse_probe);
+    std::vector<std::vector<faiss_idx_t>> nearest_coarse_labels =
+        client.compute_nearest_coarse_vectors_idx(decrypted_coarse_distances,
+                                                  coarse_vector_labels, nprobe,
+                                                  coarse_probe);
     compute_nearest_nprobe_coarse_search_timer.StopTimer();
     SPDLOG_INFO(
-        "Computed nearest coarse vectors successfully, time(us) = {}",
+        "Computed nearest coarse vectors successfully, time = {}(us)",
         compute_nearest_nprobe_coarse_search_timer.getDurationMicroseconds());
 
-    // // Send nearest coarse vector indexes to server to compute precise scores
-    // // (distances)
-    // std::array<std::array<float, COARSE_PROBE>, NQUERY> precise_scores;
-    // get_precise_scores(nearest_coarse_vectors, precise_query,
-    // precise_scores);
-    // // SPDLOG_INFO("Received precise distance scores successfully");
+    precise_search_timer.StartTimer();
+    std::vector<std::vector<seal::seal_byte>> serde_encrypted_precise_scores =
+        client.get_precise_scores(serde_encrypted_precise_queries,
+                                  nearest_coarse_labels);
+    precise_search_timer.StopTimer();
+    SPDLOG_INFO("Received precise distance scores successfully, time = {}(us)",
+                precise_search_timer.getDurationMicroseconds());
+
+    // TODO: uncomment on implementing precise search
+
+    // deserialise_precise_search_results_timer.StartTimer();
+    // std::vector<float> precise_distances =
+    //     client.deserialise_decrypt_precise_distances(
+    //         serde_encrypted_precise_scores);
+    // deserialise_precise_search_results_timer.StopTimer();
+    // SPDLOG_INFO(
+    //     "Deserialised and decrypted precise distances successfully, "
+    //     "time = {}(us)",
+    //     deserialise_precise_search_results_timer.getDurationMicroseconds());
     //
-    // std::array<std::array<DistanceIndexData, COARSE_PROBE>, NQUERY>
-    //     nearest_precise_vectors;
-    // compute_nearest_precise_vectors(precise_scores, nearest_coarse_vectors,
-    //                                 nearest_precise_vectors);
-    // // SPDLOG_INFO("Computed nearest precise vectors successfully");
-    //
-    // precise_benchmark_timer.StopTimer();
-    //
+    // compute_k_nearest_precise_timer.StartTimer();
+    // std::vector<faiss_idx_t> k_nearest_vectors =
+    //     client.compute_nearest_precise_vectors(precise_distances,
+    //                                            sorted_coarse_labels);
+    // compute_k_nearest_precise_timer.StopTimer();
+    // SPDLOG_INFO("Computed nearest precise vectors successfully, time(us) =
+    // {}",
+    //             compute_k_nearest_precise_timer.getDurationMicroseconds());
+
+    // TODO: update benchmarks for encrypted pipeline
+
     // printf("\n");
     // SPDLOG_INFO("TIME");
     // SPDLOG_INFO("Start: Query, End: Computing nearest precise vectors (Does "

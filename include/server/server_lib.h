@@ -8,6 +8,9 @@
 #include <seal/seal.h>
 
 #include "client_server_utils.h"
+#include "faiss/MetricType.h"
+#include "seal/ciphertext.h"
+#include "seal/util/defines.h"
 
 // Singleton class pattern for static access across all controllers
 class Server {
@@ -70,13 +73,16 @@ class Server {
         size_t num_queries, size_t nprobe, seal::RelinKeys relin_keys,
         seal::GaloisKeys galois_keys) const;
 
-    void preciseSearch(
-        const std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, NQUERY>
-            &precise_query,
-        const std::array<std::array<faiss::idx_t, COARSE_PROBE>, NQUERY>
-            &nearest_coarse_vector_idx,
-        std::array<std::array<float, COARSE_PROBE>, NQUERY>
-            &precise_distance_scores) const;
+    std::vector<seal::Ciphertext> deserialise_precise_search_params(
+        const std::vector<std::vector<seal::seal_byte>>
+            &serde_encrypted_precise_queries) const;
+
+    std::vector<seal::Ciphertext> preciseSearch(
+        const std::vector<std::vector<faiss::idx_t>> &nearest_coarse_vectors_id,
+        const std::vector<seal::Ciphertext> &encrypted_precise_queries) const;
+
+    std::vector<std::vector<seal::seal_byte>> serialise_precise_search_results(
+        const std::vector<seal::Ciphertext> &encrypted_precise_distances) const;
 
     void preciseVectorPIR(
         const std::array<std::array<faiss_idx_t, K>, NQUERY>

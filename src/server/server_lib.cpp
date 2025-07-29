@@ -1,5 +1,4 @@
 #include <cstdio>
-#include <iterator>
 #include <vector>
 
 #include <faiss/IndexFlat.h>
@@ -14,6 +13,7 @@
 
 // Include controllers headers to register with server
 #include "controllers/Query.h"
+#include "seal/ciphertext.h"
 #include "seal/util/defines.h"
 
 char const *SERVER_ADDRESS = "0.0.0.0";
@@ -310,63 +310,73 @@ Server::coarseSearch(
     return {encrypted_coarse_distances, coarse_distance_labels};
 }
 
-void Server::preciseSearch(
-    const std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, NQUERY>
-        &precise_query,
-    const std::array<std::array<faiss::idx_t, COARSE_PROBE>, NQUERY>
-        &nearest_coarse_vector_idx,
-    std::array<std::array<float, COARSE_PROBE>, NQUERY>
-        &precise_distance_scores) const {
+// TODO: deserialise_precise_search_params
+std::vector<seal::Ciphertext> Server::deserialise_precise_search_params(
+    const std::vector<std::vector<seal::seal_byte>>
+        &serde_encrypted_precise_queries) const {}
+
+// TODO: implement precise search
+std::vector<seal::Ciphertext> Server::preciseSearch(
+    const std::vector<std::vector<faiss::idx_t>> &nearest_coarse_vectors_id,
+    const std::vector<seal::Ciphertext> &encrypted_precise_queries) const {
     // SPDLOG_INFO("Starting precise search on the server");
 
-    const float *dataset_base_ptr = m_DatasetBase.data();
-
-    for (int i = 0; i < NQUERY; i++) {
-        for (int j = 0; j < COARSE_PROBE; j++) {
-            float dist = 0.0;
-            const float *precise_vec_idx =
-                dataset_base_ptr +
-                (nearest_coarse_vector_idx[i][j] * PRECISE_VECTOR_DIMENSIONS);
-
-            for (int k = 0; k < PRECISE_VECTOR_DIMENSIONS; k++) {
-                dist += std::pow((precise_vec_idx[k] - precise_query[i][k]), 2);
-            }
-
-            precise_distance_scores[i][j] = dist;
-        }
-    }
-
-    // SPDLOG_INFO("Precise search completed");
+    // const float *dataset_base_ptr = m_DatasetBase.data();
+    //
+    // for (int i = 0; i < NQUERY; i++) {
+    //     for (int j = 0; j < COARSE_PROBE; j++) {
+    //         float dist = 0.0;
+    //         const float *precise_vec_idx =
+    //             dataset_base_ptr +
+    //             (nearest_coarse_vector_idx[i][j] *
+    //             PRECISE_VECTOR_DIMENSIONS);
+    //
+    //         for (int k = 0; k < PRECISE_VECTOR_DIMENSIONS; k++) {
+    //             dist += std::pow((precise_vec_idx[k] - precise_query[i][k]),
+    //             2);
+    //         }
+    //
+    //         precise_distance_scores[i][j] = dist;
+    //     }
+    // }
+    //
+    // // SPDLOG_INFO("Precise search completed");
 }
 
-void Server::preciseVectorPIR(
-    const std::array<std::array<faiss_idx_t, K>, NQUERY>
-        &k_nearest_precise_vectors_idx,
-    std::array<std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, K>,
-               NQUERY> &query_results) {
-    // SPDLOG_INFO("Starting precise vector PIR on the server");
+// TODO: serialise_precise_search_results
+std::vector<std::vector<seal::seal_byte>>
+Server::serialise_precise_search_results(
+    const std::vector<seal::Ciphertext> &encrypted_precise_distances) const {}
 
-    float *dataset_base_ptr = m_DatasetBase.data();
-
-    for (int i = 0; i < NQUERY; i++) {
-        for (int j = 0; j < K; j++) {
-            float *precise_vec_idx =
-                dataset_base_ptr + (k_nearest_precise_vectors_idx[i][j] *
-                                    PRECISE_VECTOR_DIMENSIONS);
-
-            std::span<float> prec_vec(precise_vec_idx,
-                                      PRECISE_VECTOR_DIMENSIONS *
-                                          sizeof(precise_vec_idx));
-            for (int k = 0; k < PRECISE_VECTOR_DIMENSIONS; k++) {
-                // SPDLOG_INFO("Vector {} Dimension k[{}] = {}", j, k,
-                // prec_vec[k]);
-                query_results[i][j][k] = prec_vec[k];
-            }
-        }
-    }
-
-    // SPDLOG_INFO("Precise vector PIR completed");
-}
+// TODO: Implement PIR for encrypted pipeline
+// void Server::preciseVectorPIR(
+//     const std::array<std::array<faiss_idx_t, K>, NQUERY>
+//         &k_nearest_precise_vectors_idx,
+//     std::array<std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, K>,
+//                NQUERY> &query_results) {
+//     // SPDLOG_INFO("Starting precise vector PIR on the server");
+//
+//     float *dataset_base_ptr = m_DatasetBase.data();
+//
+//     for (int i = 0; i < NQUERY; i++) {
+//         for (int j = 0; j < K; j++) {
+//             float *precise_vec_idx =
+//                 dataset_base_ptr + (k_nearest_precise_vectors_idx[i][j] *
+//                                     PRECISE_VECTOR_DIMENSIONS);
+//
+//             std::span<float> prec_vec(precise_vec_idx,
+//                                       PRECISE_VECTOR_DIMENSIONS *
+//                                           sizeof(precise_vec_idx));
+//             for (int k = 0; k < PRECISE_VECTOR_DIMENSIONS; k++) {
+//                 // SPDLOG_INFO("Vector {} Dimension k[{}] = {}", j, k,
+//                 // prec_vec[k]);
+//                 query_results[i][j][k] = prec_vec[k];
+//             }
+//         }
+//     }
+//
+//     // SPDLOG_INFO("Precise vector PIR completed");
+// }
 
 // helper for debugging
 void Server::display_nprobe_centroids(

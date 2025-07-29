@@ -56,22 +56,20 @@ class Client {
                            std::vector<float> &centroids) const;
 
     // Returns NQUERY pairs of serialize ciphertexts and the relinearization
-    // and galois keys
-
-    // tuple.1 - vector of encrypted residual queries for nqueries
-
-    // tuple.2 - vector of encrypted residual squared lengths for nqueries
-
-    // tuple.3 - relinearization keys
-
-    // tuple.4 - galois keys
+    // and galois keys, tuple.1 - vector of encrypted residual queries for
+    // nqueries, tuple.2 - vector of encrypted residual squared lengths for
+    // nqueries, tuple.3 - relinearization keys, tuple.4 - galois keys
+    // tuple.5 - flat vec of encrypted query vectors
     std::tuple<std::vector<std::vector<std::vector<seal::seal_byte>>>,
                std::vector<std::vector<std::vector<seal::seal_byte>>>,
-               std::vector<seal::seal_byte>, std::vector<seal::seal_byte>>
-    compute_encrypted_coarse_search_parms(
+               std::vector<seal::seal_byte>, std::vector<seal::seal_byte>,
+               std::vector<std::vector<seal::seal_byte>>>
+    compute_encrypted_search_parms(
         std::vector<float> &precise_queries, std::vector<float> &centroids,
         std::vector<faiss_idx_t> &nearest_centroids_idx) const;
 
+    // Sends the residuals and nearest centroids to the server to perform a
+    // coarse search and returns the encrypted coarse distances
     std::pair<std::vector<std::vector<std::vector<seal::seal_byte>>>,
               std::vector<std::vector<faiss_idx_t>>>
     get_encrypted_coarse_scores(
@@ -87,26 +85,29 @@ class Client {
         const std::vector<std::vector<std::vector<seal::seal_byte>>>
             &serde_encrypted_coarse_distances);
 
+    // Selects the top `coarse_probe` coarse vectors and returns their ids
     std::vector<std::vector<faiss_idx_t>> compute_nearest_coarse_vectors_idx(
         const std::vector<std::vector<float>> &decrypted_coarse_distance_scores,
         const std::vector<std::vector<faiss_idx_t>> &coarse_vector_labels,
         const size_t num_queries, const size_t coarse_probe) const;
 
-    void get_precise_scores(
-        const std::array<std::vector<DistanceIndexData>, NQUERY>
-            &sorted_coarse_vectors,
-        const std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, NQUERY>
-            &precise_query,
-        std::array<std::array<float, COARSE_PROBE>, NQUERY> &precise_scores);
+    // Sends the encrypted queries along with the nearest coarse vector ids to
+    // the server to perform a precise search and return the encrypted precise
+    // distances
+    std::vector<std::vector<seal::seal_byte>> get_precise_scores(
+        const std::vector<std::vector<seal::seal_byte>> &serde_precise_queries,
+        const std::vector<std::vector<faiss_idx_t>> &nearest_coarse_vectors_id)
+        const;
 
-    void compute_nearest_precise_vectors(
-        const std::array<std::array<float, COARSE_PROBE>, NQUERY>
-            &precise_scores,
+    std::vector<float> deserialise_decrypt_precise_distances(
+        const std::vector<std::vector<seal::seal_byte>>
+            &serde_encrypted_precise_distances) const;
+
+    std::vector<faiss_idx_t> compute_nearest_precise_vectors(
+        const std::vector<float> &precise_distances,
         // Uses the same index order for precise scores
-        const std::array<std::vector<DistanceIndexData>, NQUERY>
-            &sorted_coarse_vectors,
-        std::array<std::array<DistanceIndexData, COARSE_PROBE>, NQUERY>
-            &nearest_precise_vectors);
+        const std::vector<std::vector<faiss_idx_t>> &nearest_coarse_vectors_id)
+        const;
 
     void get_precise_vectors_pir(
         const std::array<std::array<DistanceIndexData, COARSE_PROBE>, NQUERY>

@@ -7,6 +7,7 @@
 
 #include "client_lib.h"
 #include "client_server_utils.h"
+#include "seal/util/defines.h"
 
 char const *QUERY_DATASET_PATH = "../sift/siftsmall/siftsmall_query.fvecs";
 char const *GROUNDTRUTH_DATASET_PATH =
@@ -147,8 +148,9 @@ Client::sort_nearest_centroids(std::vector<float> &precise_queries,
 
 std::tuple<std::vector<std::vector<std::vector<seal::seal_byte>>>,
            std::vector<std::vector<std::vector<seal::seal_byte>>>,
-           std::vector<seal::seal_byte>, std::vector<seal::seal_byte>>
-Client::compute_encrypted_coarse_search_parms(
+           std::vector<seal::seal_byte>, std::vector<seal::seal_byte>,
+           std::vector<std::vector<seal::seal_byte>>>
+Client::compute_encrypted_search_parms(
     std::vector<float> &precise_queries, std::vector<float> &centroids,
     std::vector<faiss_idx_t> &nearest_centroids_idx) const {
 
@@ -170,6 +172,8 @@ Client::compute_encrypted_coarse_search_parms(
     std::vector<std::vector<std::vector<seal::seal_byte>>>
         serde_nqueries_residual_vectors_squared;
     serde_nqueries_residual_vectors_squared.reserve(m_NumQueries);
+    std::vector<std::vector<seal::seal_byte>> serde_encrypted_precise_queries;
+    serde_encrypted_precise_queries.reserve(m_NumQueries);
 
     if (!m_OptEncryption.has_value()) {
         SPDLOG_ERROR("Encryption uninitialised");
@@ -199,6 +203,26 @@ Client::compute_encrypted_coarse_search_parms(
         //     printf("%f, ", query_vector[temp]);
         // }
         // printf("\n");
+
+        seal::Plaintext pt_precise_query;
+        std::vector<int64_t> int_precise_query(m_PreciseVectorDimensions);
+        for (int k = 0; k < m_PreciseVectorDimensions; k++) {
+            int_precise_query[k] =
+                static_cast<int64_t>(query_vector[k] * BFV_SCALING_FACTOR);
+        }
+        m_OptEncryption.value().BatchEncoder.encode(int_precise_query,
+                                                    pt_precise_query);
+
+        seal::Serializable<seal::Ciphertext> encrypted_precise_query_vector =
+            m_OptEncryption.value().Encryptor.encrypt_symmetric(
+                pt_precise_query);
+
+        std::vector<seal::seal_byte> serde_precise_query_vector;
+        serde_precise_query_vector.resize(
+            encrypted_precise_query_vector.save_size());
+        encrypted_precise_query_vector.save(serde_precise_query_vector.data(),
+                                            serde_precise_query_vector.size());
+        serde_encrypted_precise_queries.push_back(serde_precise_query_vector);
 
         for (int k = 0; k < m_NProbe; k++) {
             std::span<float> centroid_view(
@@ -286,7 +310,7 @@ Client::compute_encrypted_coarse_search_parms(
 
     return {serde_nqueries_residual_vectors,
             serde_nqueries_residual_vectors_squared, serde_relin_keys,
-            serde_galois_keys};
+            serde_galois_keys, serde_encrypted_precise_queries};
 }
 
 std::pair<std::vector<std::vector<std::vector<seal::seal_byte>>>,
@@ -325,17 +349,13 @@ Client::get_encrypted_coarse_scores(
 
     nlohmann::json resp = nlohmann::json::parse(r.text);
 
-    std::vector<std::vector<std::vector<seal::seal_byte>>>
-        encrypted_coarse_scores;
-    std::vector<std::vector<faiss_idx_t>> coarse_vector_labels;
+    auto encrypted_coarse_scores =
+        resp.at("encryptedCoarseDistances")
+            .get<std::vector<std::vector<std::vector<seal::seal_byte>>>>();
 
-    // auto encrypted_coarse_scores =
-    //     resp.at("encryptedCoarseDistances")
-    //         .get<std::vector<std::vector<std::vector<seal::seal_byte>>>>();
-    //
-    // auto coarse_vector_labels =
-    //     resp.at("coarseVectorLabels")
-    //         .get<std::vector<std::vector<faiss_idx_t>>>();
+    auto coarse_vector_labels =
+        resp.at("coarseVectorLabels")
+            .get<std::vector<std::vector<faiss_idx_t>>>();
 
     return {encrypted_coarse_scores, coarse_vector_labels};
 }
@@ -465,57 +485,95 @@ Client::compute_nearest_coarse_vectors_idx(
     return nquery_coarse_vector;
 }
 
-void get_precise_scores(
-    const std::array<std::vector<DistanceIndexData>, NQUERY>
-        &sorted_coarse_vectors,
-    const std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, NQUERY>
-        &precise_query,
-    std::array<std::array<float, COARSE_PROBE>, NQUERY> &precise_scores) {
+std::vector<std::vector<seal::seal_byte>> Client::get_precise_scores(
+    const std::vector<std::vector<seal::seal_byte>> &serde_precise_queries,
+    const std::vector<std::vector<faiss_idx_t>> &nearest_coarse_vectors_id)
+    const {
 
-    std::array<std::array<faiss_idx_t, COARSE_PROBE>, NQUERY>
-        nearest_coarse_vectors_id;
-
-    for (int i = 0; i < NQUERY; i++) {
-        for (int j = 0; j < COARSE_PROBE; j++) {
-            nearest_coarse_vectors_id[i][j] = sorted_coarse_vectors[i][j].idx;
-        }
-    }
-
-    nlohmann::json coarse_search_json;
-    coarse_search_json["preciseQuery"] = precise_query;
-    coarse_search_json["nearestCoarseVectorIndexes"] =
-        nearest_coarse_vectors_id;
+    nlohmann::json precise_search_json;
+    precise_search_json["encryptedQueries"] = serde_precise_queries;
+    precise_search_json["nearestCoarseVectorsID"] = nearest_coarse_vectors_id;
+    SPDLOG_INFO("Size of the precise search request = {}",
+                precise_search_json.dump().size());
 
     cpr::Response r = cpr::Post(cpr::Url(server_addr + "precisesearch"),
-                                cpr::Body(coarse_search_json.dump()));
+                                cpr::Body(precise_search_json.dump()));
 
     nlohmann::json resp = nlohmann::json::parse(r.text);
 
-    precise_scores =
-        resp.at("preciseDistanceScores")
-            .get<std::array<std::array<float, COARSE_PROBE>, NQUERY>>();
+    auto encrypted_precise_distances =
+        resp.at("encryptedPreciseDistances")
+            .get<std::vector<std::vector<seal::seal_byte>>>();
+
+    return encrypted_precise_distances;
 }
 
-void compute_nearest_precise_vectors(
-    const std::array<std::array<float, COARSE_PROBE>, NQUERY> &precise_scores,
-    const std::array<std::vector<DistanceIndexData>, NQUERY>
-        &sorted_coarse_vectors,
-    std::array<std::array<DistanceIndexData, COARSE_PROBE>, NQUERY>
-        &nearest_precise_vectors) {
-    for (int i = 0; i < NQUERY; i++) {
-        for (int j = 0; j < COARSE_PROBE; j++) {
-            nearest_precise_vectors[i][j] = DistanceIndexData{
-                precise_scores[i][j], sorted_coarse_vectors[i][j].idx};
-        }
-    }
+// TODO: implement
+// std::vector<float> deserialise_decrypt_precise_distances(
+//     const std::vector<std::vector<seal::seal_byte>>
+//         &serde_encrypted_precise_distances) const {}
+//
+// TODO: implement
+// std::vector<faiss_idx_t> compute_nearest_precise_vectors(
+//     const std::vector<float> &precise_distances,
+//     // Uses the same index order for precise scores
+//     const std::vector<std::vector<faiss_idx_t>> &nearest_coarse_vectors_id)
+//     {}
 
-    for (auto &precise_score_query : nearest_precise_vectors) {
-        std::ranges::sort(precise_score_query, [&](const DistanceIndexData &a,
-                                                   const DistanceIndexData &b) {
-            return a.distance < b.distance;
-        });
-    }
-}
+// void get_precise_scores(
+//     const std::array<std::vector<DistanceIndexData>, NQUERY>
+//         &sorted_coarse_vectors,
+//     const std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, NQUERY>
+//         &precise_query,
+//     std::array<std::array<float, COARSE_PROBE>, NQUERY> &precise_scores) {
+//
+//     std::array<std::array<faiss_idx_t, COARSE_PROBE>, NQUERY>
+//         nearest_coarse_vectors_id;
+//
+//     for (int i = 0; i < NQUERY; i++) {
+//         for (int j = 0; j < COARSE_PROBE; j++) {
+//             nearest_coarse_vectors_id[i][j] =
+//             sorted_coarse_vectors[i][j].idx;
+//         }
+//     }
+//
+//     nlohmann::json coarse_search_json;
+//     coarse_search_json["preciseQuery"] = precise_query;
+//     coarse_search_json["nearestCoarseVectorIndexes"] =
+//         nearest_coarse_vectors_id;
+//
+//     cpr::Response r = cpr::Post(cpr::Url(server_addr + "precisesearch"),
+//                                 cpr::Body(coarse_search_json.dump()));
+//
+//     nlohmann::json resp = nlohmann::json::parse(r.text);
+//
+//     precise_scores =
+//         resp.at("preciseDistanceScores")
+//             .get<std::array<std::array<float, COARSE_PROBE>, NQUERY>>();
+// }
+//
+// void compute_nearest_precise_vectors(
+//     const std::array<std::array<float, COARSE_PROBE>, NQUERY>
+//     &precise_scores, const std::array<std::vector<DistanceIndexData>, NQUERY>
+//         &sorted_coarse_vectors,
+//     std::array<std::array<DistanceIndexData, COARSE_PROBE>, NQUERY>
+//         &nearest_precise_vectors) {
+//     for (int i = 0; i < NQUERY; i++) {
+//         for (int j = 0; j < COARSE_PROBE; j++) {
+//             nearest_precise_vectors[i][j] = DistanceIndexData{
+//                 precise_scores[i][j], sorted_coarse_vectors[i][j].idx};
+//         }
+//     }
+//
+//     for (auto &precise_score_query : nearest_precise_vectors) {
+//         std::ranges::sort(precise_score_query, [&](const DistanceIndexData
+//         &a,
+//                                                    const DistanceIndexData
+//                                                    &b) {
+//             return a.distance < b.distance;
+//         });
+//     }
+// }
 
 void get_precise_vectors_pir(
     const std::array<std::array<DistanceIndexData, COARSE_PROBE>, NQUERY>
