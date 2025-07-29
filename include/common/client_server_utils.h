@@ -41,7 +41,7 @@ void vecs_read(const char *fname, size_t &d_out, size_t &n_out,
     fread(&d, 1, sizeof(int), f);
     assert((d > 0 && d < 1000000) || !"Incorrect dimensions");
     fseek(f, 0, SEEK_SET);
-    struct stat st{};
+    struct stat st {};
     fstat(fileno(f), &st);
     const size_t sz = st.st_size;
     assert(sz % ((d + 1) * 4) == 0 || !"Incorrect file size");

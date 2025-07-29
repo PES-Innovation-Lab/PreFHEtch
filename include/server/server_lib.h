@@ -73,16 +73,21 @@ class Server {
         size_t num_queries, size_t nprobe, seal::RelinKeys relin_keys,
         seal::GaloisKeys galois_keys) const;
 
-    std::vector<seal::Ciphertext> deserialise_precise_search_params(
-        const std::vector<std::vector<seal::seal_byte>>
+    std::vector<std::vector<seal::Ciphertext>>
+    deserialise_precise_search_params(
+        const std::vector<std::vector<std::vector<seal::seal_byte>>>
             &serde_encrypted_precise_queries) const;
 
-    std::vector<seal::Ciphertext> preciseSearch(
+    std::vector<std::vector<seal::Ciphertext>> preciseSearch(
         const std::vector<std::vector<faiss::idx_t>> &nearest_coarse_vectors_id,
-        const std::vector<seal::Ciphertext> &encrypted_precise_queries) const;
+        const std::vector<std::vector<seal::Ciphertext>>
+            &encrypted_precise_queries,
+        seal::RelinKeys relin_keys, seal::GaloisKeys galois_keys) const;
 
-    std::vector<std::vector<seal::seal_byte>> serialise_precise_search_results(
-        const std::vector<seal::Ciphertext> &encrypted_precise_distances) const;
+    std::vector<std::vector<std::vector<seal::seal_byte>>>
+    serialise_precise_search_results(
+        const std::vector<std::vector<seal::Ciphertext>>
+            &encrypted_precise_distances) const;
 
     void preciseVectorPIR(
         const std::array<std::array<faiss_idx_t, K>, NQUERY>
