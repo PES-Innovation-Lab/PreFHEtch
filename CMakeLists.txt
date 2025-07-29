@@ -16,6 +16,8 @@ find_package(Drogon REQUIRED)
 # Library to make HTTP requests
 find_package(cpr CONFIG REQUIRED)
 
+find_package(Boost REQUIRED COMPONENTS program_options)
+
 include(FetchContent)
 
 # Faiss fork to incorporate custom features
@@ -65,6 +67,7 @@ target_link_libraries(PreFHEtch_server_headers
         spdlog::spdlog
         SEAL::seal
         faiss
+        Boost::program_options
 )
 
 add_library(PreFHEtch_server_lib
@@ -101,6 +104,7 @@ target_link_libraries(PreFHEtch_client_headers
         cpr::cpr
         spdlog::spdlog
         SEAL::seal
+        Boost::program_options
 )
 
 add_library(PreFHEtch_client_lib

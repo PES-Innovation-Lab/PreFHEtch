@@ -10,6 +10,7 @@ Pre-Filtering Homomorphically Encrypted queries for Triage and Candidate Handlin
     - [JsonCpp](https://github.com/open-source-parsers/jsoncpp)
     - [Drogon](https://github.com/drogonframework/drogon)
     - [cpr](https://github.com/libcpr/cpr)
+    - [Boost](https://www.boost.org/)
 
 - Download the dataset
 
@@ -48,7 +49,7 @@ cd build
 # in another terminal (for running the PreFHEtch-client)
 docker exec -it prefhetch-container bash
 cd build
-./PreFHEtch-client
+./PreFHEtch_client --nq 5 --nprobe 10 --coarse-probe 200 --k 100
 ```
 If any changes are made, you will have to run the build command again, ie:
 ```bash
