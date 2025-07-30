@@ -3,11 +3,11 @@
 
 #include <cpr/cpr.h>
 #include <nlohmann/json.hpp>
+#include <seal/seal.h>
 #include <spdlog/spdlog.h>
 
 #include "client_lib.h"
 #include "client_server_utils.h"
-#include "seal/util/defines.h"
 
 char const *QUERY_DATASET_PATH = "../sift/siftsmall/siftsmall_query.fvecs";
 char const *GROUNDTRUTH_DATASET_PATH =
@@ -316,13 +316,13 @@ Client::compute_encrypted_search_parms(
 std::pair<std::vector<std::vector<std::vector<seal::seal_byte>>>,
           std::vector<std::vector<faiss_idx_t>>>
 Client::get_encrypted_coarse_scores(
-    std::vector<std::vector<std::vector<seal::seal_byte>>>
+    const std::vector<std::vector<std::vector<seal::seal_byte>>>
         &serde_encrypted_vecs,
-    std::vector<std::vector<std::vector<seal::seal_byte>>>
+    const std::vector<std::vector<std::vector<seal::seal_byte>>>
         &serde_encrypted_vecs_squared,
-    std::vector<faiss_idx_t> &nprobe_nearest_centroids_idx,
-    std::vector<seal::seal_byte> &serde_relin_keys,
-    std::vector<seal::seal_byte> &serde_galois_keys) const {
+    const std::vector<faiss_idx_t> &nprobe_nearest_centroids_idx,
+    const std::vector<seal::seal_byte> &serde_relin_keys,
+    const std::vector<seal::seal_byte> &serde_galois_keys) const {
 
     nlohmann::json coarse_search_json;
     coarse_search_json["numQueries"] = m_NumQueries;
@@ -485,14 +485,18 @@ Client::compute_nearest_coarse_vectors_idx(
     return nquery_coarse_vector;
 }
 
-std::vector<std::vector<seal::seal_byte>> Client::get_precise_scores(
+std::vector<std::vector<std::vector<seal::seal_byte>>>
+Client::get_precise_scores(
     const std::vector<std::vector<seal::seal_byte>> &serde_precise_queries,
-    const std::vector<std::vector<faiss_idx_t>> &nearest_coarse_vectors_id)
-    const {
+    const std::vector<std::vector<faiss_idx_t>> &nearest_coarse_vectors_id,
+    const std::vector<seal::seal_byte> &serde_relin_keys,
+    const std::vector<seal::seal_byte> &serde_galois_keys) const {
 
     nlohmann::json precise_search_json;
     precise_search_json["encryptedQueries"] = serde_precise_queries;
     precise_search_json["nearestCoarseVectorsID"] = nearest_coarse_vectors_id;
+    precise_search_json["relinKeys"] = serde_relin_keys;
+    precise_search_json["galoisKeys"] = serde_galois_keys;
     SPDLOG_INFO("Size of the precise search request = {}",
                 precise_search_json.dump().size());
 
@@ -503,7 +507,7 @@ std::vector<std::vector<seal::seal_byte>> Client::get_precise_scores(
 
     auto encrypted_precise_distances =
         resp.at("encryptedPreciseDistances")
-            .get<std::vector<std::vector<seal::seal_byte>>>();
+            .get<std::vector<std::vector<std::vector<seal::seal_byte>>>>();
 
     return encrypted_precise_distances;
 }

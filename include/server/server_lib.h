@@ -8,9 +8,6 @@
 #include <seal/seal.h>
 
 #include "client_server_utils.h"
-#include "faiss/MetricType.h"
-#include "seal/ciphertext.h"
-#include "seal/util/defines.h"
 
 // Singleton class pattern for static access across all controllers
 class Server {
@@ -73,15 +70,19 @@ class Server {
         size_t num_queries, size_t nprobe, seal::RelinKeys relin_keys,
         seal::GaloisKeys galois_keys) const;
 
-    std::vector<std::vector<seal::Ciphertext>>
+    std::tuple<std::vector<seal::Ciphertext>, seal::RelinKeys, seal::GaloisKeys>
     deserialise_precise_search_params(
-        const std::vector<std::vector<std::vector<seal::seal_byte>>>
-            &serde_encrypted_precise_queries) const;
+        const std::vector<std::vector<seal::seal_byte>>
+            &serde_encrypted_precise_queries,
+        const std::vector<seal::seal_byte> &serde_relin_keys,
+        const std::vector<seal::seal_byte> &serde_galois_keys) const;
 
+    // takes nquery vectors with each query containing `coarse_probe`
+    // number of encrypted queries, returns nquery vectors with each
+    // vector containing a vector of `coarse_probe` number of distances
     std::vector<std::vector<seal::Ciphertext>> preciseSearch(
         const std::vector<std::vector<faiss::idx_t>> &nearest_coarse_vectors_id,
-        const std::vector<std::vector<seal::Ciphertext>>
-            &encrypted_precise_queries,
+        const std::vector<seal::Ciphertext> &encrypted_precise_queries,
         seal::RelinKeys relin_keys, seal::GaloisKeys galois_keys) const;
 
     std::vector<std::vector<std::vector<seal::seal_byte>>>

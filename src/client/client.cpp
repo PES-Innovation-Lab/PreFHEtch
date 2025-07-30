@@ -1,11 +1,11 @@
 #include <vector>
 
 #include <boost/program_options.hpp>
+#include <seal/seal.h>
 #include <spdlog/spdlog.h>
 
 #include "client_lib.h"
 #include "client_server_utils.h"
-#include "seal/util/defines.h"
 
 namespace po = boost::program_options;
 
@@ -130,9 +130,11 @@ int main(int argc, char *argv[]) {
         compute_nearest_nprobe_coarse_search_timer.getDurationMicroseconds());
 
     precise_search_timer.StartTimer();
-    std::vector<std::vector<seal::seal_byte>> serde_encrypted_precise_scores =
-        client.get_precise_scores(serde_encrypted_precise_queries,
-                                  nearest_coarse_labels);
+    std::vector<std::vector<std::vector<seal::seal_byte>>>
+        serde_encrypted_precise_scores =
+            client.get_precise_scores(serde_encrypted_precise_queries,
+                                      nearest_coarse_labels, serde_relin_keys,
+                                      serde_galois_keys);
     precise_search_timer.StopTimer();
     SPDLOG_INFO("Received precise distance scores successfully, time = {}(us)",
                 precise_search_timer.getDurationMicroseconds());

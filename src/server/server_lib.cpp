@@ -15,7 +15,9 @@
 // Include controllers headers to register with server
 #include "controllers/Query.h"
 #include "seal/ciphertext.h"
+#include "seal/galoiskeys.h"
 #include "seal/plaintext.h"
+#include "seal/relinkeys.h"
 #include "seal/util/defines.h"
 
 char const *SERVER_ADDRESS = "0.0.0.0";
@@ -218,15 +220,16 @@ Server::deserialise_coarse_search_parms(
             decrypted_residual_vector_squared /=
                 (BFV_SCALING_FACTOR * BFV_SCALING_FACTOR);
 
-            SPDLOG_INFO("Nquery = {}, Nprobe = {}, vec size = {}, squared val "
-                        "= {}, printing "
-                        "residual vector",
-                        i, j, decoded_residual_vector.size(),
-                        decrypted_residual_vector_squared);
-            for (int k = 0; k < m_PreciseVectorDimensions; k++) {
-                printf("%lld, ", decoded_residual_vector[k]);
-            }
-            printf("\n");
+            // SPDLOG_INFO("Nquery = {}, Nprobe = {}, vec size = {}, squared val
+            // "
+            //             "= {}, printing "
+            //             "residual vector",
+            //             i, j, decoded_residual_vector.size(),
+            //             decrypted_residual_vector_squared);
+            // for (int k = 0; k < m_PreciseVectorDimensions; k++) {
+            //     printf("%lld, ", decoded_residual_vector[k]);
+            // }
+            // printf("\n");
         }
 
         encrypted_nquery_residual_vectors.push_back(
@@ -312,46 +315,43 @@ Server::coarseSearch(
     return {encrypted_coarse_distances, coarse_distance_labels};
 }
 
-std::vector<std::vector<seal::Ciphertext>>
+std::tuple<std::vector<seal::Ciphertext>, seal::RelinKeys, seal::GaloisKeys>
 Server::deserialise_precise_search_params(
-    const std::vector<std::vector<std::vector<seal::seal_byte>>>
-        &serde_encrypted_precise_queries) const {
+    const std::vector<std::vector<seal::seal_byte>>
+        &serde_encrypted_precise_queries,
+    const std::vector<seal::seal_byte> &serde_relin_keys,
+    const std::vector<seal::seal_byte> &serde_galois_keys) const {
 
     seal::SEALContext seal_ctx(m_EncryptionParms);
     seal::BatchEncoder batch_encoder(seal_ctx);
 
-    std::vector<std::vector<seal::Ciphertext>> encrypted_nquery_precise_queries;
-    encrypted_nquery_precise_queries.reserve(
-        serde_encrypted_precise_queries.size());
+    seal::RelinKeys relin_keys;
+    relin_keys.load(seal_ctx, serde_relin_keys.data(), serde_relin_keys.size());
+
+    seal::GaloisKeys galois_keys;
+    galois_keys.load(seal_ctx, serde_galois_keys.data(),
+                     serde_galois_keys.size());
+
+    std::vector<seal::Ciphertext> encrypted_precise_queries;
+    encrypted_precise_queries.reserve(serde_encrypted_precise_queries.size());
 
     SPDLOG_INFO("Deserializing encrypted precise search params");
     for (int i = 0; i < serde_encrypted_precise_queries.size(); i++) {
-        std::vector<seal::Ciphertext> encrypted_precise_queries;
-        encrypted_precise_queries.reserve(
-            serde_encrypted_precise_queries[i].size());
+        seal::Ciphertext encrypted_precise_query;
 
-        for (int j = 0; j < serde_encrypted_precise_queries[i].size(); j++) {
-            seal::Ciphertext encrypted_precise_query;
+        encrypted_precise_query.load(seal_ctx,
+                                     serde_encrypted_precise_queries[i].data(),
+                                     serde_encrypted_precise_queries[i].size());
 
-            encrypted_precise_query.load(
-                seal_ctx, serde_encrypted_precise_queries[i][j].data(),
-                serde_encrypted_precise_queries[i][j].size());
-
-            encrypted_precise_queries.push_back(encrypted_precise_query);
-        }
-
-        encrypted_nquery_precise_queries.push_back(encrypted_precise_queries);
+        encrypted_precise_queries.push_back(encrypted_precise_query);
     }
 
-    return encrypted_nquery_precise_queries;
+    return {encrypted_precise_queries, relin_keys, galois_keys};
 }
 
-// the input is nquery vectors with each query containing coarse probe number of
-// encrypted queries. the output is nquery vectors with each vector containing a
-// vector of coarse probe number of distances
 std::vector<std::vector<seal::Ciphertext>> Server::preciseSearch(
     const std::vector<std::vector<faiss::idx_t>> &nearest_coarse_vectors_id,
-    const std::vector<std::vector<seal::Ciphertext>> &encrypted_precise_queries,
+    const std::vector<seal::Ciphertext> &encrypted_precise_queries,
     seal::RelinKeys relin_keys, seal::GaloisKeys galois_keys) const {
 
     const float *dataset_base_ptr = m_DatasetBase.data();
@@ -361,28 +361,28 @@ std::vector<std::vector<seal::Ciphertext>> Server::preciseSearch(
     seal::Evaluator evaluator(seal_ctx);
 
     std::vector<std::vector<seal::Ciphertext>> encrypted_precise_distances;
-    encrypted_precise_distances.resize(NQUERY);
+    encrypted_precise_distances.reserve(NQUERY);
 
-    for (int i = 0; i < NQUERY; i++) {
-        encrypted_precise_distances[i].resize(COARSE_PROBE);
-        for (int j = 0; j < COARSE_PROBE; j++) {
+    for (int i = 0; i < encrypted_precise_queries.size(); i++) {
+        std::vector<seal::Ciphertext> coarse_probe_precise_distances;
+        size_t coarse_probe = nearest_coarse_vectors_id[i].size();
+        coarse_probe_precise_distances.reserve(coarse_probe);
+
+        for (int j = 0; j < coarse_probe; j++) {
             const float *precise_vec_idx =
                 dataset_base_ptr +
                 (nearest_coarse_vectors_id[i][j] * PRECISE_VECTOR_DIMENSIONS);
-            // prepare plaintext vector.
             std::vector<int64_t> pod_vec(batch_encoder.slot_count(), 0);
             for (int k = 0; k < PRECISE_VECTOR_DIMENSIONS; k++) {
                 pod_vec[k] = static_cast<int64_t>(precise_vec_idx[k]);
             }
+
             seal::Plaintext db_vec;
             batch_encoder.encode(pod_vec, db_vec);
-
-            // do subtraction
             seal::Ciphertext sub_result;
-            evaluator.sub_plain(encrypted_precise_queries[i][j], db_vec,
+            evaluator.sub_plain(encrypted_precise_queries[i], db_vec,
                                 sub_result);
 
-            // do squaring
             // TODO: optimize the square here using the expansion formula.
             seal::Ciphertext result;
             evaluator.square(sub_result, result);
@@ -395,8 +395,10 @@ std::vector<std::vector<seal::Ciphertext>> Server::preciseSearch(
                 evaluator.add_inplace(result, rotated);
             }
 
-            encrypted_precise_distances[i][j] = result;
+            coarse_probe_precise_distances.push_back(result);
         }
+
+        encrypted_precise_distances.push_back(coarse_probe_precise_distances);
     }
 
     return encrypted_precise_distances;

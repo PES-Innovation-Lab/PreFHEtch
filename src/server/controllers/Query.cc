@@ -1,16 +1,12 @@
 #include <memory>
+#include <vector>
 
 #include <nlohmann/json.hpp>
-#include <seal/decryptor.h>
-#include <seal/encryptionparams.h>
-#include <seal/secretkey.h>
+#include <seal/seal.h>
 #include <spdlog/spdlog.h>
-#include <vector>
 
 #include "Query.h"
 #include "client_server_utils.h"
-#include "seal/ciphertext.h"
-#include "seal/util/defines.h"
 #include "server_lib.h"
 
 void Query::query(
@@ -155,31 +151,35 @@ void Query::precise_search(
     auto nearest_coarse_vectors_id =
         req_body.at("nearestCoarseVectorsID")
             .get<std::vector<std::vector<faiss_idx_t>>>();
+    auto serde_relin_keys =
+        req_body["relinKeys"].get<std::vector<seal::seal_byte>>();
+    auto serde_galois_keys =
+        req_body["galoisKeys"].get<std::vector<seal::seal_byte>>();
 
     std::shared_ptr<Server> server = Server::getInstance();
 
     deserialise_precise_search_params_timer.StartTimer();
-    // TODO: deserialise precise search params
-    std::vector<seal::Ciphertext> encrypted_precise_queries =
+    auto [encrypted_precise_queries, relin_keys, galois_keys] =
         server->deserialise_precise_search_params(
-            serde_encrypted_precise_queries);
+            serde_encrypted_precise_queries, serde_relin_keys,
+            serde_galois_keys);
     deserialise_precise_search_params_timer.StopTimer();
 
     precise_search_timer.StartTimer();
-    std::vector<seal::Ciphertext> encrypted_precise_distances =
+    std::vector<std::vector<seal::Ciphertext>> encrypted_precise_distances =
         server->preciseSearch(nearest_coarse_vectors_id,
-                              encrypted_precise_queries);
+                              encrypted_precise_queries, relin_keys,
+                              galois_keys);
     precise_search_timer.StopTimer();
 
     serialise_precise_search_results_timer.StartTimer();
-    // TODO: serialise encrypted distances and send in reponse
-    std::vector<std::vector<seal::seal_byte>> serde_precise_search_results =
-        server->serialise_precise_search_results(encrypted_precise_distances);
+    std::vector<std::vector<std::vector<seal::seal_byte>>>
+        serde_precise_search_results = server->serialise_precise_search_results(
+            encrypted_precise_distances);
     serialise_precise_search_results_timer.StopTimer();
 
     nlohmann::json response;
-    response["implement"] = "encrypted distances";
-    // response["encryptedPreciseDistances"] = serde_precise_search_results;
+    response["encryptedPreciseDistances"] = serde_precise_search_results;
     const HttpResponsePtr resp = HttpResponse::newHttpResponse();
     resp->setContentTypeString("application/json");
     resp->setBody(response.dump());

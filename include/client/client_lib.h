@@ -73,13 +73,13 @@ class Client {
     std::pair<std::vector<std::vector<std::vector<seal::seal_byte>>>,
               std::vector<std::vector<faiss_idx_t>>>
     get_encrypted_coarse_scores(
-        std::vector<std::vector<std::vector<seal::seal_byte>>>
-            &serde_encrypted_vecs,
-        std::vector<std::vector<std::vector<seal::seal_byte>>>
-            &serde_encrypted_vecs_squared,
-        std::vector<faiss_idx_t> &nprobe_nearest_centroids_idx,
-        std::vector<seal::seal_byte> &serde_relin_keys,
-        std::vector<seal::seal_byte> &serde_galois_keys) const;
+        const std::vector<std::vector<std::vector<seal::seal_byte>>>
+            &serde_encrypted_residual_vecs,
+        const std::vector<std::vector<std::vector<seal::seal_byte>>>
+            &serde_encrypted_residual_vecs_squared,
+        const std::vector<faiss_idx_t> &nprobe_nearest_centroids_idx,
+        const std::vector<seal::seal_byte> &serde_relin_keys,
+        const std::vector<seal::seal_byte> &serde_galois_keys) const;
 
     std::vector<std::vector<float>> deserialise_decrypt_coarse_distances(
         const std::vector<std::vector<std::vector<seal::seal_byte>>>
@@ -94,10 +94,11 @@ class Client {
     // Sends the encrypted queries along with the nearest coarse vector ids to
     // the server to perform a precise search and return the encrypted precise
     // distances
-    std::vector<std::vector<seal::seal_byte>> get_precise_scores(
+    std::vector<std::vector<std::vector<seal::seal_byte>>> get_precise_scores(
         const std::vector<std::vector<seal::seal_byte>> &serde_precise_queries,
-        const std::vector<std::vector<faiss_idx_t>> &nearest_coarse_vectors_id)
-        const;
+        const std::vector<std::vector<faiss_idx_t>> &nearest_coarse_vectors_id,
+        const std::vector<seal::seal_byte> &serde_relin_keys,
+        const std::vector<seal::seal_byte> &serde_galois_keys) const;
 
     std::vector<float> deserialise_decrypt_precise_distances(
         const std::vector<std::vector<seal::seal_byte>>
