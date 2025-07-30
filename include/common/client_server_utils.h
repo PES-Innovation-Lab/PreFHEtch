@@ -7,19 +7,19 @@
 
 // Dataset - SIFT10K
 
-constexpr int64_t PRECISE_VECTOR_DIMENSIONS = 128;
+// constexpr int64_t PRECISE_VECTOR_DIMENSIONS = 128;
+//
+// constexpr int64_t NPROBE = 1;
+// constexpr int64_t COARSE_PROBE = 200;
+// constexpr int64_t K = 100;
+// constexpr int64_t NBASE = 10000;
+// constexpr int64_t NQUERY = 1;
+//
+// constexpr int64_t NLIST = 256;
+// constexpr int64_t SUB_QUANTIZERS = 32;
+// constexpr int64_t SUB_QUANTIZER_SIZE = 8;
 
-constexpr int64_t NPROBE = 1;
-constexpr int64_t COARSE_PROBE = 200;
-constexpr int64_t K = 100;
-constexpr int64_t NBASE = 10000;
-constexpr int64_t NQUERY = 1;
-
-constexpr int64_t NLIST = 256;
-constexpr int64_t SUB_QUANTIZERS = 32;
-constexpr int64_t SUB_QUANTIZER_SIZE = 8;
-
-constexpr int64_t BFV_SCALING_FACTOR = 10;
+constexpr int64_t BFV_SCALING_FACTOR = 1;
 using faiss_idx_t = int64_t;
 
 struct DistanceIndexData {
@@ -41,7 +41,7 @@ void vecs_read(const char *fname, size_t &d_out, size_t &n_out,
     fread(&d, 1, sizeof(int), f);
     assert((d > 0 && d < 1000000) || !"Incorrect dimensions");
     fseek(f, 0, SEEK_SET);
-    struct stat st {};
+    struct stat st{};
     fstat(fileno(f), &st);
     const size_t sz = st.st_size;
     assert(sz % ((d + 1) * 4) == 0 || !"Incorrect file size");
@@ -63,7 +63,7 @@ void vecs_read(const char *fname, size_t &d_out, size_t &n_out,
 
 template <typename T>
 std::size_t
-getTotalSize(const std::vector<std::vector<std::vector<T>>> &vec3d) {
+getTotalNestedVecSize(const std::vector<std::vector<std::vector<T>>> &vec3d) {
     std::size_t total = 0;
     for (const auto &vec2d : vec3d) {
         for (const auto &vec1d : vec2d) {
@@ -72,6 +72,8 @@ getTotalSize(const std::vector<std::vector<std::vector<T>>> &vec3d) {
     }
     return total;
 }
+
+std::size_t getSizeInMB(const std::size_t &size_bytes);
 
 class Timer {
   public:

@@ -90,11 +90,12 @@ class Server {
         const std::vector<std::vector<seal::Ciphertext>>
             &encrypted_precise_distances) const;
 
-    void preciseVectorPIR(
-        const std::array<std::array<faiss_idx_t, K>, NQUERY>
-            &k_nearest_precise_vectors_idx,
-        std::array<std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, K>,
-                   NQUERY> &query_results);
+    // void preciseVectorPIR(
+    //     const std::array<std::array<faiss_idx_t, K>, NQUERY>
+    //         &k_nearest_precise_vectors_idx,
+    //     std::array<std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>,
+    //     K>,
+    //                NQUERY> &query_results);
 
     // helper for debugging
     void

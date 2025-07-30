@@ -1,3 +1,4 @@
+#include <stdexcept>
 #include <vector>
 
 #include <boost/program_options.hpp>
@@ -10,7 +11,12 @@
 namespace po = boost::program_options;
 
 int main(int argc, char *argv[]) {
-    size_t num_queries, nprobe, coarse_probe, k;
+    if (BFV_SCALING_FACTOR != 1) {
+        SPDLOG_ERROR("BFV_SCALING_FACTOR = 1");
+        throw std::runtime_error("BFV_SCALING_FACTOR != 1");
+    }
+
+    size_t num_queries, nprobe, coarse_probe, k_nearest;
 
     try {
 
@@ -35,14 +41,14 @@ int main(int argc, char *argv[]) {
         num_queries = po_vm["nq"].as<size_t>();
         nprobe = po_vm["nprobe"].as<size_t>();
         coarse_probe = po_vm["coarse-probe"].as<size_t>();
-        k = po_vm["k"].as<size_t>();
+        k_nearest = po_vm["k"].as<size_t>();
 
     } catch (std::exception &e) {
         SPDLOG_ERROR("Error while parsing command line args = {}", e.what());
         return 1;
     }
 
-    Client client(num_queries, nprobe);
+    Client client(num_queries, nprobe, coarse_probe, k_nearest);
 
     Timer complete_search_timer;
     Timer get_query_timer;
@@ -121,9 +127,9 @@ int main(int argc, char *argv[]) {
 
     compute_nearest_nprobe_coarse_search_timer.StartTimer();
     std::vector<std::vector<faiss_idx_t>> nearest_coarse_labels =
-        client.compute_nearest_coarse_vectors_idx(decrypted_coarse_distances,
-                                                  coarse_vector_labels, nprobe,
-                                                  coarse_probe);
+        client.compute_nearest_vectors_id(decrypted_coarse_distances,
+                                          coarse_vector_labels, nprobe,
+                                          coarse_probe);
     compute_nearest_nprobe_coarse_search_timer.StopTimer();
     SPDLOG_INFO(
         "Computed nearest coarse vectors successfully, time = {}(us)",
@@ -139,40 +145,30 @@ int main(int argc, char *argv[]) {
     SPDLOG_INFO("Received precise distance scores successfully, time = {}(us)",
                 precise_search_timer.getDurationMicroseconds());
 
-    // TODO: uncomment on implementing precise search
+    deserialise_precise_search_results_timer.StartTimer();
+    std::vector<std::vector<float>> decrypted_precise_distances =
+        client.deserialise_decrypt_precise_distances(
+            serde_encrypted_precise_scores);
+    deserialise_precise_search_results_timer.StopTimer();
+    SPDLOG_INFO(
+        "Deserialised and decrypted precise distances successfully, "
+        "time = {}(us)",
+        deserialise_precise_search_results_timer.getDurationMicroseconds());
 
-    // deserialise_precise_search_results_timer.StartTimer();
-    // std::vector<float> precise_distances =
-    //     client.deserialise_decrypt_precise_distances(
-    //         serde_encrypted_precise_scores);
-    // deserialise_precise_search_results_timer.StopTimer();
-    // SPDLOG_INFO(
-    //     "Deserialised and decrypted precise distances successfully, "
-    //     "time = {}(us)",
-    //     deserialise_precise_search_results_timer.getDurationMicroseconds());
-    //
-    // compute_k_nearest_precise_timer.StartTimer();
-    // std::vector<faiss_idx_t> k_nearest_vectors =
-    //     client.compute_nearest_precise_vectors(precise_distances,
-    //                                            sorted_coarse_labels);
-    // compute_k_nearest_precise_timer.StopTimer();
-    // SPDLOG_INFO("Computed nearest precise vectors successfully, time(us) =
-    // {}",
-    //             compute_k_nearest_precise_timer.getDurationMicroseconds());
+    compute_k_nearest_precise_timer.StartTimer();
+    std::vector<std::vector<faiss_idx_t>> k_nearest_vector_ids =
+        client.compute_nearest_vectors_id(decrypted_precise_distances,
+                                          nearest_coarse_labels, num_queries,
+                                          k_nearest);
+    compute_k_nearest_precise_timer.StopTimer();
+    SPDLOG_INFO("Computed nearest precise vectors successfully, time = {}(us)",
+                compute_k_nearest_precise_timer.getDurationMicroseconds());
 
-    // TODO: update benchmarks for encrypted pipeline
+    printf("\n");
+    SPDLOG_INFO("Query completed!");
 
-    // printf("\n");
-    // SPDLOG_INFO("TIME");
-    // SPDLOG_INFO("Start: Query, End: Computing nearest precise vectors (Does "
-    //             "not include PIR)");
-    //
-    // long long time_micro = 0;
-    // long long time_milli = 0;
-    // precise_benchmark_timer.getDuration(time_micro, time_milli);
-    // SPDLOG_INFO("Time in us = {}, Time in milliseconds = {}",
-    //             time_micro, time_milli);
-    //
+    client.benchmark_results(k_nearest_vector_ids);
+
     // // Get query vector results
     // std::array<std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, K>,
     //            NQUERY>
@@ -180,9 +176,6 @@ int main(int argc, char *argv[]) {
     // std::array<std::array<faiss_idx_t, K>, NQUERY> query_results_idx;
     // get_precise_vectors_pir(nearest_precise_vectors, query_results,
     //                         query_results_idx);
-    //
-    // SPDLOG_INFO("Query completed!");
-    // benchmark_results(query_results_idx);
 
     return 0;
 }

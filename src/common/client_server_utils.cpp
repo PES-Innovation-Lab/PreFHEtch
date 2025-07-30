@@ -13,3 +13,7 @@ long long Timer::getDurationMicroseconds() const {
                                                                  m_TimerStart)
         .count();
 }
+
+std::size_t getSizeInMB(const std::size_t &size_bytes) {
+    return size_bytes / 1000000;
+}

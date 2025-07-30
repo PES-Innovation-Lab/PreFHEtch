@@ -23,12 +23,12 @@
 char const *SERVER_ADDRESS = "0.0.0.0";
 constexpr int SERVER_PORT = 8080;
 
-char const *TRAIN_DATASET_PATH = "../sift/siftsmall/siftsmall_learn.fvecs";
-char const *BASE_DATASET_PATH = "../sift/siftsmall/siftsmall_base.fvecs";
+char const *TRAIN_DATASET_PATH = "sift/siftsmall/siftsmall_learn.fvecs";
+char const *BASE_DATASET_PATH = "sift/siftsmall/siftsmall_base.fvecs";
 
-char const *QUERY_DATASET_PATH = "../sift/siftsmall/siftsmall_query.fvecs";
+char const *QUERY_DATASET_PATH = "sift/siftsmall/siftsmall_query.fvecs";
 char const *GROUNDTRUTH_DATASET_PATH =
-    "../sift/siftsmall/siftsmall_groundtruth.ivecs";
+    "sift/siftsmall/siftsmall_groundtruth.ivecs";
 
 // Path - build/_.faiss
 std::string INDEX_FILE;
@@ -49,8 +49,7 @@ Server::Server() : m_EncryptionParms(seal::scheme_type::bfv) {
         m_PolyModulusDegree, m_PlaintextModulusSize));
 
     seal::SEALContext seal_ctx(m_EncryptionParms);
-    SPDLOG_INFO("Encryption params errors = {}",
-                seal_ctx.parameter_error_message());
+    SPDLOG_INFO("Encryption params = {}", seal_ctx.parameter_error_message());
 }
 
 void Server::run_webserver() {
@@ -95,7 +94,7 @@ void Server::init_index() {
         SPDLOG_INFO("Cached dataset to index file - {}", INDEX_FILE);
 
     } else {
-        SPDLOG_INFO("Reading cached data from index file - {}", INDEX_FILE);
+        SPDLOG_INFO("Reading cached data from index file = {}", INDEX_FILE);
 
         vecs_read<float>(BASE_DATASET_PATH, m_PreciseVectorDimensions, m_NBase,
                          m_DatasetBase);
@@ -154,7 +153,6 @@ Server::deserialise_coarse_search_parms(
     galois_keys.load(seal_ctx, serde_galois_keys.data(),
                      serde_galois_keys.size());
 
-    SPDLOG_INFO("\n\nDecrypting coarse search parms on server temporarily\n\n");
     seal::SecretKey sk;
     sk.load(seal_ctx, enc_sk.data(), enc_sk.size());
     seal::Decryptor decryptor(seal_ctx, sk);
@@ -168,7 +166,6 @@ Server::deserialise_coarse_search_parms(
     encrypted_nquery_residual_vectors_squared.reserve(
         serde_encrypted_residual_vectors_squared.size());
 
-    SPDLOG_INFO("Deserialising encrypted coarse search parms");
     for (int i = 0; i < serde_encrypted_residual_vectors.size(); i++) {
 
         std::vector<seal::Ciphertext> encrypted_query_residual_vectors;
@@ -293,8 +290,6 @@ Server::coarseSearch(
         throw std::runtime_error("m_Index->nprobe != nprobe");
     }
 
-    SPDLOG_INFO("Coarse search started");
-
     seal::SEALContext seal_ctx(m_EncryptionParms);
     seal::BatchEncoder batch_encoder(seal_ctx);
     seal::Evaluator evaluator(seal_ctx);
@@ -309,8 +304,6 @@ Server::coarseSearch(
         num_queries, encrypted_residual_queries,
         encrypted_residual_queries_squared, nprobe_centroids.data(),
         encrypted_coarse_distances, coarse_distance_labels);
-
-    SPDLOG_INFO("Coarse search complete");
 
     return {encrypted_coarse_distances, coarse_distance_labels};
 }
@@ -335,7 +328,6 @@ Server::deserialise_precise_search_params(
     std::vector<seal::Ciphertext> encrypted_precise_queries;
     encrypted_precise_queries.reserve(serde_encrypted_precise_queries.size());
 
-    SPDLOG_INFO("Deserializing encrypted precise search params");
     for (int i = 0; i < serde_encrypted_precise_queries.size(); i++) {
         seal::Ciphertext encrypted_precise_query;
 
@@ -361,7 +353,7 @@ std::vector<std::vector<seal::Ciphertext>> Server::preciseSearch(
     seal::Evaluator evaluator(seal_ctx);
 
     std::vector<std::vector<seal::Ciphertext>> encrypted_precise_distances;
-    encrypted_precise_distances.reserve(NQUERY);
+    encrypted_precise_distances.reserve(encrypted_precise_queries.size());
 
     for (int i = 0; i < encrypted_precise_queries.size(); i++) {
         std::vector<seal::Ciphertext> coarse_probe_precise_distances;
@@ -371,9 +363,9 @@ std::vector<std::vector<seal::Ciphertext>> Server::preciseSearch(
         for (int j = 0; j < coarse_probe; j++) {
             const float *precise_vec_idx =
                 dataset_base_ptr +
-                (nearest_coarse_vectors_id[i][j] * PRECISE_VECTOR_DIMENSIONS);
+                (nearest_coarse_vectors_id[i][j] * m_PreciseVectorDimensions);
             std::vector<int64_t> pod_vec(batch_encoder.slot_count(), 0);
-            for (int k = 0; k < PRECISE_VECTOR_DIMENSIONS; k++) {
+            for (int k = 0; k < m_PreciseVectorDimensions; k++) {
                 pod_vec[k] = static_cast<int64_t>(precise_vec_idx[k]);
             }
 
@@ -388,7 +380,7 @@ std::vector<std::vector<seal::Ciphertext>> Server::preciseSearch(
             evaluator.square(sub_result, result);
             evaluator.relinearize_inplace(result, relin_keys);
 
-            for (size_t step = 1; step < PRECISE_VECTOR_DIMENSIONS;
+            for (size_t step = 1; step < m_PreciseVectorDimensions;
                  step <<= 1) {
                 seal::Ciphertext rotated;
                 evaluator.rotate_rows(result, step, galois_keys, rotated);

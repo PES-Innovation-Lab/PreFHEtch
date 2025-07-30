@@ -29,6 +29,8 @@ class Client {
   private:
     size_t m_NumQueries;
     size_t m_NProbe;
+    size_t m_CoarseProbe;
+    size_t m_KNearest;
 
     size_t m_PreciseVectorDimensions;
     size_t m_Nlist;
@@ -37,7 +39,8 @@ class Client {
     std::optional<Encryption> m_OptEncryption;
 
   public:
-    explicit Client(size_t num_queries, size_t nprobe);
+    explicit Client(size_t num_queries, size_t nprobe, size_t coarse_probe,
+                    size_t k_nearest);
 
     std::vector<float> get_query();
     void encrypt_query();
@@ -85,12 +88,6 @@ class Client {
         const std::vector<std::vector<std::vector<seal::seal_byte>>>
             &serde_encrypted_coarse_distances);
 
-    // Selects the top `coarse_probe` coarse vectors and returns their ids
-    std::vector<std::vector<faiss_idx_t>> compute_nearest_coarse_vectors_idx(
-        const std::vector<std::vector<float>> &decrypted_coarse_distance_scores,
-        const std::vector<std::vector<faiss_idx_t>> &coarse_vector_labels,
-        const size_t num_queries, const size_t coarse_probe) const;
-
     // Sends the encrypted queries along with the nearest coarse vector ids to
     // the server to perform a precise search and return the encrypted precise
     // distances
@@ -100,23 +97,25 @@ class Client {
         const std::vector<seal::seal_byte> &serde_relin_keys,
         const std::vector<seal::seal_byte> &serde_galois_keys) const;
 
-    std::vector<float> deserialise_decrypt_precise_distances(
-        const std::vector<std::vector<seal::seal_byte>>
-            &serde_encrypted_precise_distances) const;
+    std::vector<std::vector<float>> deserialise_decrypt_precise_distances(
+        const std::vector<std::vector<std::vector<seal::seal_byte>>>
+            &serde_encrypted_precise_distances);
 
-    std::vector<faiss_idx_t> compute_nearest_precise_vectors(
-        const std::vector<float> &precise_distances,
-        // Uses the same index order for precise scores
-        const std::vector<std::vector<faiss_idx_t>> &nearest_coarse_vectors_id)
-        const;
+    // void get_precise_vectors_pir(
+    //     const std::array<std::array<DistanceIndexData, COARSE_PROBE>, NQUERY>
+    //         &nearest_precise_vectors,
+    //     std::array<std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>,
+    //     K>,
+    //                NQUERY> &query_results,
+    //     std::array<std::array<faiss_idx_t, K>, NQUERY> &query_results_idx);
+    //
 
-    void get_precise_vectors_pir(
-        const std::array<std::array<DistanceIndexData, COARSE_PROBE>, NQUERY>
-            &nearest_precise_vectors,
-        std::array<std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, K>,
-                   NQUERY> &query_results,
-        std::array<std::array<faiss_idx_t, K>, NQUERY> &query_results_idx);
+    void benchmark_results(const std::vector<std::vector<faiss_idx_t>>
+                               &k_nearest_vector_ids) const;
 
-    void benchmark_results(const std::array<std::array<faiss_idx_t, K>, NQUERY>
-                               &query_results_idx);
+    // Selects the top `select_nearest_probe` vectors and returns their ids
+    std::vector<std::vector<faiss_idx_t>> compute_nearest_vectors_id(
+        const std::vector<std::vector<float>> &decrypted_distance_scores,
+        const std::vector<std::vector<faiss_idx_t>> &vector_labels,
+        const size_t num_queries, const size_t select_nearest_probe) const;
 };

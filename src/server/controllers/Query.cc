@@ -16,7 +16,7 @@ void Query::query(
     Timer retrieve_centroids_timer;
     Timer serde_parms_timer;
 
-    SPDLOG_INFO("Received request on /query");
+    SPDLOG_INFO("\n\nReceived request on /query");
     query_handler_timer.StartTimer();
 
     std::shared_ptr<Server> srvr = Server::getInstance();
@@ -110,14 +110,15 @@ void Query::coarse_search(
                 coarse_search_timer.getDurationMicroseconds());
     SPDLOG_INFO("Time to serialise coarse search results = {}(us)",
                 serde_coarse_search_results_timer.getDurationMicroseconds());
-    SPDLOG_INFO("Size of the unserialised encrypted data = {}",
-                getTotalSize(serde_encrypted_coarse_distances));
+    SPDLOG_INFO(
+        "Size of the unserialised encrypted data = {}(mb)",
+        getSizeInMB(getTotalNestedVecSize(serde_encrypted_coarse_distances)));
 
     nlohmann::json response;
     response["encryptedCoarseDistances"] = serde_encrypted_coarse_distances;
     response["coarseVectorLabels"] = coarse_vector_labels;
-    SPDLOG_INFO("Size of the serialised encrypted data = {}",
-                response.dump().size());
+    SPDLOG_INFO("Size of the serialised encrypted data = {}(mb)",
+                getSizeInMB(response.dump().size()));
 
     const HttpResponsePtr resp = HttpResponse::newHttpResponse();
     resp->setContentTypeString("application/json");
