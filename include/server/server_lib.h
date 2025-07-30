@@ -58,12 +58,12 @@ class Server {
     std::pair<std::vector<std::vector<seal::Ciphertext>>,
               std::vector<std::vector<faiss::idx_t>>>
     coarseSearch(
-        std::vector<faiss::idx_t> nprobe_centroids,
+        std::vector<faiss::idx_t> &nprobe_centroids,
         std::vector<std::vector<seal::Ciphertext>> &encrypted_residual_queries,
         std::vector<std::vector<seal::Ciphertext>>
             &encrypted_residual_queries_squared,
-        size_t num_queries, size_t nprobe, seal::RelinKeys relin_keys,
-        seal::GaloisKeys galois_keys) const;
+        size_t num_queries, size_t nprobe, seal::RelinKeys &relin_keys,
+        seal::GaloisKeys &galois_keys) const;
 
     std::tuple<std::vector<seal::Ciphertext>, seal::RelinKeys, seal::GaloisKeys>
     deserialise_precise_search_params(
@@ -78,7 +78,8 @@ class Server {
     std::vector<std::vector<seal::Ciphertext>> preciseSearch(
         const std::vector<std::vector<faiss::idx_t>> &nearest_coarse_vectors_id,
         const std::vector<seal::Ciphertext> &encrypted_precise_queries,
-        seal::RelinKeys relin_keys, seal::GaloisKeys galois_keys) const;
+        const seal::RelinKeys &relin_keys,
+        const seal::GaloisKeys &galois_keys) const;
 
     // void preciseVectorPIR(
     //     const std::array<std::array<faiss_idx_t, K>, NQUERY>
@@ -90,7 +91,7 @@ class Server {
     // helper for debugging
     void
     display_nprobe_centroids(const std::vector<faiss::idx_t> &nprobe_centroids,
-                             size_t num_queries) const;
+                             const size_t num_queries) const;
 
     std::vector<std::vector<std::vector<seal::seal_byte>>>
     serialise_encrypted_distances(
@@ -109,9 +110,9 @@ class Server {
 
     std::pair<std::vector<std::vector<seal::Ciphertext>>,
               std::vector<std::vector<faiss::idx_t>>>
-    singlePhaseSearch(std::vector<faiss::idx_t> nprobe_centroids,
-                      std::vector<seal::Ciphertext> &encrypted_queries,
-                      size_t num_queries, size_t nprobe,
-                      seal::RelinKeys relin_keys,
-                      seal::GaloisKeys galois_keys) const;
+    singlePhaseSearch(const std::vector<faiss::idx_t> &nprobe_centroids,
+                      const std::vector<seal::Ciphertext> &encrypted_queries,
+                      const size_t num_queries, const size_t nprobe,
+                      const seal::RelinKeys &relin_keys,
+                      const seal::GaloisKeys &galois_keys) const;
 };

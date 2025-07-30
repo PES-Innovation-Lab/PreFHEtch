@@ -69,6 +69,7 @@ int main(int argc, char *argv[]) {
     // only after initial query to server
 
     complete_search_timer.StartTimer();
+
     get_query_timer.StartTimer();
     std::vector<float> precise_queries = client.get_query();
     get_query_timer.StopTimer();
@@ -131,10 +132,13 @@ int main(int argc, char *argv[]) {
                                               k_nearest);
         compute_k_nearest_precise_timer.StopTimer();
         SPDLOG_INFO(
-            "Computed nearest precise vectors successfully, time = {}(us)",
+            "Computed nearest precise vectors successfully, time = {}(us)\n",
             compute_k_nearest_precise_timer.getDurationMicroseconds());
 
-        printf("\n");
+        complete_search_timer.StopTimer();
+        SPDLOG_INFO("Complete Single Phase Search time = {}(us)",
+                    complete_search_timer.getDurationMicroseconds());
+
         SPDLOG_INFO("Single Phase Search Query completed!");
 
         client.benchmark_results(k_nearest_vector_ids);
@@ -222,10 +226,13 @@ int main(int argc, char *argv[]) {
                                               num_queries, k_nearest);
         compute_k_nearest_precise_timer.StopTimer();
         SPDLOG_INFO(
-            "Computed nearest precise vectors successfully, time = {}(us)",
+            "Computed nearest precise vectors successfully, time = {}(us)\n",
             compute_k_nearest_precise_timer.getDurationMicroseconds());
 
-        printf("\n");
+        complete_search_timer.StopTimer();
+        SPDLOG_INFO("Complete Two Phase Search time = {}(us)",
+                    complete_search_timer.getDurationMicroseconds());
+
         SPDLOG_INFO("Two Phase Search Query completed!");
 
         client.benchmark_results(k_nearest_vector_ids);
