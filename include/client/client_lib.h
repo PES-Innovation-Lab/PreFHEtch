@@ -8,7 +8,7 @@
 
 const std::string server_addr = "http://localhost:8080/";
 
-class Encryption {
+class ClientEncryption {
   public:
     seal::EncryptionParameters EncryptedParms;
     seal::KeyGenerator KeyGen;
@@ -21,8 +21,8 @@ class Encryption {
     seal::Decryptor Decryptor;
     seal::BatchEncoder BatchEncoder;
 
-    Encryption(seal::EncryptionParameters encrypt_parms,
-               const seal::SEALContext &context);
+    ClientEncryption(seal::EncryptionParameters encrypt_parms,
+                     const seal::SEALContext &context);
 };
 
 class Client {
@@ -36,7 +36,7 @@ class Client {
     size_t m_Nlist;
     size_t m_Subquantizers;
 
-    std::optional<Encryption> m_OptEncryption;
+    std::optional<ClientEncryption> m_OptEncryption;
 
   public:
     explicit Client(size_t num_queries, size_t nprobe, size_t coarse_probe,

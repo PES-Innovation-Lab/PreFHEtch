@@ -1,6 +1,8 @@
 #pragma once
 
 #include <memory>
+#include <mutex>
+#include <stdexcept>
 #include <vector>
 
 #include <faiss/IndexFlat.h>
@@ -8,15 +10,37 @@
 #include <seal/seal.h>
 
 #include "client_server_utils.h"
+#include "seal/context.h"
+
+class ServerEncryption {
+  public:
+    seal::EncryptionParameters EncryptedParms;
+    seal::SEALContext SealCtx;
+    seal::BatchEncoder BatchEncoder;
+
+    ServerEncryption(seal::EncryptionParameters encrypt_parms,
+                     const seal::SEALContext &context);
+};
 
 // Singleton class pattern for static access across all controllers
 class Server {
+    // const size_t Nlist = 256;
+    // const size_t SubQuantizers = 32;
+    // const size_t SubQuantizerSize = 8;
+    // m_PolyModulusDegree = 8192;
+    // m_PlaintextModulusSize = 48;
+
   public:
-    const size_t Nlist = 256;
-    const size_t SubQuantizers = 32;
-    const size_t SubQuantizerSize = 8;
+    size_t SubQuantizers;
 
   private:
+    static std::shared_ptr<Server> shared_instance;
+    static std::once_flag server_initialised;
+    static bool server_initialised_bool;
+
+    size_t m_Nlist;
+    size_t m_SubQuantizerSize;
+
     size_t m_PreciseVectorDimensions;
     size_t m_NBase;
 
@@ -26,13 +50,36 @@ class Server {
 
     size_t m_PolyModulusDegree;
     size_t m_PlaintextModulusSize;
-    seal::EncryptionParameters m_EncryptionParms;
+
+    ServerEncryption m_ServerEncryption;
+
+    Server(size_t nlist, size_t sub_quantizers, size_t sub_quantizers_size,
+           size_t poly_modulus, size_t plaintext_modulus,
+           seal::EncryptionParameters &encrypt_params,
+           seal::SEALContext &seal_ctx);
 
   public:
-    Server();
+    Server(const Server &) = delete;
+    Server operator=(const Server &) = delete;
+
+    static void intialiseServer(size_t nlist, size_t sub_quantizers,
+                                size_t sub_quantizers_size, size_t poly_modulus,
+                                size_t plaintext_modulus,
+                                seal::EncryptionParameters &encrypt_params,
+                                seal::SEALContext &seal_ctx) {
+        std::call_once(server_initialised, [&] {
+            shared_instance.reset(new Server(
+                nlist, sub_quantizers, sub_quantizers_size, poly_modulus,
+                plaintext_modulus, encrypt_params, seal_ctx));
+            server_initialised_bool = true;
+        });
+    }
+
     static std::shared_ptr<Server> &getInstance() {
-        static std::shared_ptr<Server> server = std::make_shared<Server>();
-        return server;
+        if (!server_initialised_bool) {
+            throw std::runtime_error("Server object is uninitialised");
+        }
+        return shared_instance;
     }
 
     void init_index();
@@ -63,7 +110,7 @@ class Server {
         std::vector<std::vector<seal::Ciphertext>>
             &encrypted_residual_queries_squared,
         size_t num_queries, size_t nprobe, seal::RelinKeys &relin_keys,
-        seal::GaloisKeys &galois_keys) const;
+        seal::GaloisKeys &galois_keys);
 
     std::tuple<std::vector<seal::Ciphertext>, seal::RelinKeys, seal::GaloisKeys>
     deserialise_precise_search_params(
@@ -78,14 +125,13 @@ class Server {
     std::vector<std::vector<seal::Ciphertext>> preciseSearch(
         const std::vector<std::vector<faiss::idx_t>> &nearest_coarse_vectors_id,
         const std::vector<seal::Ciphertext> &encrypted_precise_queries,
-        const seal::RelinKeys &relin_keys,
-        const seal::GaloisKeys &galois_keys) const;
+        const seal::RelinKeys &relin_keys, const seal::GaloisKeys &galois_keys);
 
     // void preciseVectorPIR(
     //     const std::array<std::array<faiss_idx_t, K>, NQUERY>
     //         &k_nearest_precise_vectors_idx,
-    //     std::array<std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>,
-    //     K>,
+    //     std::array<std::array<std::array<float,
+    //     PRECISE_VECTOR_DIMENSIONS>, K>,
     //                NQUERY> &query_results);
 
     // helper for debugging
@@ -114,5 +160,5 @@ class Server {
                       const std::vector<seal::Ciphertext> &encrypted_queries,
                       const size_t num_queries, const size_t nprobe,
                       const seal::RelinKeys &relin_keys,
-                      const seal::GaloisKeys &galois_keys) const;
+                      const seal::GaloisKeys &galois_keys);
 };

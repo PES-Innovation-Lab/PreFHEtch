@@ -13,8 +13,8 @@ char const *QUERY_DATASET_PATH = "sift/siftsmall/siftsmall_query.fvecs";
 char const *GROUNDTRUTH_DATASET_PATH =
     "sift/siftsmall/siftsmall_groundtruth.ivecs";
 
-Encryption::Encryption(seal::EncryptionParameters encrypt_parms,
-                       const seal::SEALContext &seal_ctx)
+ClientEncryption::ClientEncryption(seal::EncryptionParameters encrypt_parms,
+                                   const seal::SEALContext &seal_ctx)
     : EncryptedParms(std::move(encrypt_parms)), KeyGen(seal_ctx),
       SecretKey(KeyGen.secret_key()),
       SerdeRelinKeys(KeyGen.create_relin_keys()),

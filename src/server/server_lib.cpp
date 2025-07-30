@@ -11,6 +11,8 @@
 #include <spdlog/spdlog.h>
 
 #include "client_server_utils.h"
+#include "seal/context.h"
+#include "seal/encryptionparams.h"
 #include "server_lib.h"
 #include "server_utils.h"
 
@@ -30,23 +32,27 @@ char const *GROUNDTRUTH_DATASET_PATH =
 // Path - build/_.faiss
 std::string INDEX_FILE;
 
-Server::Server() : m_EncryptionParms(seal::scheme_type::bfv) {
+ServerEncryption::ServerEncryption(seal::EncryptionParameters encrypt_parms,
+                                   const seal::SEALContext &seal_ctx)
+    : EncryptedParms(std::move(encrypt_parms)), SealCtx(seal_ctx),
+      BatchEncoder(seal_ctx) {}
+
+Server::Server(size_t nlist, size_t sub_quantizers, size_t sub_quantizers_size,
+               size_t poly_modulus, size_t plaintext_modulus,
+               seal::EncryptionParameters &encrypt_params,
+               seal::SEALContext &seal_ctx)
+    : m_ServerEncryption(encrypt_params, seal_ctx) {
+
+    m_Nlist = nlist;
+    SubQuantizers = sub_quantizers;
+    m_SubQuantizerSize = sub_quantizers_size;
+    m_PolyModulusDegree = poly_modulus;
+    m_PlaintextModulusSize = plaintext_modulus;
+
     std::ostringstream oss;
-    oss << "build/" << "IVF" << Nlist << "_PQ" << SubQuantizers
-        << "_SUB_QUANTIZER_SIZE" << SubQuantizerSize << ".faiss";
+    oss << "build/" << "IVF" << m_Nlist << "_PQ" << SubQuantizers
+        << "_SUB_QUANTIZER_SIZE" << m_SubQuantizerSize << ".faiss";
     INDEX_FILE = oss.str();
-
-    m_PolyModulusDegree = 8192;
-    m_PlaintextModulusSize = 48;
-
-    m_EncryptionParms.set_poly_modulus_degree(m_PolyModulusDegree);
-    m_EncryptionParms.set_coeff_modulus(
-        seal::CoeffModulus::BFVDefault(m_PolyModulusDegree));
-    m_EncryptionParms.set_plain_modulus(seal::PlainModulus::Batching(
-        m_PolyModulusDegree, m_PlaintextModulusSize));
-
-    seal::SEALContext seal_ctx(m_EncryptionParms);
-    SPDLOG_INFO("Encryption params = {}", seal_ctx.parameter_error_message());
 }
 
 void Server::run_webserver() {
@@ -70,8 +76,8 @@ void Server::init_index() {
 
         m_Quantizer = faiss::IndexFlatL2(m_PreciseVectorDimensions);
         m_Index = std::make_unique<faiss::IndexIVFPQ>(
-            &m_Quantizer, m_PreciseVectorDimensions, Nlist, SubQuantizers,
-            SubQuantizerSize);
+            &m_Quantizer, m_PreciseVectorDimensions, m_Nlist, SubQuantizers,
+            m_SubQuantizerSize);
 
         SPDLOG_INFO("Training on {} vectors", parsed_training_count);
         m_Index->train(parsed_training_count, parsed_train_set.data());
@@ -108,9 +114,9 @@ void Server::init_index() {
 
 std::vector<float> Server::retrieve_centroids() const {
     std::vector<float> centroids;
-    centroids.resize(Nlist * m_PreciseVectorDimensions);
+    centroids.resize(m_Nlist * m_PreciseVectorDimensions);
 
-    for (int i = 0; i < Nlist; i++) {
+    for (int i = 0; i < m_Nlist; i++) {
         m_Index->quantizer->reconstruct(i, centroids.data() +
                                                (i * m_PreciseVectorDimensions));
     }
@@ -120,8 +126,9 @@ std::vector<float> Server::retrieve_centroids() const {
 
 std::vector<seal::seal_byte> Server::serialise_parms() const {
     std::vector<seal::seal_byte> serde_parms;
-    serde_parms.resize(static_cast<size_t>(m_EncryptionParms.save_size()));
-    m_EncryptionParms.save(
+    serde_parms.resize(
+        static_cast<size_t>(m_ServerEncryption.EncryptedParms.save_size()));
+    m_ServerEncryption.EncryptedParms.save(
         reinterpret_cast<seal::seal_byte *>(serde_parms.data()),
         serde_parms.size());
 
@@ -140,19 +147,17 @@ Server::deserialise_coarse_search_parms(
     const std::vector<seal::seal_byte> &serde_galois_keys,
     const std::vector<seal::seal_byte> &enc_sk) const {
 
-    seal::SEALContext seal_ctx(m_EncryptionParms);
-    seal::BatchEncoder batch_encoder(seal_ctx);
-
     seal::RelinKeys relin_keys;
-    relin_keys.load(seal_ctx, serde_relin_keys.data(), serde_relin_keys.size());
+    relin_keys.load(m_ServerEncryption.SealCtx, serde_relin_keys.data(),
+                    serde_relin_keys.size());
 
     seal::GaloisKeys galois_keys;
-    galois_keys.load(seal_ctx, serde_galois_keys.data(),
+    galois_keys.load(m_ServerEncryption.SealCtx, serde_galois_keys.data(),
                      serde_galois_keys.size());
 
-    seal::SecretKey sk;
-    sk.load(seal_ctx, enc_sk.data(), enc_sk.size());
-    seal::Decryptor decryptor(seal_ctx, sk);
+    // seal::SecretKey sk;
+    // sk.load(m_ServerEncryption.SealCtx, enc_sk.data(), enc_sk.size());
+    // seal::Decryptor decryptor(m_ServerEncryption.SealCtx, sk);
 
     std::vector<std::vector<seal::Ciphertext>>
         encrypted_nquery_residual_vectors;
@@ -178,11 +183,13 @@ Server::deserialise_coarse_search_parms(
             seal::Ciphertext encrypted_residual_vector_sq;
 
             encrypted_residual_vector.load(
-                seal_ctx, serde_encrypted_residual_vectors[i][j].data(),
+                m_ServerEncryption.SealCtx,
+                serde_encrypted_residual_vectors[i][j].data(),
                 serde_encrypted_residual_vectors[i][j].size());
 
             encrypted_residual_vector_sq.load(
-                seal_ctx, serde_encrypted_residual_vectors_squared[i][j].data(),
+                m_ServerEncryption.SealCtx,
+                serde_encrypted_residual_vectors_squared[i][j].data(),
                 serde_encrypted_residual_vectors_squared[i][j].size());
 
             encrypted_query_residual_vectors.push_back(
@@ -190,29 +197,30 @@ Server::deserialise_coarse_search_parms(
             encrypted_query_residual_vectors_squared.push_back(
                 encrypted_residual_vector_sq);
 
-            seal::Plaintext decrypted_residual_vector;
-            seal::Plaintext decrypted_residual_vector_sq;
-            std::vector<int64_t> decoded_residual_vector;
-            std::vector<int64_t> decoded_residual_vector_squared;
-
-            decryptor.decrypt(encrypted_residual_vector,
-                              decrypted_residual_vector);
-            batch_encoder.decode(decrypted_residual_vector,
-                                 decoded_residual_vector);
-            std::for_each(decoded_residual_vector.begin(),
-                          decoded_residual_vector.end(),
-                          [](int64_t &n) { n /= BFV_SCALING_FACTOR; });
-
-            decryptor.decrypt(encrypted_residual_vector_sq,
-                              decrypted_residual_vector_sq);
-            std::vector<int64_t> encoded_u64_residual_vector_squared(1, 0LL);
-            batch_encoder.decode(decrypted_residual_vector_sq,
-                                 encoded_u64_residual_vector_squared);
-
-            float decrypted_residual_vector_squared =
-                encoded_u64_residual_vector_squared[0];
-            decrypted_residual_vector_squared /=
-                (BFV_SCALING_FACTOR * BFV_SCALING_FACTOR);
+            // seal::Plaintext decrypted_residual_vector;
+            // seal::Plaintext decrypted_residual_vector_sq;
+            // std::vector<int64_t> decoded_residual_vector;
+            // std::vector<int64_t> decoded_residual_vector_squared;
+            //
+            // decryptor.decrypt(encrypted_residual_vector,
+            //                   decrypted_residual_vector);
+            // m_ServerEncryption.BatchEncoder.decode(decrypted_residual_vector,
+            //                                        decoded_residual_vector);
+            // std::for_each(decoded_residual_vector.begin(),
+            //               decoded_residual_vector.end(),
+            //               [](int64_t &n) { n /= BFV_SCALING_FACTOR; });
+            //
+            // decryptor.decrypt(encrypted_residual_vector_sq,
+            //                   decrypted_residual_vector_sq);
+            // std::vector<int64_t> encoded_u64_residual_vector_squared(1, 0LL);
+            // m_ServerEncryption.BatchEncoder.decode(
+            //     decrypted_residual_vector_sq,
+            //     encoded_u64_residual_vector_squared);
+            //
+            // float decrypted_residual_vector_squared =
+            //     encoded_u64_residual_vector_squared[0];
+            // decrypted_residual_vector_squared /=
+            //     (BFV_SCALING_FACTOR * BFV_SCALING_FACTOR);
 
             // SPDLOG_INFO("Nquery = {}, Nprobe = {}, vec size = {}, squared val
             // "
@@ -244,7 +252,7 @@ Server::coarseSearch(
     std::vector<std::vector<seal::Ciphertext>>
         &encrypted_residual_queries_squared,
     size_t num_queries, size_t nprobe, seal::RelinKeys &relin_keys,
-    seal::GaloisKeys &galois_keys) const {
+    seal::GaloisKeys &galois_keys) {
 
     m_Index->nprobe = nprobe;
     if (m_Index->nprobe != nprobe) {
@@ -252,9 +260,7 @@ Server::coarseSearch(
         throw std::runtime_error("m_Index->nprobe != nprobe");
     }
 
-    seal::SEALContext seal_ctx(m_EncryptionParms);
-    seal::BatchEncoder batch_encoder(seal_ctx);
-    seal::Evaluator evaluator(seal_ctx);
+    seal::Evaluator evaluator(m_ServerEncryption.SealCtx);
 
     std::vector<std::vector<seal::Ciphertext>> encrypted_coarse_distances(
         num_queries * nprobe);
@@ -262,8 +268,8 @@ Server::coarseSearch(
                                                                   nprobe);
 
     m_Index->search_encrypted(
-        batch_encoder, evaluator, relin_keys, galois_keys, BFV_SCALING_FACTOR,
-        num_queries, encrypted_residual_queries,
+        m_ServerEncryption.BatchEncoder, evaluator, relin_keys, galois_keys,
+        BFV_SCALING_FACTOR, num_queries, encrypted_residual_queries,
         encrypted_residual_queries_squared, nprobe_centroids.data(),
         encrypted_coarse_distances, coarse_distance_labels);
 
@@ -277,14 +283,12 @@ Server::deserialise_precise_search_params(
     const std::vector<seal::seal_byte> &serde_relin_keys,
     const std::vector<seal::seal_byte> &serde_galois_keys) const {
 
-    seal::SEALContext seal_ctx(m_EncryptionParms);
-    seal::BatchEncoder batch_encoder(seal_ctx);
-
     seal::RelinKeys relin_keys;
-    relin_keys.load(seal_ctx, serde_relin_keys.data(), serde_relin_keys.size());
+    relin_keys.load(m_ServerEncryption.SealCtx, serde_relin_keys.data(),
+                    serde_relin_keys.size());
 
     seal::GaloisKeys galois_keys;
-    galois_keys.load(seal_ctx, serde_galois_keys.data(),
+    galois_keys.load(m_ServerEncryption.SealCtx, serde_galois_keys.data(),
                      serde_galois_keys.size());
 
     std::vector<seal::Ciphertext> encrypted_precise_queries;
@@ -293,7 +297,7 @@ Server::deserialise_precise_search_params(
     for (int i = 0; i < serde_encrypted_precise_queries.size(); i++) {
         seal::Ciphertext encrypted_precise_query;
 
-        encrypted_precise_query.load(seal_ctx,
+        encrypted_precise_query.load(m_ServerEncryption.SealCtx,
                                      serde_encrypted_precise_queries[i].data(),
                                      serde_encrypted_precise_queries[i].size());
 
@@ -306,14 +310,11 @@ Server::deserialise_precise_search_params(
 std::vector<std::vector<seal::Ciphertext>> Server::preciseSearch(
     const std::vector<std::vector<faiss::idx_t>> &nearest_coarse_vectors_id,
     const std::vector<seal::Ciphertext> &encrypted_precise_queries,
-    const seal::RelinKeys &relin_keys,
-    const seal::GaloisKeys &galois_keys) const {
+    const seal::RelinKeys &relin_keys, const seal::GaloisKeys &galois_keys) {
 
     const float *dataset_base_ptr = m_DatasetBase.data();
 
-    seal::SEALContext seal_ctx(m_EncryptionParms);
-    seal::BatchEncoder batch_encoder(seal_ctx);
-    seal::Evaluator evaluator(seal_ctx);
+    seal::Evaluator evaluator(m_ServerEncryption.SealCtx);
 
     std::vector<std::vector<seal::Ciphertext>> encrypted_precise_distances;
     encrypted_precise_distances.reserve(encrypted_precise_queries.size());
@@ -327,17 +328,19 @@ std::vector<std::vector<seal::Ciphertext>> Server::preciseSearch(
             const float *precise_vec_idx =
                 dataset_base_ptr +
                 (nearest_coarse_vectors_id[i][j] * m_PreciseVectorDimensions);
-            std::vector<int64_t> pod_vec(batch_encoder.slot_count(), 0);
+            std::vector<int64_t> pod_vec(
+                m_ServerEncryption.BatchEncoder.slot_count(), 0);
             for (int k = 0; k < m_PreciseVectorDimensions; k++) {
                 pod_vec[k] = static_cast<int64_t>(precise_vec_idx[k]);
             }
 
             seal::Plaintext db_vec;
-            batch_encoder.encode(pod_vec, db_vec);
+            m_ServerEncryption.BatchEncoder.encode(pod_vec, db_vec);
 
             seal::Ciphertext result = L2sqr_encrypted(
-                evaluator, batch_encoder, db_vec, encrypted_precise_queries[i],
-                relin_keys, galois_keys, m_PreciseVectorDimensions);
+                evaluator, m_ServerEncryption.BatchEncoder, db_vec,
+                encrypted_precise_queries[i], relin_keys, galois_keys,
+                m_PreciseVectorDimensions);
             coarse_probe_precise_distances.push_back(result);
         }
 
@@ -437,14 +440,12 @@ Server::deserialise_single_phase_search_parms(
     const std::vector<seal::seal_byte> &serde_relin_keys,
     const std::vector<seal::seal_byte> &serde_galois_keys) const {
 
-    seal::SEALContext seal_ctx(m_EncryptionParms);
-    seal::BatchEncoder batch_encoder(seal_ctx);
-
     seal::RelinKeys relin_keys;
-    relin_keys.load(seal_ctx, serde_relin_keys.data(), serde_relin_keys.size());
+    relin_keys.load(m_ServerEncryption.SealCtx, serde_relin_keys.data(),
+                    serde_relin_keys.size());
 
     seal::GaloisKeys galois_keys;
-    galois_keys.load(seal_ctx, serde_galois_keys.data(),
+    galois_keys.load(m_ServerEncryption.SealCtx, serde_galois_keys.data(),
                      serde_galois_keys.size());
 
     std::vector<seal::Ciphertext> nquery_encrypted_vectors;
@@ -453,7 +454,7 @@ Server::deserialise_single_phase_search_parms(
     for (int i = 0; i < serde_encrypted_query_vectors.size(); i++) {
 
         seal::Ciphertext encrypted_query_vector;
-        encrypted_query_vector.load(seal_ctx,
+        encrypted_query_vector.load(m_ServerEncryption.SealCtx,
                                     serde_encrypted_query_vectors[i].data(),
                                     serde_encrypted_query_vectors[i].size());
 
@@ -469,12 +470,9 @@ Server::singlePhaseSearch(
     const std::vector<faiss::idx_t> &nprobe_centroids,
     const std::vector<seal::Ciphertext> &encrypted_queries,
     const size_t num_queries, const size_t nprobe,
-    const seal::RelinKeys &relin_keys,
-    const seal::GaloisKeys &galois_keys) const {
+    const seal::RelinKeys &relin_keys, const seal::GaloisKeys &galois_keys) {
 
-    seal::SEALContext seal_ctx(m_EncryptionParms);
-    seal::BatchEncoder batch_encoder(seal_ctx);
-    seal::Evaluator evaluator(seal_ctx);
+    seal::Evaluator evaluator(m_ServerEncryption.SealCtx);
 
     const float *dataset_base_ptr = m_DatasetBase.data();
     std::vector<size_t> list_sizes_per_query;
@@ -513,17 +511,19 @@ Server::singlePhaseSearch(
                     dataset_base_ptr + (db_index * m_PreciseVectorDimensions);
 
                 // get plain text vector
-                std::vector<int64_t> pod_vec(batch_encoder.slot_count(), 0);
+                std::vector<int64_t> pod_vec(
+                    m_ServerEncryption.BatchEncoder.slot_count(), 0);
                 for (int l = 0; l < m_PreciseVectorDimensions; l++) {
                     pod_vec[l] = static_cast<int64_t>(db_query[l]);
                 }
                 seal::Plaintext db_vec;
-                batch_encoder.encode(pod_vec, db_vec);
+                m_ServerEncryption.BatchEncoder.encode(pod_vec, db_vec);
 
                 // compute l2 distance
-                result = L2sqr_encrypted(
-                    evaluator, batch_encoder, db_vec, encrypted_queries[i],
-                    relin_keys, galois_keys, m_PreciseVectorDimensions);
+                result =
+                    L2sqr_encrypted(evaluator, m_ServerEncryption.BatchEncoder,
+                                    db_vec, encrypted_queries[i], relin_keys,
+                                    galois_keys, m_PreciseVectorDimensions);
 
                 // push distance into vector
                 encrypted_distance.push_back(result);
