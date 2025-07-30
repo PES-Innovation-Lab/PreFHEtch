@@ -1,11 +1,14 @@
 #!/bin/bash
 
+# Run all commands from the repository root
+
 setup() {
   sudo apt-get update && sudo apt-get install -y \
     git build-essential curl uuid-dev \
     libjsoncpp-dev pkg-config zlib1g-dev \
     libssl-dev libblas-dev liblapack-dev \
     libcurl4-openssl-dev \
+    libboost-all-dev \
     wget && sudo apt-get clean &&
     sudo rm -rf /var/lib/apt/lists/*
 
@@ -32,10 +35,19 @@ uninstall() {
   sudo rm -rf /usr/local/lib/cmake
 }
 
-sift() {
-  cd .. && mkdir sift && cd sift &&
+sift10k() {
+  mkdir sift
+  cd sift &&
     wget ftp://ftp.irisa.fr/local/texmex/corpus/siftsmall.tar.gz &&
     tar -xzf siftsmall.tar.gz &&
+    cd ..
+}
+
+sift1m() {
+  mkdir sift
+  cd sift &&
+    wget ftp://ftp.irisa.fr/local/texmex/corpus/sift.tar.gz &&
+    tar -xzf sift.tar.gz &&
     cd ..
 }
 
@@ -46,8 +58,11 @@ setup)
 clean)
   uninstall
   ;;
-sift)
-  sift
+sift10k)
+  sift10k
+  ;;
+sift1m)
+  sift1m
   ;;
 *)
   echo "Invalid option"
