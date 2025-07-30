@@ -11,6 +11,7 @@
 
 #include "client_server_utils.h"
 #include "server_lib.h"
+#include "server_utils.h"
 
 // Include controllers headers to register with server
 #include "controllers/Query.h"
@@ -35,7 +36,7 @@ std::string INDEX_FILE;
 
 Server::Server() : m_EncryptionParms(seal::scheme_type::bfv) {
     std::ostringstream oss;
-    oss << "IVF" << Nlist << "_PQ" << SubQuantizers << "_SUB_QUANTIZER_SIZE"
+    oss << "build/" << "IVF" << Nlist << "_PQ" << SubQuantizers << "_SUB_QUANTIZER_SIZE"
         << SubQuantizerSize << ".faiss";
     INDEX_FILE = oss.str();
 
@@ -336,22 +337,8 @@ std::vector<std::vector<seal::Ciphertext>> Server::preciseSearch(
 
             seal::Plaintext db_vec;
             batch_encoder.encode(pod_vec, db_vec);
-            seal::Ciphertext sub_result;
-            evaluator.sub_plain(encrypted_precise_queries[i], db_vec,
-                                sub_result);
-
-            // TODO: optimize the square here using the expansion formula.
-            seal::Ciphertext result;
-            evaluator.square(sub_result, result);
-            evaluator.relinearize_inplace(result, relin_keys);
-
-            for (size_t step = 1; step < m_PreciseVectorDimensions;
-                 step <<= 1) {
-                seal::Ciphertext rotated;
-                evaluator.rotate_rows(result, step, galois_keys, rotated);
-                evaluator.add_inplace(result, rotated);
-            }
-
+            
+            seal::Ciphertext result = L2sqr_encrypted(evaluator, batch_encoder, db_vec, encrypted_precise_queries[i], relin_keys, galois_keys, m_PreciseVectorDimensions);
             coarse_probe_precise_distances.push_back(result);
         }
 
@@ -484,5 +471,63 @@ Server::singlePhaseSearch(std::vector<faiss::idx_t> nprobe_centroids,
                           size_t num_queries, size_t nprobe,
                           seal::RelinKeys relin_keys,
                           seal::GaloisKeys galois_keys) const {
-    // TODO: implement
+  seal::SEALContext seal_ctx(m_EncryptionParms);
+  seal::BatchEncoder batch_encoder(seal_ctx);
+  seal::Evaluator evaluator(seal_ctx);
+
+  const float *dataset_base_ptr = m_DatasetBase.data();
+  std::vector<size_t> list_sizes_per_query;
+  list_sizes_per_query.reserve(num_queries);
+
+  for (int64_t i = 0; i < num_queries; ++i) {
+      size_t total = 0;
+      for (int64_t j = 0; j < nprobe; ++j) {
+          int64_t key = nprobe_centroids[i * nprobe + j];
+          total += m_Index->invlists->list_size(key);
+      }
+      list_sizes_per_query.push_back(total);
+  }
+
+  std::vector<std::vector<seal::Ciphertext>> encrypted_distances;
+  encrypted_distances.reserve(num_queries);
+  std::vector<std::vector<faiss::idx_t>> labels_nquery;
+  labels_nquery.reserve(num_queries);
+
+  for (int i = 0; i < num_queries; i++) {
+
+    std::vector<seal::Ciphertext> encrypted_distance;
+    encrypted_distance.reserve(list_sizes_per_query[i]);
+    std::vector<faiss::idx_t> labels;
+    labels.reserve(list_sizes_per_query[i]);
+
+    for (int j = 0; j < nprobe; j++){
+      const size_t code_size = m_Index->invlists->list_size(nprobe_centroids[i * nprobe + j]);
+
+      for (int k = 0; k < code_size; k++) {
+        seal::Ciphertext result;
+        size_t db_index = m_Index->invlists->get_ids(nprobe_centroids[i * nprobe + j])[k];
+        const float* db_query = dataset_base_ptr + (db_index * m_PreciseVectorDimensions);
+
+        // get plain text vector
+        std::vector<int64_t> pod_vec(batch_encoder.slot_count(), 0);
+        for (int l = 0; l < m_PreciseVectorDimensions; l++) {
+            pod_vec[l] = static_cast<int64_t>(db_query[l]);
+        }
+        seal::Plaintext db_vec;
+        batch_encoder.encode(pod_vec, db_vec);
+
+        // compute l2 distance
+        result = L2sqr_encrypted(evaluator, batch_encoder, db_vec, encrypted_queries[i], relin_keys, galois_keys, m_PreciseVectorDimensions);
+
+        // push distance into vector 
+        encrypted_distance.push_back(result);
+        labels.push_back(db_index);
+      }
+    }
+
+    encrypted_distances.push_back(encrypted_distance);
+    labels_nquery.push_back(labels);
+  }
+  
+  return {encrypted_distances, labels_nquery};
 }
