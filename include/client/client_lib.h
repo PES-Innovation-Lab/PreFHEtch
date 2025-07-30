@@ -58,7 +58,7 @@ class Client {
     sort_nearest_centroids(std::vector<float> &precise_queries,
                            std::vector<float> &centroids) const;
 
-    // Returns NQUERY pairs of serialize ciphertexts and the relinearization
+    // Returns NQUERY pairs of serialized ciphertexts and the relinearization
     // and galois keys, tuple.1 - vector of encrypted residual queries for
     // nqueries, tuple.2 - vector of encrypted residual squared lengths for
     // nqueries, tuple.3 - relinearization keys, tuple.4 - galois keys
@@ -67,7 +67,7 @@ class Client {
                std::vector<std::vector<std::vector<seal::seal_byte>>>,
                std::vector<seal::seal_byte>, std::vector<seal::seal_byte>,
                std::vector<std::vector<seal::seal_byte>>>
-    compute_encrypted_search_parms(
+    compute_encrypted_two_phase_search_parms(
         std::vector<float> &precise_queries, std::vector<float> &centroids,
         std::vector<faiss_idx_t> &nearest_centroids_idx) const;
 
@@ -118,4 +118,26 @@ class Client {
         const std::vector<std::vector<float>> &decrypted_distance_scores,
         const std::vector<std::vector<faiss_idx_t>> &vector_labels,
         const size_t num_queries, const size_t select_nearest_probe) const;
+
+    // --------------------------------------
+    // Single Phase Search
+
+    // Returns NQUERY pairs of serialized ciphertexts and the relinearization
+    // and galois keys, tuple.1 - vector of encrypted queries for
+    // nqueries, tuple.2 - relinearization keys, tuple.3 - galois keys
+    std::tuple<std::vector<std::vector<seal::seal_byte>>,
+               std::vector<seal::seal_byte>, std::vector<seal::seal_byte>>
+    compute_encrypted_single_phase_search_parms(
+        std::vector<float> &precise_queries) const;
+
+    // Sends the encrypted queries and nearest centroids to the server to
+    // perform a single phase search and returns the encrypted precise distances
+    std::pair<std::vector<std::vector<std::vector<seal::seal_byte>>>,
+              std::vector<std::vector<faiss_idx_t>>>
+    get_encrypted_single_phase_search_scores(
+        const std::vector<std::vector<seal::seal_byte>>
+            &serde_encrypted_queries,
+        const std::vector<faiss_idx_t> &nprobe_nearest_centroids_idx,
+        const std::vector<seal::seal_byte> &serde_relin_keys,
+        const std::vector<seal::seal_byte> &serde_galois_keys) const;
 };

@@ -153,7 +153,7 @@ std::tuple<std::vector<std::vector<std::vector<seal::seal_byte>>>,
            std::vector<std::vector<std::vector<seal::seal_byte>>>,
            std::vector<seal::seal_byte>, std::vector<seal::seal_byte>,
            std::vector<std::vector<seal::seal_byte>>>
-Client::compute_encrypted_search_parms(
+Client::compute_encrypted_two_phase_search_parms(
     std::vector<float> &precise_queries, std::vector<float> &centroids,
     std::vector<faiss_idx_t> &nearest_centroids_idx) const {
 
@@ -686,3 +686,105 @@ std::vector<std::vector<faiss_idx_t>> Client::compute_nearest_vectors_id(
 //                 std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, K>,
 //                 NQUERY>>();
 // }
+
+// ----------------------------------------------------
+// Single Phase Search
+
+std::tuple<std::vector<std::vector<seal::seal_byte>>,
+           std::vector<seal::seal_byte>, std::vector<seal::seal_byte>>
+Client::compute_encrypted_single_phase_search_parms(
+    std::vector<float> &precise_queries) const {
+
+    std::vector<seal::seal_byte> serde_relin_keys(
+        m_OptEncryption.value().SerdeRelinKeys.save_size());
+    m_OptEncryption.value().SerdeRelinKeys.save(serde_relin_keys.data(),
+                                                serde_relin_keys.size());
+
+    std::vector<seal::seal_byte> serde_galois_keys(
+        m_OptEncryption.value().SerdeGaloisKeys.save_size());
+    m_OptEncryption.value().SerdeGaloisKeys.save(serde_galois_keys.data(),
+                                                 serde_galois_keys.size());
+
+    std::vector<std::vector<seal::seal_byte>> serde_encrypted_precise_queries;
+    serde_encrypted_precise_queries.reserve(m_NumQueries);
+
+    if (!m_OptEncryption.has_value()) {
+        SPDLOG_ERROR("Encryption uninitialised");
+        throw std::runtime_error("Encryption uninitialised");
+    }
+
+    if (m_PreciseVectorDimensions >
+        m_OptEncryption.value().EncryptedParms.poly_modulus_degree()) {
+        SPDLOG_ERROR("Elements per vector exceeds poly modulus degree");
+        throw std::runtime_error(
+            "Elements per vector exceeds poly modulus degree");
+    }
+
+    for (int i = 0; i < m_NumQueries; i++) {
+        std::span<float> query_vector(precise_queries.data() +
+                                          i * m_PreciseVectorDimensions,
+                                      m_PreciseVectorDimensions);
+        // SPDLOG_INFO("\n\n Query num = {}", i);
+        // SPDLOG_INFO("Printing Query");
+        // for (int temp = 0; temp < m_PreciseVectorDimensions; temp++) {
+        //     printf("%f, ", query_vector[temp]);
+        // }
+        // printf("\n");
+
+        seal::Plaintext pt_precise_query;
+        std::vector<int64_t> int_precise_query(m_PreciseVectorDimensions);
+        for (int k = 0; k < m_PreciseVectorDimensions; k++) {
+            int_precise_query[k] =
+                static_cast<int64_t>(query_vector[k] * BFV_SCALING_FACTOR);
+        }
+        m_OptEncryption.value().BatchEncoder.encode(int_precise_query,
+                                                    pt_precise_query);
+
+        seal::Serializable<seal::Ciphertext> encrypted_precise_query_vector =
+            m_OptEncryption.value().Encryptor.encrypt_symmetric(
+                pt_precise_query);
+
+        std::vector<seal::seal_byte> serde_precise_query_vector;
+        serde_precise_query_vector.resize(
+            encrypted_precise_query_vector.save_size());
+        encrypted_precise_query_vector.save(serde_precise_query_vector.data(),
+                                            serde_precise_query_vector.size());
+        serde_encrypted_precise_queries.push_back(serde_precise_query_vector);
+    }
+
+    return {serde_encrypted_precise_queries, serde_relin_keys,
+            serde_galois_keys};
+}
+
+std::pair<std::vector<std::vector<std::vector<seal::seal_byte>>>,
+          std::vector<std::vector<faiss_idx_t>>>
+Client::get_encrypted_single_phase_search_scores(
+    const std::vector<std::vector<seal::seal_byte>> &serde_encrypted_queries,
+    const std::vector<faiss_idx_t> &nprobe_nearest_centroids_idx,
+    const std::vector<seal::seal_byte> &serde_relin_keys,
+    const std::vector<seal::seal_byte> &serde_galois_keys) const {
+
+    nlohmann::json encrypted_search_json;
+    encrypted_search_json["numQueries"] = m_NumQueries;
+    encrypted_search_json["encryptedQueries"] = serde_encrypted_queries;
+    encrypted_search_json["nearestCentroids"] = nprobe_nearest_centroids_idx;
+    encrypted_search_json["relinKeys"] = serde_relin_keys;
+    encrypted_search_json["galoisKeys"] = serde_galois_keys;
+
+    SPDLOG_INFO("Size of the single phase search request = {}(mb)",
+                getSizeInMB(encrypted_search_json.dump().size()));
+
+    cpr::Response r = cpr::Post(cpr::Url(server_addr + "single-phase-search"),
+                                cpr::Body(encrypted_search_json.dump()));
+
+    nlohmann::json resp = nlohmann::json::parse(r.text);
+
+    auto encrypted_vector_distances =
+        resp.at("encryptedDistances")
+            .get<std::vector<std::vector<std::vector<seal::seal_byte>>>>();
+
+    auto result_vector_labels =
+        resp.at("vectorLabels").get<std::vector<std::vector<faiss_idx_t>>>();
+
+    return {encrypted_vector_distances, result_vector_labels};
+}

@@ -239,41 +239,6 @@ Server::deserialise_coarse_search_parms(
             encrypted_nquery_residual_vectors_squared, relin_keys, galois_keys};
 }
 
-std::vector<std::vector<std::vector<seal::seal_byte>>>
-Server::serialise_encrypted_coarse_distances(
-    const std::vector<std::vector<seal::Ciphertext>>
-        &encrypted_coarse_distances) const {
-
-    std::vector<std::vector<std::vector<seal::seal_byte>>>
-        nquery_encrypted_coarse_distances;
-    nquery_encrypted_coarse_distances.reserve(
-        encrypted_coarse_distances.size());
-
-    for (int i = 0; i < encrypted_coarse_distances.size(); i++) {
-        std::vector<std::vector<seal::seal_byte>>
-            nprobe_encrypted_coarse_distances;
-        nprobe_encrypted_coarse_distances.reserve(
-            encrypted_coarse_distances[i].size());
-
-        for (int j = 0; j < encrypted_coarse_distances[i].size(); j++) {
-            std::vector<seal::seal_byte> serde_encrypted_coarse_distances(
-                encrypted_coarse_distances[i][j].save_size());
-
-            encrypted_coarse_distances[i][j].save(
-                serde_encrypted_coarse_distances.data(),
-                serde_encrypted_coarse_distances.size());
-
-            nprobe_encrypted_coarse_distances.push_back(
-                serde_encrypted_coarse_distances);
-        }
-
-        nquery_encrypted_coarse_distances.push_back(
-            nprobe_encrypted_coarse_distances);
-    }
-
-    return nquery_encrypted_coarse_distances;
-}
-
 std::pair<std::vector<std::vector<seal::Ciphertext>>,
           std::vector<std::vector<faiss::idx_t>>>
 Server::coarseSearch(
@@ -397,38 +362,37 @@ std::vector<std::vector<seal::Ciphertext>> Server::preciseSearch(
 }
 
 std::vector<std::vector<std::vector<seal::seal_byte>>>
-Server::serialise_precise_search_results(
-    const std::vector<std::vector<seal::Ciphertext>>
-        &encrypted_precise_distances) const {
+Server::serialise_encrypted_distances(
+    const std::vector<std::vector<seal::Ciphertext>> &encrypted_distances)
+    const {
 
     std::vector<std::vector<std::vector<seal::seal_byte>>>
-        encrypted_nquery_precise_distances;
-    encrypted_nquery_precise_distances.reserve(
-        encrypted_precise_distances.size());
+        serde_nquery_encrypted_distances;
+    serde_nquery_encrypted_distances.reserve(encrypted_distances.size());
 
-    for (int i = 0; i < encrypted_precise_distances.size(); i++) {
+    for (int i = 0; i < encrypted_distances.size(); i++) {
         std::vector<std::vector<seal::seal_byte>>
-            encrypted_coarse_probe_distances;
-        encrypted_coarse_probe_distances.reserve(
-            encrypted_precise_distances[i].size());
+            serde_per_query_encrypted_distances;
+        serde_per_query_encrypted_distances.reserve(
+            encrypted_distances[i].size());
 
-        for (int j = 0; j < encrypted_precise_distances[i].size(); j++) {
-            std::vector<seal::seal_byte> serde_encrypted_precise_distances(
-                encrypted_precise_distances[i][j].save_size());
+        for (int j = 0; j < encrypted_distances[i].size(); j++) {
+            std::vector<seal::seal_byte> serde_encrypted_coarse_distances(
+                encrypted_distances[i][j].save_size());
 
-            encrypted_precise_distances[i][j].save(
-                serde_encrypted_precise_distances.data(),
-                serde_encrypted_precise_distances.size());
+            encrypted_distances[i][j].save(
+                serde_encrypted_coarse_distances.data(),
+                serde_encrypted_coarse_distances.size());
 
-            encrypted_coarse_probe_distances.push_back(
-                serde_encrypted_precise_distances);
+            serde_per_query_encrypted_distances.push_back(
+                serde_encrypted_coarse_distances);
         }
 
-        encrypted_nquery_precise_distances.push_back(
-            encrypted_coarse_probe_distances);
+        serde_nquery_encrypted_distances.push_back(
+            serde_per_query_encrypted_distances);
     }
 
-    return encrypted_nquery_precise_distances;
+    return serde_nquery_encrypted_distances;
 }
 
 // TODO: Implement PIR for encrypted pipeline
@@ -475,4 +439,50 @@ void Server::display_nprobe_centroids(
         }
         printf("\n");
     }
+}
+
+// -----------------------------------
+// Single Phase Search
+
+std::tuple<std::vector<seal::Ciphertext>, seal::RelinKeys, seal::GaloisKeys>
+Server::deserialise_single_phase_search_parms(
+    const std::vector<std::vector<seal::seal_byte>>
+        &serde_encrypted_query_vectors,
+    const std::vector<seal::seal_byte> &serde_relin_keys,
+    const std::vector<seal::seal_byte> &serde_galois_keys) const {
+
+    seal::SEALContext seal_ctx(m_EncryptionParms);
+    seal::BatchEncoder batch_encoder(seal_ctx);
+
+    seal::RelinKeys relin_keys;
+    relin_keys.load(seal_ctx, serde_relin_keys.data(), serde_relin_keys.size());
+
+    seal::GaloisKeys galois_keys;
+    galois_keys.load(seal_ctx, serde_galois_keys.data(),
+                     serde_galois_keys.size());
+
+    std::vector<seal::Ciphertext> nquery_encrypted_vectors;
+    nquery_encrypted_vectors.reserve(serde_encrypted_query_vectors.size());
+
+    for (int i = 0; i < serde_encrypted_query_vectors.size(); i++) {
+
+        seal::Ciphertext encrypted_query_vector;
+        encrypted_query_vector.load(seal_ctx,
+                                    serde_encrypted_query_vectors[i].data(),
+                                    serde_encrypted_query_vectors[i].size());
+
+        nquery_encrypted_vectors.push_back(encrypted_query_vector);
+    }
+
+    return {nquery_encrypted_vectors, relin_keys, galois_keys};
+}
+
+std::pair<std::vector<std::vector<seal::Ciphertext>>,
+          std::vector<std::vector<faiss::idx_t>>>
+Server::singlePhaseSearch(std::vector<faiss::idx_t> nprobe_centroids,
+                          std::vector<seal::Ciphertext> &encrypted_queries,
+                          size_t num_queries, size_t nprobe,
+                          seal::RelinKeys relin_keys,
+                          seal::GaloisKeys galois_keys) const {
+    // TODO: implement
 }

@@ -99,20 +99,8 @@ void Query::coarse_search(
     serde_coarse_search_results_timer.StartTimer();
     std::vector<std::vector<std::vector<seal::seal_byte>>>
         serde_encrypted_coarse_distances =
-            server->serialise_encrypted_coarse_distances(
-                encrypted_coarse_distances);
+            server->serialise_encrypted_distances(encrypted_coarse_distances);
     serde_coarse_search_results_timer.StopTimer();
-
-    // TODO: log the times and results after callback()
-    SPDLOG_INFO("Time to deserialise coarse search params = {}(us)",
-                serde_coarse_search_params_timer.getDurationMicroseconds());
-    SPDLOG_INFO("Time to perform coarse search = {}(us)",
-                coarse_search_timer.getDurationMicroseconds());
-    SPDLOG_INFO("Time to serialise coarse search results = {}(us)",
-                serde_coarse_search_results_timer.getDurationMicroseconds());
-    SPDLOG_INFO(
-        "Size of the unserialised encrypted data = {}(mb)",
-        getSizeInMB(getTotalNestedVecSize(serde_encrypted_coarse_distances)));
 
     nlohmann::json response;
     response["encryptedCoarseDistances"] = serde_encrypted_coarse_distances;
@@ -127,6 +115,15 @@ void Query::coarse_search(
     callback(resp);
     coarse_search_handler_timer.StopTimer();
 
+    SPDLOG_INFO("Time to deserialise coarse search params = {}(us)",
+                serde_coarse_search_params_timer.getDurationMicroseconds());
+    SPDLOG_INFO("Time to perform coarse search = {}(us)",
+                coarse_search_timer.getDurationMicroseconds());
+    SPDLOG_INFO("Time to serialise coarse search results = {}(us)",
+                serde_coarse_search_results_timer.getDurationMicroseconds());
+    SPDLOG_INFO(
+        "Size of the unserialised encrypted data = {}(mb)",
+        getSizeInMB(getTotalNestedVecSize(serde_encrypted_coarse_distances)));
     SPDLOG_INFO(
         "Exiting from coarse search handler, total handler time = {}(us)",
         coarse_search_handler_timer.getDurationMicroseconds());
@@ -175,8 +172,8 @@ void Query::precise_search(
 
     serialise_precise_search_results_timer.StartTimer();
     std::vector<std::vector<std::vector<seal::seal_byte>>>
-        serde_precise_search_results = server->serialise_precise_search_results(
-            encrypted_precise_distances);
+        serde_precise_search_results =
+            server->serialise_encrypted_distances(encrypted_precise_distances);
     serialise_precise_search_results_timer.StopTimer();
 
     nlohmann::json response;
@@ -229,4 +226,77 @@ void Query::precise_vector_pir(
 
     callback(resp);
     SPDLOG_INFO("Exiting from precise vector PIR handler");
+}
+
+void Query::single_phase_search(
+    const HttpRequestPtr &req,
+    std::function<void(const HttpResponsePtr &)> &&callback) const {
+
+    Timer single_phase_search_handler_timer;
+    Timer serde_search_params_timer;
+    Timer encrypted_search_timer;
+    Timer serde_search_results_timer;
+
+    SPDLOG_INFO("Received request on /single-phase-search");
+    single_phase_search_handler_timer.StartTimer();
+
+    nlohmann::json req_body = nlohmann::json::parse(req->body());
+    size_t num_queries = req_body["numQueries"].get<size_t>();
+    auto serde_encrypted_query_vectors =
+        req_body["encryptedQueries"]
+            .get<std::vector<std::vector<seal::seal_byte>>>();
+    auto nprobe_centroids =
+        req_body["nearestCentroids"].get<std::vector<faiss::idx_t>>();
+    auto serde_relin_keys =
+        req_body["relinKeys"].get<std::vector<seal::seal_byte>>();
+    auto serde_galois_keys =
+        req_body["galoisKeys"].get<std::vector<seal::seal_byte>>();
+
+    size_t nprobe = nprobe_centroids.size() / num_queries;
+
+    std::shared_ptr<Server> server = Server::getInstance();
+
+    serde_search_params_timer.StartTimer();
+    auto [encrypted_query_vectors, relin_keys, galois_keys] =
+        server->deserialise_single_phase_search_parms(
+            serde_encrypted_query_vectors, serde_relin_keys, serde_galois_keys);
+    serde_search_params_timer.StopTimer();
+
+    encrypted_search_timer.StartTimer();
+    auto [encrypted_coarse_distances, coarse_vector_labels] =
+        server->singlePhaseSearch(nprobe_centroids, encrypted_query_vectors,
+                                  num_queries, nprobe, relin_keys, galois_keys);
+    encrypted_search_timer.StopTimer();
+
+    serde_search_results_timer.StartTimer();
+    std::vector<std::vector<std::vector<seal::seal_byte>>>
+        serde_encrypted_single_phase_distances =
+            server->serialise_encrypted_distances(encrypted_coarse_distances);
+    serde_search_results_timer.StopTimer();
+
+    nlohmann::json response;
+    response["encryptedDistances"] = serde_encrypted_single_phase_distances;
+    response["vectorLabels"] = coarse_vector_labels;
+    SPDLOG_INFO("Size of the serialised encrypted data = {}(mb)",
+                getSizeInMB(response.dump().size()));
+
+    const HttpResponsePtr resp = HttpResponse::newHttpResponse();
+    resp->setContentTypeString("application/json");
+    resp->setBody(response.dump());
+
+    callback(resp);
+    single_phase_search_handler_timer.StopTimer();
+
+    SPDLOG_INFO("Time to deserialise single phase search params = {}(us)",
+                serde_search_params_timer.getDurationMicroseconds());
+    SPDLOG_INFO("Time to perform single phase search = {}(us)",
+                encrypted_search_timer.getDurationMicroseconds());
+    SPDLOG_INFO("Time to serialise single phase search results = {}(us)",
+                serde_search_results_timer.getDurationMicroseconds());
+    SPDLOG_INFO("Size of the unserialised encrypted data = {}(mb)",
+                getSizeInMB(getTotalNestedVecSize(
+                    serde_encrypted_single_phase_distances)));
+    SPDLOG_INFO(
+        "Exiting from single phase search handler, total handler time = {}(us)",
+        single_phase_search_handler_timer.getDurationMicroseconds());
 }

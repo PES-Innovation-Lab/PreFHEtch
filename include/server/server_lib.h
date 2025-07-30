@@ -55,11 +55,6 @@ class Server {
         // TODO: remove secret key, used for debugging
         const std::vector<seal::seal_byte> &sk) const;
 
-    std::vector<std::vector<std::vector<seal::seal_byte>>>
-    serialise_encrypted_coarse_distances(
-        const std::vector<std::vector<seal::Ciphertext>>
-            &encrypted_coarse_distances) const;
-
     std::pair<std::vector<std::vector<seal::Ciphertext>>,
               std::vector<std::vector<faiss::idx_t>>>
     coarseSearch(
@@ -85,11 +80,6 @@ class Server {
         const std::vector<seal::Ciphertext> &encrypted_precise_queries,
         seal::RelinKeys relin_keys, seal::GaloisKeys galois_keys) const;
 
-    std::vector<std::vector<std::vector<seal::seal_byte>>>
-    serialise_precise_search_results(
-        const std::vector<std::vector<seal::Ciphertext>>
-            &encrypted_precise_distances) const;
-
     // void preciseVectorPIR(
     //     const std::array<std::array<faiss_idx_t, K>, NQUERY>
     //         &k_nearest_precise_vectors_idx,
@@ -101,4 +91,27 @@ class Server {
     void
     display_nprobe_centroids(const std::vector<faiss::idx_t> &nprobe_centroids,
                              size_t num_queries) const;
+
+    std::vector<std::vector<std::vector<seal::seal_byte>>>
+    serialise_encrypted_distances(
+        const std::vector<std::vector<seal::Ciphertext>> &encrypted_distances)
+        const;
+
+    // -----------------------------------
+    // Single Phase Search
+
+    std::tuple<std::vector<seal::Ciphertext>, seal::RelinKeys, seal::GaloisKeys>
+    deserialise_single_phase_search_parms(
+        const std::vector<std::vector<seal::seal_byte>>
+            &serde_encrypted_query_vectors,
+        const std::vector<seal::seal_byte> &serde_relin_keys,
+        const std::vector<seal::seal_byte> &serde_galois_keys) const;
+
+    std::pair<std::vector<std::vector<seal::Ciphertext>>,
+              std::vector<std::vector<faiss::idx_t>>>
+    singlePhaseSearch(std::vector<faiss::idx_t> nprobe_centroids,
+                      std::vector<seal::Ciphertext> &encrypted_queries,
+                      size_t num_queries, size_t nprobe,
+                      seal::RelinKeys relin_keys,
+                      seal::GaloisKeys galois_keys) const;
 };
