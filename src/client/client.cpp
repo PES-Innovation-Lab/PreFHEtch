@@ -189,7 +189,7 @@ int main(int argc, char *argv[]) {
         compute_nearest_nprobe_coarse_search_timer.StartTimer();
         std::vector<std::vector<faiss_idx_t>> nearest_coarse_labels =
             client.compute_nearest_vectors_id(decrypted_coarse_distances,
-                                              coarse_vector_labels, nprobe,
+                                              coarse_vector_labels, num_queries,
                                               coarse_probe);
         compute_nearest_nprobe_coarse_search_timer.StopTimer();
         SPDLOG_INFO(

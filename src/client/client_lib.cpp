@@ -508,7 +508,6 @@ Client::get_precise_scores(
 
     std::vector<std::vector<std::vector<seal::seal_byte>>>
         encrypted_precise_distances;
-    encrypted_precise_distances.reserve(1);
 
     std::vector<std::vector<seal::seal_byte>> all_distances;
     all_distances.reserve(response.encrypted_precise_distances_size());
@@ -523,7 +522,24 @@ Client::get_precise_scores(
         all_distances.push_back(std::move(distance_bytes));
     }
 
-    encrypted_precise_distances.push_back(std::move(all_distances));
+    encrypted_precise_distances.reserve(nearest_coarse_vectors_id.size());
+    size_t distance_index = 0;
+
+    for (size_t query_idx = 0; query_idx < nearest_coarse_vectors_id.size();
+         ++query_idx) {
+        std::vector<std::vector<seal::seal_byte>> query_distances;
+        size_t expected_results = nearest_coarse_vectors_id[query_idx].size();
+        query_distances.reserve(expected_results);
+
+        for (size_t result_idx = 0; result_idx < expected_results &&
+                                    distance_index < all_distances.size();
+             ++result_idx) {
+            query_distances.push_back(std::move(all_distances[distance_index]));
+            distance_index++;
+        }
+
+        encrypted_precise_distances.push_back(std::move(query_distances));
+    }
 
     return encrypted_precise_distances;
 }
@@ -674,6 +690,20 @@ std::vector<std::vector<faiss_idx_t>> Client::compute_nearest_vectors_id(
     const std::vector<std::vector<faiss_idx_t>> &vector_labels,
     const size_t num_queries, const size_t select_nearest_probe) const {
 
+    if (decrypted_distance_scores.size() != num_queries) {
+        SPDLOG_ERROR("expected {} queries, got {} distance score vectors",
+                     num_queries, decrypted_distance_scores.size());
+        throw std::runtime_error(
+            "Query count mismatch in compute_nearest_vectors_id");
+    }
+
+    if (vector_labels.size() != num_queries) {
+        SPDLOG_ERROR("expected {} queries, got {} label vectors", num_queries,
+                     vector_labels.size());
+        throw std::runtime_error(
+            "Label count mismatch in compute_nearest_vectors_id");
+    }
+
     std::vector<std::vector<faiss_idx_t>> nquery_selected_probe_vectors;
     nquery_selected_probe_vectors.reserve(num_queries);
 
@@ -685,8 +715,8 @@ std::vector<std::vector<faiss_idx_t>> Client::compute_nearest_vectors_id(
         if (decrypted_distance_scores[i].size() < select_nearest_probe) {
             SPDLOG_ERROR("Number of computed results is lesser than "
                          "select_nearest_probe");
-            throw std::runtime_error("Number of computed results is "
-                                     "lesser than select_nearest_probe");
+            throw std::runtime_error("Number of computed results is lesser "
+                                     "than select_nearest_probe");
         }
 
         std::vector<DistanceIndexData> nprobe_per_query_vector_distances;
@@ -705,7 +735,6 @@ std::vector<std::vector<faiss_idx_t>> Client::compute_nearest_vectors_id(
     }
 
     for (int k = 0; k < nquery_selected_probe_vector_distances.size(); k++) {
-
         std::vector<faiss_idx_t> selected_probe_query_vector;
         selected_probe_query_vector.reserve(select_nearest_probe);
         std::ranges::sort(
@@ -718,30 +747,11 @@ std::vector<std::vector<faiss_idx_t>> Client::compute_nearest_vectors_id(
             nquery_selected_probe_vector_distances[k].begin(),
             select_nearest_probe);
 
-        // SPDLOG_INFO("Span -> Printing nearest coarse_probe vectors, i={}",
-        // k); for (const DistanceIndexData &dt : coarse_probe_view) {
-        //     printf("%lld - %f, ", dt.idx, dt.distance);
-        // }
-        // printf("\n\n\n);
-
         std::transform(selected_probe_view.begin(), selected_probe_view.end(),
                        std::back_inserter(selected_probe_query_vector),
                        [](const DistanceIndexData &dt) { return dt.idx; });
         nquery_selected_probe_vectors.push_back(selected_probe_query_vector);
     }
-
-    // SPDLOG_INFO("Printing nearest coarse_probe vectors");
-    // SPDLOG_INFO("nquery_coarse_vector.size() = {}",
-    //             nquery_coarse_vector.size());
-    // for (int i = 0; i < nquery_coarse_vector.size(); i++) {
-    //     SPDLOG_INFO("nquery_coarse_vector[{}].size() = {}", i,
-    //                 nquery_coarse_vector[i].size());
-    //     for (int j = 0; j < nquery_coarse_vector[i].size(); j++) {
-    //         printf("%lld, ", nquery_coarse_vector[i][j]);
-    //     }
-    //     printf("\n");
-    // }
-    // printf("\n");
 
     return nquery_selected_probe_vectors;
 }

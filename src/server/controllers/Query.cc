@@ -68,7 +68,7 @@ void Query::coarse_search(
     coarse_search_handler_timer.StartTimer();
 
     prefhetch::proto::CoarseSearchRequest request;
-    if (!request.ParseFromString(req->body())) {
+    if (!request.ParseFromString(std::string(req->body()))) {
         SPDLOG_ERROR("Failed to parse protobuf coarse search request");
         const HttpResponsePtr resp = HttpResponse::newHttpResponse();
         resp->setStatusCode(k400BadRequest);
@@ -213,7 +213,7 @@ void Query::precise_search(
     precise_search_handler_timer.StartTimer();
 
     prefhetch::proto::PreciseSearchRequest request;
-    if (!request.ParseFromString(req->body())) {
+    if (!request.ParseFromString(std::string(req->body()))) {
         SPDLOG_ERROR("Failed to parse protobuf precise search request");
         const HttpResponsePtr resp = HttpResponse::newHttpResponse();
         resp->setStatusCode(k400BadRequest);
@@ -339,7 +339,7 @@ void Query::single_phase_search(
     single_phase_search_handler_timer.StartTimer();
 
     prefhetch::proto::SinglePhaseSearchRequest request;
-    if (!request.ParseFromString(req->body())) {
+    if (!request.ParseFromString(std::string(req->body()))) {
         SPDLOG_ERROR("Failed to parse protobuf single phase search request");
         const HttpResponsePtr resp = HttpResponse::newHttpResponse();
         resp->setStatusCode(k400BadRequest);
