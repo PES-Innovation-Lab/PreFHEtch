@@ -347,28 +347,66 @@ Client::get_encrypted_coarse_scores(
 
     prefhetch::CoarseSearchRequest request;
     request.set_num_queries(m_NumQueries);
-    // Use helper functions to fill repeated fields:
-    // Flatten 2D vectors: send all residuals for all queries and nprobes
-    for (const auto& query_vec : serde_encrypted_vecs)
-        for (const auto& residual_vec : query_vec)
-            request.add_residual_vecs(residual_vec.data(), residual_vec.size());
-    for (const auto& query_vec : serde_encrypted_vecs_squared)
-        for (const auto& residual_vec : query_vec)
-            request.add_residual_vecs_squared(residual_vec.data(), residual_vec.size());
-    for (auto idx : nprobe_nearest_centroids_idx)
-        request.add_nearest_centroids(idx);
+
+    // Counters for logging
+    size_t total_residual_vecs = 0;
+    size_t total_residual_vecs_squared = 0;
+    size_t total_centroids = 0;
+
+    for (size_t q = 0; q < m_NumQueries; q++) {
+        auto* query = request.add_queries();
+        
+        // Residual vectors
+        for (const auto& vec : serde_encrypted_vecs[q]) {
+            query->add_residual_vecs()->assign(
+                reinterpret_cast<const char*>(vec.data()),
+                vec.size()
+            );
+            total_residual_vecs++;
+        }
+        
+        // Residual vectors squared
+        for (const auto& vec : serde_encrypted_vecs_squared[q]) {
+            query->add_residual_vecs_squared()->assign(
+                reinterpret_cast<const char*>(vec.data()),
+                vec.size()
+            );
+            total_residual_vecs_squared++;
+        }
+        
+        // Centroids
+        for (size_t p = 0; p < m_NProbe; p++) {
+            query->add_nearest_centroids(
+                nprobe_nearest_centroids_idx[q * m_NProbe + p]
+            );
+            total_centroids++;
+        }
+    }
     
+    // Enhanced logging similar to JSON version
     SPDLOG_INFO("DEBUG: Sending num_queries={}, residual_vecs={}, residual_vecs_squared={}, nearest_centroids={}", 
-                m_NumQueries, request.residual_vecs_size(), request.residual_vecs_squared_size(), request.nearest_centroids_size());
+                m_NumQueries, total_residual_vecs, total_residual_vecs_squared, total_centroids);
     
-    request.set_relin_keys(serde_relin_keys.data(), serde_relin_keys.size());
-    request.set_galois_keys(serde_galois_keys.data(), serde_galois_keys.size());
+    // Set keys
+    request.set_relin_keys(
+        reinterpret_cast<const char*>(serde_relin_keys.data()),
+        serde_relin_keys.size()
+    );
+    request.set_galois_keys(
+        reinterpret_cast<const char*>(serde_galois_keys.data()),
+        serde_galois_keys.size()
+    );
+    
     // TODO: Remove sk, used for debugging
     std::vector<seal::seal_byte> serde_sk(
         m_OptEncryption.value().SecretKey.save_size());
     m_OptEncryption.value().SecretKey.save(serde_sk.data(), serde_sk.size());
-    request.set_sk(serde_sk.data(), serde_sk.size());
+    request.set_sk(
+        reinterpret_cast<const char*>(serde_sk.data()),
+        serde_sk.size()
+    );
 
+    // Serialization timing and logging
     std::string serialized_request;
     auto start_ser = std::chrono::high_resolution_clock::now();
     request.SerializeToString(&serialized_request);
@@ -376,6 +414,10 @@ Client::get_encrypted_coarse_scores(
     auto ser_time = std::chrono::duration_cast<std::chrono::microseconds>(end_ser - start_ser).count();
     SPDLOG_INFO("CoarseSearchRequest serialization size: {} bytes, time: {} us", serialized_request.size(), ser_time);
 
+    // Additional size logging like JSON version
+    SPDLOG_INFO("Size of the coarse search request = {}(mb)", getSizeInMB(serialized_request.size()));
+
+    // HTTP request timing
     auto start_post = std::chrono::high_resolution_clock::now();
     cpr::Response r = cpr::Post(
         cpr::Url(server_addr + "coarsesearch"),
@@ -385,128 +427,59 @@ Client::get_encrypted_coarse_scores(
     auto post_time = std::chrono::duration_cast<std::chrono::microseconds>(end_post - start_post).count();
     SPDLOG_INFO("CoarseSearch POST request time: {} us", post_time);
 
+    // Response parsing timing
     auto start_deser = std::chrono::high_resolution_clock::now();
-    prefhetch::CoarseSearchResponse resp;
-    if (!resp.ParseFromString(r.text)) {
+    prefhetch::CoarseSearchResponse response;
+    if (!response.ParseFromString(r.text)) {
         throw std::runtime_error("Failed to parse protobuf response");
     }
     auto end_deser = std::chrono::high_resolution_clock::now();
     auto deser_time = std::chrono::duration_cast<std::chrono::microseconds>(end_deser - start_deser).count();
     SPDLOG_INFO("CoarseSearchResponse deserialization size: {} bytes, time: {} us", r.text.size(), deser_time);
 
-    SPDLOG_INFO("num distances = {}", resp.encrypted_coarse_distances_size());
-    SPDLOG_INFO("num labels = {}", resp.coarse_vector_labels_size());
+    // Count response data for logging
+    size_t total_distances = 0;
+    size_t total_labels = 0;
+    for (const auto& result : response.results()) {
+        total_distances += result.encrypted_coarse_distances_size();
+        total_labels += result.coarse_vector_labels_size();
+    }
     
-    // Parse the response data properly
+    SPDLOG_INFO("num distances = {}", total_distances);
+    SPDLOG_INFO("num labels = {}", total_labels);
+    
+    // Process response with cleaner structure
     std::vector<std::vector<std::vector<seal::seal_byte>>> encrypted_coarse_scores;
     std::vector<std::vector<faiss_idx_t>> coarse_vector_labels;
     
-    // Reconstruct the 3D structure from the flattened response
-    // Assuming the response is flattened as: [query1_centroid1, query1_centroid2, ..., query2_centroid1, ...]
-    size_t num_queries = m_NumQueries;
-    // Calculate the actual number of centroids per query from the response
-    size_t centroids_per_query = resp.encrypted_coarse_distances_size() / num_queries;
+    encrypted_coarse_scores.reserve(response.results_size());
+    coarse_vector_labels.reserve(response.results_size());
     
-    encrypted_coarse_scores.reserve(num_queries);
-    coarse_vector_labels.reserve(num_queries);
-    
-    for (size_t q = 0; q < num_queries; q++) {
+    for (const auto& result : response.results()) {
+        // Process distances
         std::vector<std::vector<seal::seal_byte>> query_scores;
-        std::vector<faiss_idx_t> query_labels;
+        query_scores.reserve(result.encrypted_coarse_distances_size());
         
-        query_scores.reserve(centroids_per_query);
-        query_labels.reserve(centroids_per_query);
-        
-        for (size_t p = 0; p < centroids_per_query; p++) {
-            size_t idx = q * centroids_per_query + p;
-            
-            if (idx < static_cast<size_t>(resp.encrypted_coarse_distances_size())) {
-                const std::string& bytes = resp.encrypted_coarse_distances(static_cast<int>(idx));
-                std::vector<seal::seal_byte> ciphertext_bytes;
-                ciphertext_bytes.reserve(bytes.size());
-                for (unsigned char c : bytes) {
-                    ciphertext_bytes.push_back(static_cast<seal::seal_byte>(c));
-                }
-                query_scores.push_back(std::move(ciphertext_bytes));
-            }
-            
-            if (idx < static_cast<size_t>(resp.coarse_vector_labels_size())) {
-                query_labels.push_back(static_cast<faiss_idx_t>(resp.coarse_vector_labels(static_cast<int>(idx))));
-            }
+        for (const auto& bytes : result.encrypted_coarse_distances()) {
+            std::vector<seal::seal_byte> vec(
+                reinterpret_cast<const seal::seal_byte*>(bytes.data()),
+                reinterpret_cast<const seal::seal_byte*>(bytes.data() + bytes.size())
+            );
+            query_scores.push_back(std::move(vec));
         }
-        
         encrypted_coarse_scores.push_back(std::move(query_scores));
-        coarse_vector_labels.push_back(std::move(query_labels));
-    }
-    coarse_search_json["sk"] = serde_sk;
-
-    // SPDLOG_INFO("residualVecs Size = {}, residualVecsSquared Size = {}",
-    //             coarse_search_json["residualVecs"].dump().size(),
-    //             coarse_search_json["residualVecsSquared"].dump().size());
-    SPDLOG_INFO("Size of the coarse search request = {}(mb)",
-                getSizeInMB(coarse_search_json.dump().size()));
-
-    cpr::Response r = cpr::Post(cpr::Url(server_addr + "coarsesearch"),
-                                cpr::Body(coarse_search_json.dump()));
-
-    nlohmann::json resp = nlohmann::json::parse(r.text);
-
-    auto encrypted_coarse_scores =
-        resp.at("encryptedCoarseDistances")
-            .get<std::vector<std::vector<std::vector<seal::seal_byte>>>>();
-
-    auto coarse_vector_labels =
-        resp.at("coarseVectorLabels")
-            .get<std::vector<std::vector<faiss_idx_t>>>();
-
-    return {encrypted_coarse_scores, coarse_vector_labels};
-}
-
-std::vector<std::vector<float>> Client::deserialise_decrypt_coarse_distances(
-    const std::vector<std::vector<std::vector<seal::seal_byte>>>
-        &serde_encrypted_coarse_distances) {
-
-    std::vector<std::vector<float>> nquery_coarse_distances;
-    nquery_coarse_distances.reserve(serde_encrypted_coarse_distances.size());
-    seal::SEALContext seal_ctx(m_OptEncryption.value().EncryptedParms);
-
-    for (int i = 0; i < serde_encrypted_coarse_distances.size(); i++) {
-        std::vector<float> nprobe_coarse_distances;
-        nprobe_coarse_distances.reserve(
-            serde_encrypted_coarse_distances[i].size());
-
-        for (int j = 0; j < serde_encrypted_coarse_distances[i].size(); j++) {
-            seal::Ciphertext encrypted_coarse_distance;
-            seal::Plaintext decrypted_coarse_distance;
-            std::vector<int64_t> decoded_coarse_distances;
-            float coarse_distances;
-
-            encrypted_coarse_distance.load(
-                seal_ctx, serde_encrypted_coarse_distances[i][j].data(),
-                serde_encrypted_coarse_distances[i][j].size());
-            m_OptEncryption.value().Decryptor.decrypt(
-                encrypted_coarse_distance, decrypted_coarse_distance);
-            m_OptEncryption.value().BatchEncoder.decode(
-                decrypted_coarse_distance, decoded_coarse_distances);
-            coarse_distances = static_cast<float>(decoded_coarse_distances[0]) /
-                               (BFV_SCALING_FACTOR * BFV_SCALING_FACTOR);
-            nprobe_coarse_distances.push_back(coarse_distances);
+        
+        // Process labels
+        std::vector<faiss_idx_t> labels;
+        labels.reserve(result.coarse_vector_labels_size());
+        
+        for (auto label : result.coarse_vector_labels()) {
+            labels.push_back(static_cast<faiss_idx_t>(label));
         }
-
-        nquery_coarse_distances.push_back(nprobe_coarse_distances);
+        coarse_vector_labels.push_back(std::move(labels));
     }
-
-    // SPDLOG_INFO("Printing deserialised decrypted coarse distances");
-    // for (int i = 0; i < nquery_coarse_distances.size(); i++) {
-    //     SPDLOG_INFO("\n Query = {}", i);
-
-    //     for (int j = 0; j < nquery_coarse_distances[i].size(); j++) {
-    //         printf("nprobe = %d -> %f, ", j, nquery_coarse_distances[i][j]);
-    //     }
-    //     printf("\n");
-    // }
-
-    return nquery_coarse_distances;
+    
+    return {encrypted_coarse_scores, coarse_vector_labels};
 }
 
 std::vector<std::vector<faiss_idx_t>>

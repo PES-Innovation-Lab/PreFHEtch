@@ -10,7 +10,7 @@ class Query : public drogon::HttpController<Query> {
 
     ADD_METHOD_TO(Query::query, "/query", Get);
 
-    ADD_METHOD_TO(Query::coarse_search, "/coarsesearch", Post);
+    ADD_METHOD_TO(Query::coarseSearch, "/coarsesearch", Post);
 
     ADD_METHOD_TO(Query::precise_search, "/precisesearch", Post);
 

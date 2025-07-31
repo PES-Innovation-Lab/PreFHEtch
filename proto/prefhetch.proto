@@ -16,14 +16,27 @@ message QueryResponse {
 // Coarse search endpoint request/response
 message CoarseSearchRequest {
   uint64 num_queries = 1;
-  repeated bytes residual_vecs = 2;
-  repeated bytes residual_vecs_squared = 3;
-  repeated uint64 nearest_centroids = 4;
-  bytes relin_keys = 5;
-  bytes galois_keys = 6;
-  bytes sk = 7;
+  repeated CoarseQueryData queries = 2;
+  // repeated bytes residual_vecs = 2;
+  // repeated bytes residual_vecs_squared = 3;
+  // repeated uint64 nearest_centroids = 4;
+  bytes relin_keys = 3;
+  bytes galois_keys = 4;
+  bytes sk = 5;
+}
+
+message CoarseQueryData{
+  repeated bytes residual_vecs = 1;
+  repeated bytes residual_vecs_squared = 2;
+  repeated uint64 nearest_centroids = 3;
 }
 message CoarseSearchResponse {
+  // repeated bytes encrypted_coarse_distances = 1;
+  // repeated uint64 coarse_vector_labels = 2;
+  repeated CoarseQueryResult results = 1;
+}
+
+message CoarseQueryResult{
   repeated bytes encrypted_coarse_distances = 1;
   repeated uint64 coarse_vector_labels = 2;
 }
