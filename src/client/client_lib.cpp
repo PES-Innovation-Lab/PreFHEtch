@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cstring>
 #include <vector>
 
 #include <cpr/cpr.h>
@@ -8,6 +9,7 @@
 
 #include "client_lib.h"
 #include "client_server_utils.h"
+#include "search.pb.h"
 
 char const *QUERY_DATASET_PATH = "sift/siftsmall/siftsmall_query.fvecs";
 char const *GROUNDTRUTH_DATASET_PATH =
@@ -54,12 +56,24 @@ std::pair<std::vector<float>, std::vector<seal::seal_byte>>
 Client::get_centroids_encrypted_parms() {
     cpr::Response r = cpr::Get(cpr::Url(server_addr + "query"));
 
-    const nlohmann::json resp = nlohmann::json::parse(r.text);
-    std::vector<float> centroids =
-        resp.at("centroids").get<std::vector<float>>();
-    std::vector<seal::seal_byte> encrypted_parms =
-        resp.at("encryptedParms").get<std::vector<seal::seal_byte>>();
-    m_Subquantizers = resp.at("subquantizers").get<size_t>();
+    prefhetch::proto::QueryResponse response;
+    if (!response.ParseFromString(r.text)) {
+        SPDLOG_ERROR("Failed to parse protobuf response");
+        throw std::runtime_error("Failed to parse protobuf response");
+    }
+
+    std::vector<float> centroids;
+    centroids.reserve(response.centroids_size());
+    for (int i = 0; i < response.centroids_size(); ++i) {
+        centroids.push_back(response.centroids(i));
+    }
+
+    std::vector<seal::seal_byte> encrypted_parms;
+    const std::string &parms_data = response.encrypted_parms();
+    encrypted_parms.resize(parms_data.size());
+    std::memcpy(encrypted_parms.data(), parms_data.data(), parms_data.size());
+
+    m_Subquantizers = response.subquantizers();
 
     m_Nlist = centroids.size() / m_PreciseVectorDimensions;
 
@@ -325,38 +339,83 @@ Client::get_encrypted_coarse_scores(
     const std::vector<seal::seal_byte> &serde_relin_keys,
     const std::vector<seal::seal_byte> &serde_galois_keys) const {
 
-    nlohmann::json coarse_search_json;
-    coarse_search_json["numQueries"] = m_NumQueries;
-    coarse_search_json["residualVecs"] = serde_encrypted_vecs;
-    coarse_search_json["residualVecsSquared"] = serde_encrypted_vecs_squared;
-    coarse_search_json["nearestCentroids"] = nprobe_nearest_centroids_idx;
-    coarse_search_json["relinKeys"] = serde_relin_keys;
-    coarse_search_json["galoisKeys"] = serde_galois_keys;
+    prefhetch::proto::CoarseSearchRequest request;
+    request.set_num_queries(m_NumQueries);
+
+    for (const auto &query_vecs : serde_encrypted_vecs) {
+        auto *query_vectors = request.add_residual_vecs();
+        for (const auto &vec_bytes : query_vecs) {
+            query_vectors->add_vectors(vec_bytes.data(), vec_bytes.size());
+        }
+    }
+
+    for (const auto &query_vecs : serde_encrypted_vecs_squared) {
+        auto *query_vectors = request.add_residual_vecs_squared();
+        for (const auto &vec_bytes : query_vecs) {
+            query_vectors->add_vectors(vec_bytes.data(), vec_bytes.size());
+        }
+    }
+
+    for (faiss_idx_t centroid : nprobe_nearest_centroids_idx) {
+        request.add_nearest_centroids(static_cast<int64_t>(centroid));
+    }
+
+    request.set_relin_keys(serde_relin_keys.data(), serde_relin_keys.size());
+    request.set_galois_keys(serde_galois_keys.data(), serde_galois_keys.size());
 
     // TODO: Remove sk, used for debugging
     std::vector<seal::seal_byte> serde_sk(
         m_OptEncryption.value().SecretKey.save_size());
     m_OptEncryption.value().SecretKey.save(serde_sk.data(), serde_sk.size());
-    coarse_search_json["sk"] = serde_sk;
+    request.set_sk(serde_sk.data(), serde_sk.size());
 
-    // SPDLOG_INFO("residualVecs Size = {}, residualVecsSquared Size = {}",
-    //             coarse_search_json["residualVecs"].dump().size(),
-    //             coarse_search_json["residualVecsSquared"].dump().size());
+    std::string serialized_request;
+    request.SerializeToString(&serialized_request);
+
     SPDLOG_INFO("Size of the coarse search request = {}(mb)",
-                getSizeInMB(coarse_search_json.dump().size()));
+                getSizeInMB(serialized_request.size()));
 
-    cpr::Response r = cpr::Post(cpr::Url(server_addr + "coarsesearch"),
-                                cpr::Body(coarse_search_json.dump()));
+    cpr::Response r = cpr::Post(
+        cpr::Url(server_addr + "coarsesearch"), cpr::Body(serialized_request),
+        cpr::Header{{"Content-Type", "application/x-protobuf"}});
 
-    nlohmann::json resp = nlohmann::json::parse(r.text);
+    prefhetch::proto::CoarseSearchResponse response;
+    if (!response.ParseFromString(r.text)) {
+        SPDLOG_ERROR("Failed to parse protobuf coarse search response");
+        throw std::runtime_error(
+            "Failed to parse protobuf coarse search response");
+    }
 
-    auto encrypted_coarse_scores =
-        resp.at("encryptedCoarseDistances")
-            .get<std::vector<std::vector<std::vector<seal::seal_byte>>>>();
+    std::vector<std::vector<std::vector<seal::seal_byte>>>
+        encrypted_coarse_scores;
+    encrypted_coarse_scores.reserve(response.encrypted_coarse_distances_size());
 
-    auto coarse_vector_labels =
-        resp.at("coarseVectorLabels")
-            .get<std::vector<std::vector<faiss_idx_t>>>();
+    for (const auto &query_distances : response.encrypted_coarse_distances()) {
+        std::vector<std::vector<seal::seal_byte>> query_scores;
+        query_scores.reserve(query_distances.vectors_size());
+
+        for (const auto &distance_data : query_distances.vectors()) {
+            std::vector<seal::seal_byte> distance_bytes;
+            distance_bytes.resize(distance_data.size());
+            std::memcpy(distance_bytes.data(), distance_data.data(),
+                        distance_data.size());
+            query_scores.push_back(std::move(distance_bytes));
+        }
+        encrypted_coarse_scores.push_back(std::move(query_scores));
+    }
+
+    std::vector<std::vector<faiss_idx_t>> coarse_vector_labels;
+    coarse_vector_labels.reserve(response.coarse_vector_labels_size());
+
+    for (const auto &query_labels : response.coarse_vector_labels()) {
+        std::vector<faiss_idx_t> labels;
+        labels.reserve(query_labels.labels_size());
+
+        for (int64_t label : query_labels.labels()) {
+            labels.push_back(static_cast<faiss_idx_t>(label));
+        }
+        coarse_vector_labels.push_back(std::move(labels));
+    }
 
     return {encrypted_coarse_scores, coarse_vector_labels};
 }
@@ -415,22 +474,57 @@ Client::get_precise_scores(
     const std::vector<seal::seal_byte> &serde_relin_keys,
     const std::vector<seal::seal_byte> &serde_galois_keys) const {
 
-    nlohmann::json precise_search_json;
-    precise_search_json["encryptedQueries"] = serde_precise_queries;
-    precise_search_json["nearestCoarseVectorsID"] = nearest_coarse_vectors_id;
-    precise_search_json["relinKeys"] = serde_relin_keys;
-    precise_search_json["galoisKeys"] = serde_galois_keys;
+    prefhetch::proto::PreciseSearchRequest request;
+
+    for (const auto &query_bytes : serde_precise_queries) {
+        request.add_encrypted_queries(query_bytes.data(), query_bytes.size());
+    }
+
+    for (const auto &vector_labels : nearest_coarse_vectors_id) {
+        auto *labels = request.add_nearest_coarse_vectors_id();
+        for (faiss_idx_t label : vector_labels) {
+            labels->add_labels(static_cast<int64_t>(label));
+        }
+    }
+
+    request.set_relin_keys(serde_relin_keys.data(), serde_relin_keys.size());
+    request.set_galois_keys(serde_galois_keys.data(), serde_galois_keys.size());
+
+    std::string serialized_request;
+    request.SerializeToString(&serialized_request);
+
     SPDLOG_INFO("Size of the precise search request = {}(mb)",
-                getSizeInMB(precise_search_json.dump().size()));
+                getSizeInMB(serialized_request.size()));
 
-    cpr::Response r = cpr::Post(cpr::Url(server_addr + "precisesearch"),
-                                cpr::Body(precise_search_json.dump()));
+    cpr::Response r = cpr::Post(
+        cpr::Url(server_addr + "precisesearch"), cpr::Body(serialized_request),
+        cpr::Header{{"Content-Type", "application/x-protobuf"}});
 
-    nlohmann::json resp = nlohmann::json::parse(r.text);
+    prefhetch::proto::PreciseSearchResponse response;
+    if (!response.ParseFromString(r.text)) {
+        SPDLOG_ERROR("Failed to parse protobuf precise search response");
+        throw std::runtime_error(
+            "Failed to parse protobuf precise search response");
+    }
 
-    auto encrypted_precise_distances =
-        resp.at("encryptedPreciseDistances")
-            .get<std::vector<std::vector<std::vector<seal::seal_byte>>>>();
+    std::vector<std::vector<std::vector<seal::seal_byte>>>
+        encrypted_precise_distances;
+    encrypted_precise_distances.reserve(1);
+
+    std::vector<std::vector<seal::seal_byte>> all_distances;
+    all_distances.reserve(response.encrypted_precise_distances_size());
+
+    for (int i = 0; i < response.encrypted_precise_distances_size(); ++i) {
+        const std::string &distance_data =
+            response.encrypted_precise_distances(i);
+        std::vector<seal::seal_byte> distance_bytes;
+        distance_bytes.resize(distance_data.size());
+        std::memcpy(distance_bytes.data(), distance_data.data(),
+                    distance_data.size());
+        all_distances.push_back(std::move(distance_bytes));
+    }
+
+    encrypted_precise_distances.push_back(std::move(all_distances));
 
     return encrypted_precise_distances;
 }
@@ -764,27 +858,68 @@ Client::get_encrypted_single_phase_search_scores(
     const std::vector<seal::seal_byte> &serde_relin_keys,
     const std::vector<seal::seal_byte> &serde_galois_keys) const {
 
-    nlohmann::json encrypted_search_json;
-    encrypted_search_json["numQueries"] = m_NumQueries;
-    encrypted_search_json["encryptedQueries"] = serde_encrypted_queries;
-    encrypted_search_json["nearestCentroids"] = nprobe_nearest_centroids_idx;
-    encrypted_search_json["relinKeys"] = serde_relin_keys;
-    encrypted_search_json["galoisKeys"] = serde_galois_keys;
+    prefhetch::proto::SinglePhaseSearchRequest request;
+    request.set_num_queries(m_NumQueries);
+
+    for (const auto &query_bytes : serde_encrypted_queries) {
+        request.add_encrypted_queries(query_bytes.data(), query_bytes.size());
+    }
+
+    for (faiss_idx_t centroid : nprobe_nearest_centroids_idx) {
+        request.add_nearest_centroids(static_cast<int64_t>(centroid));
+    }
+
+    request.set_relin_keys(serde_relin_keys.data(), serde_relin_keys.size());
+    request.set_galois_keys(serde_galois_keys.data(), serde_galois_keys.size());
+
+    std::string serialized_request;
+    request.SerializeToString(&serialized_request);
 
     SPDLOG_INFO("Size of the single phase search request = {}(mb)",
-                getSizeInMB(encrypted_search_json.dump().size()));
+                getSizeInMB(serialized_request.size()));
 
-    cpr::Response r = cpr::Post(cpr::Url(server_addr + "single-phase-search"),
-                                cpr::Body(encrypted_search_json.dump()));
+    cpr::Response r =
+        cpr::Post(cpr::Url(server_addr + "single-phase-search"),
+                  cpr::Body(serialized_request),
+                  cpr::Header{{"Content-Type", "application/x-protobuf"}});
 
-    nlohmann::json resp = nlohmann::json::parse(r.text);
+    prefhetch::proto::SinglePhaseSearchResponse response;
+    if (!response.ParseFromString(r.text)) {
+        SPDLOG_ERROR("Failed to parse protobuf single phase search response");
+        throw std::runtime_error(
+            "Failed to parse protobuf single phase search response");
+    }
 
-    auto encrypted_vector_distances =
-        resp.at("encryptedDistances")
-            .get<std::vector<std::vector<std::vector<seal::seal_byte>>>>();
+    std::vector<std::vector<std::vector<seal::seal_byte>>>
+        encrypted_vector_distances;
+    encrypted_vector_distances.reserve(response.encrypted_distances_size());
 
-    auto result_vector_labels =
-        resp.at("vectorLabels").get<std::vector<std::vector<faiss_idx_t>>>();
+    for (const auto &query_distances : response.encrypted_distances()) {
+        std::vector<std::vector<seal::seal_byte>> query_vecs;
+        query_vecs.reserve(query_distances.vectors_size());
+
+        for (const auto &distance_data : query_distances.vectors()) {
+            std::vector<seal::seal_byte> distance_bytes;
+            distance_bytes.resize(distance_data.size());
+            std::memcpy(distance_bytes.data(), distance_data.data(),
+                        distance_data.size());
+            query_vecs.push_back(std::move(distance_bytes));
+        }
+        encrypted_vector_distances.push_back(std::move(query_vecs));
+    }
+
+    std::vector<std::vector<faiss_idx_t>> result_vector_labels;
+    result_vector_labels.reserve(response.vector_labels_size());
+
+    for (const auto &query_labels : response.vector_labels()) {
+        std::vector<faiss_idx_t> labels;
+        labels.reserve(query_labels.labels_size());
+
+        for (int i = 0; i < query_labels.labels_size(); ++i) {
+            labels.push_back(static_cast<faiss_idx_t>(query_labels.labels(i)));
+        }
+        result_vector_labels.push_back(std::move(labels));
+    }
 
     return {encrypted_vector_distances, result_vector_labels};
 }

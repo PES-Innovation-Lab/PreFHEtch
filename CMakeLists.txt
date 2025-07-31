@@ -15,6 +15,8 @@ find_package(jsoncpp CONFIG REQUIRED)
 find_package(Drogon REQUIRED)
 # Library to make HTTP requests
 find_package(cpr CONFIG REQUIRED)
+# Protocol Buffers
+find_package(Protobuf REQUIRED)
 
 find_package(Boost REQUIRED COMPONENTS program_options)
 
@@ -52,6 +54,19 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(spdlog)
 
+add_library(PreFHEtch_proto 
+    proto/search.pb.cc
+    proto/search.pb.h
+)
+target_link_libraries(PreFHEtch_proto 
+    PUBLIC 
+    protobuf::libprotobuf
+)
+target_include_directories(PreFHEtch_proto 
+    PUBLIC 
+    ${CMAKE_CURRENT_SOURCE_DIR}/proto
+)
+
 # PreFHEtch_server
 
 add_library(PreFHEtch_server_headers INTERFACE)
@@ -68,6 +83,7 @@ target_link_libraries(PreFHEtch_server_headers
         SEAL::seal
         faiss
         Boost::program_options
+        PreFHEtch_proto
 )
 
 add_library(PreFHEtch_server_lib
@@ -105,6 +121,7 @@ target_link_libraries(PreFHEtch_client_headers
         spdlog::spdlog
         SEAL::seal
         Boost::program_options
+        PreFHEtch_proto
 )
 
 add_library(PreFHEtch_client_lib

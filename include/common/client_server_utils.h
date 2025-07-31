@@ -79,7 +79,7 @@ class Timer {
   public:
     void StartTimer();
     void StopTimer();
-    long long getDurationMicroseconds() const;
+    long long getDurationMilliseconds() const;
 
   private:
     std::chrono::time_point<std::chrono::high_resolution_clock> m_TimerStart;

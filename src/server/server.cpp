@@ -78,8 +78,8 @@ int main(int argc, char *argv[]) {
     init_index_timer.StartTimer();
     server->init_index();
     init_index_timer.StopTimer();
-    SPDLOG_INFO("Initialized index, time = {}(us)",
-                init_index_timer.getDurationMicroseconds());
+    SPDLOG_INFO("Initialized index, time = {}(ms)",
+                init_index_timer.getDurationMilliseconds());
 
     Server::run_webserver();
     return 0;

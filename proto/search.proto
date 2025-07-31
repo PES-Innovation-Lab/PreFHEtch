@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+package prefhetch.proto;
+
+message QueryResponse {
+    repeated float centroids = 1;
+    bytes encrypted_parms = 2;
+    uint64 subquantizers = 3;
+}
+
+message CoarseSearchRequest {
+    uint64 num_queries = 1;
+    repeated CoarseSearchQueryVectors residual_vecs = 2;
+    repeated CoarseSearchQueryVectors residual_vecs_squared = 3;
+    repeated int64 nearest_centroids = 4;
+    bytes relin_keys = 5;
+    bytes galois_keys = 6;
+    bytes sk = 7;
+}
+
+message CoarseSearchQueryVectors {
+    repeated bytes vectors = 1;
+}
+
+message CoarseSearchResponse {
+    repeated CoarseSearchQueryVectors encrypted_coarse_distances = 1;
+    repeated CoarseVectorLabels coarse_vector_labels = 2;
+}
+
+message CoarseVectorLabels {
+    repeated int64 labels = 1;
+}
+
+message PreciseSearchRequest {
+    repeated bytes encrypted_queries = 1;
+    repeated PreciseSearchVectorLabels nearest_coarse_vectors_id = 2;
+    bytes relin_keys = 3;
+    bytes galois_keys = 4;
+}
+
+message PreciseSearchVectorLabels {
+    repeated int64 labels = 1;
+}
+
+message PreciseSearchResponse {
+    repeated bytes encrypted_precise_distances = 1;
+}
+
+message SinglePhaseSearchRequest {
+    uint64 num_queries = 1;
+    repeated bytes encrypted_queries = 2;
+    repeated int64 nearest_centroids = 3;
+    bytes relin_keys = 4;
+    bytes galois_keys = 5;
+}
+
+message SinglePhaseSearchResponse {
+    repeated SinglePhaseSearchQueryVectors encrypted_distances = 1;
+    repeated SinglePhaseSearchVectorLabels vector_labels = 2;
+}
+
+message SinglePhaseSearchQueryVectors {
+    repeated bytes vectors = 1;
+}
+
+message SinglePhaseSearchVectorLabels {
+    repeated int64 labels = 1;
+}

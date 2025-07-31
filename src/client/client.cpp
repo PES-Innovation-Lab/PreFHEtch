@@ -72,14 +72,14 @@ int main(int argc, char *argv[]) {
     get_query_timer.StartTimer();
     std::vector<float> precise_queries = client.get_query();
     get_query_timer.StopTimer();
-    SPDLOG_INFO("Query vectors obtained successfully, time = {}(us)",
-                get_query_timer.getDurationMicroseconds());
+    SPDLOG_INFO("Query vectors obtained successfully, time = {}(ms)",
+                get_query_timer.getDurationMilliseconds());
 
     get_centroids_timer.StartTimer();
     auto [centroids, encrypted_parms] = client.get_centroids_encrypted_parms();
     get_centroids_timer.StopTimer();
-    SPDLOG_INFO("Fetched centroids from server successfully, time = {}(us)",
-                get_centroids_timer.getDurationMicroseconds());
+    SPDLOG_INFO("Fetched centroids from server successfully, time = {}(ms)",
+                get_centroids_timer.getDurationMilliseconds());
 
     client.init_client_encrypt_parms(encrypted_parms);
 
@@ -87,8 +87,8 @@ int main(int argc, char *argv[]) {
     auto [sort_nearest_centroids_idx, nprobe_nearest_centroids_idx] =
         client.sort_nearest_centroids(precise_queries, centroids);
     sort_centroids_timer.StopTimer();
-    SPDLOG_INFO("Computed nearest centroids successfully, time = {}(us)",
-                sort_centroids_timer.getDurationMicroseconds());
+    SPDLOG_INFO("Computed nearest centroids successfully, time = {}(ms)",
+                sort_centroids_timer.getDurationMilliseconds());
 
     if (enable_single_phase) {
 
@@ -102,8 +102,8 @@ int main(int argc, char *argv[]) {
             client.compute_encrypted_single_phase_search_parms(precise_queries);
         encrypt_search_params_timer.StopTimer();
         SPDLOG_INFO("Computed encrypted single phase search params "
-                    "time = {}(us)",
-                    encrypt_search_params_timer.getDurationMicroseconds());
+                    "time = {}(ms)",
+                    encrypt_search_params_timer.getDurationMilliseconds());
 
         search_timer.StartTimer();
         auto [serde_encrypted_distances, result_vector_labels] =
@@ -113,16 +113,16 @@ int main(int argc, char *argv[]) {
         search_timer.StopTimer();
         SPDLOG_INFO(
             "Received encrypted single phase search distances successfully, "
-            "time = {}(us)",
-            search_timer.getDurationMicroseconds());
+            "time = {}(ms)",
+            search_timer.getDurationMilliseconds());
 
         deserialise_search_results_timer.StartTimer();
         auto decrypted_distances = client.deserialise_decrypt_coarse_distances(
             serde_encrypted_distances);
         deserialise_search_results_timer.StopTimer();
         SPDLOG_INFO("Deserialised and decrypted search distances successfully, "
-                    "time = {}(us)",
-                    deserialise_search_results_timer.getDurationMicroseconds());
+                    "time = {}(ms)",
+                    deserialise_search_results_timer.getDurationMilliseconds());
 
         compute_k_nearest_precise_timer.StartTimer();
         std::vector<std::vector<faiss_idx_t>> k_nearest_vector_ids =
@@ -131,12 +131,12 @@ int main(int argc, char *argv[]) {
                                               k_nearest);
         compute_k_nearest_precise_timer.StopTimer();
         SPDLOG_INFO(
-            "Computed nearest precise vectors successfully, time = {}(us)\n",
-            compute_k_nearest_precise_timer.getDurationMicroseconds());
+            "Computed nearest precise vectors successfully, time = {}(ms)\n",
+            compute_k_nearest_precise_timer.getDurationMilliseconds());
 
         complete_search_timer.StopTimer();
-        SPDLOG_INFO("Complete Single Phase Search time = {}(us)",
-                    complete_search_timer.getDurationMicroseconds());
+        SPDLOG_INFO("Complete Single Phase Search time = {}(ms)",
+                    complete_search_timer.getDurationMilliseconds());
 
         SPDLOG_INFO("Single Phase Search Query completed!");
 
@@ -161,8 +161,8 @@ int main(int argc, char *argv[]) {
         encrypt_coarse_search_params_timer.StopTimer();
         SPDLOG_INFO(
             "Computed encrypted coarse search params "
-            "time = {}(us)",
-            encrypt_coarse_search_params_timer.getDurationMicroseconds());
+            "time = {}(ms)",
+            encrypt_coarse_search_params_timer.getDurationMilliseconds());
 
         coarse_search_timer.StartTimer();
         auto [serde_encrypted_coarse_distances, coarse_vector_labels] =
@@ -173,8 +173,8 @@ int main(int argc, char *argv[]) {
                 serde_galois_keys);
         coarse_search_timer.StopTimer();
         SPDLOG_INFO("Received encrypted coarse distances successfully, "
-                    "time = {}(us)",
-                    coarse_search_timer.getDurationMicroseconds());
+                    "time = {}(ms)",
+                    coarse_search_timer.getDurationMilliseconds());
 
         deserialise_coarse_search_results_timer.StartTimer();
         auto decrypted_coarse_distances =
@@ -183,8 +183,8 @@ int main(int argc, char *argv[]) {
         deserialise_coarse_search_results_timer.StopTimer();
         SPDLOG_INFO(
             "Deserialised and decrypted coarse distances successfully, "
-            "time = {}(us)",
-            deserialise_coarse_search_results_timer.getDurationMicroseconds());
+            "time = {}(ms)",
+            deserialise_coarse_search_results_timer.getDurationMilliseconds());
 
         compute_nearest_nprobe_coarse_search_timer.StartTimer();
         std::vector<std::vector<faiss_idx_t>> nearest_coarse_labels =
@@ -193,9 +193,9 @@ int main(int argc, char *argv[]) {
                                               coarse_probe);
         compute_nearest_nprobe_coarse_search_timer.StopTimer();
         SPDLOG_INFO(
-            "Computed nearest coarse vectors successfully, time = {}(us)",
+            "Computed nearest coarse vectors successfully, time = {}(ms)",
             compute_nearest_nprobe_coarse_search_timer
-                .getDurationMicroseconds());
+                .getDurationMilliseconds());
 
         precise_search_timer.StartTimer();
         std::vector<std::vector<std::vector<seal::seal_byte>>>
@@ -205,8 +205,8 @@ int main(int argc, char *argv[]) {
                                           serde_relin_keys, serde_galois_keys);
         precise_search_timer.StopTimer();
         SPDLOG_INFO(
-            "Received precise distance scores successfully, time = {}(us)",
-            precise_search_timer.getDurationMicroseconds());
+            "Received precise distance scores successfully, time = {}(ms)",
+            precise_search_timer.getDurationMilliseconds());
 
         deserialise_precise_search_results_timer.StartTimer();
         std::vector<std::vector<float>> decrypted_precise_distances =
@@ -215,8 +215,8 @@ int main(int argc, char *argv[]) {
         deserialise_precise_search_results_timer.StopTimer();
         SPDLOG_INFO(
             "Deserialised and decrypted precise distances successfully, "
-            "time = {}(us)",
-            deserialise_precise_search_results_timer.getDurationMicroseconds());
+            "time = {}(ms)",
+            deserialise_precise_search_results_timer.getDurationMilliseconds());
 
         compute_k_nearest_precise_timer.StartTimer();
         std::vector<std::vector<faiss_idx_t>> k_nearest_vector_ids =
@@ -225,12 +225,12 @@ int main(int argc, char *argv[]) {
                                               num_queries, k_nearest);
         compute_k_nearest_precise_timer.StopTimer();
         SPDLOG_INFO(
-            "Computed nearest precise vectors successfully, time = {}(us)\n",
-            compute_k_nearest_precise_timer.getDurationMicroseconds());
+            "Computed nearest precise vectors successfully, time = {}(ms)\n",
+            compute_k_nearest_precise_timer.getDurationMilliseconds());
 
         complete_search_timer.StopTimer();
-        SPDLOG_INFO("Complete Two Phase Search time = {}(us)",
-                    complete_search_timer.getDurationMicroseconds());
+        SPDLOG_INFO("Complete Two Phase Search time = {}(ms)",
+                    complete_search_timer.getDurationMilliseconds());
 
         SPDLOG_INFO("Two Phase Search Query completed!");
 

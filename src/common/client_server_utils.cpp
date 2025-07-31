@@ -8,8 +8,8 @@ void Timer::StopTimer() {
     m_TimerEnd = std::chrono::high_resolution_clock::now();
 }
 
-long long Timer::getDurationMicroseconds() const {
-    return std::chrono::duration_cast<std::chrono::microseconds>(m_TimerEnd -
+long long Timer::getDurationMilliseconds() const {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(m_TimerEnd -
                                                                  m_TimerStart)
         .count();
 }
