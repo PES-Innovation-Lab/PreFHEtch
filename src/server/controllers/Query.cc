@@ -2,7 +2,6 @@
 #include <vector>
 #include <cstring>
 
-#include <nlohmann/json.hpp>
 #include <seal/seal.h>
 #include <spdlog/spdlog.h>
 
@@ -319,26 +318,9 @@ void Query::precise_vector_pir(
     std::function<void(const HttpResponsePtr &)> &&callback) const {
     SPDLOG_INFO("Received request on /precise-vector-pir");
 
-    // nlohmann::json req_body = nlohmann::json::parse(req->body());
-    //
-    // const std::array<std::array<faiss_idx_t, K>, NQUERY>
-    //     k_nearest_precise_vectors_id =
-    //         req_body.at("nearestPreciseVectorIndexes")
-    //             .get<std::array<std::array<faiss_idx_t, K>, NQUERY>>();
-    //
-    // std::array<std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, K>,
-    //            NQUERY>
-    //     query_results;
-    //
-    // std::shared_ptr<Server> server = Server::getInstance();
-    // server->preciseVectorPIR(k_nearest_precise_vectors_id, query_results);
-    //
-    nlohmann::json response;
-    // response["queryResults"] = query_results;
-    response["implement"] = "to be implemented";
     const HttpResponsePtr resp = HttpResponse::newHttpResponse();
-    resp->setContentTypeString("application/json");
-    resp->setBody(response.dump());
+    resp->setContentTypeString("text/plain");
+    resp->setBody("to be implemented");
 
     callback(resp);
     SPDLOG_INFO("Exiting from precise vector PIR handler");

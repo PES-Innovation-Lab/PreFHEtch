@@ -3,7 +3,6 @@
 #include <vector>
 
 #include <cpr/cpr.h>
-#include <nlohmann/json.hpp>
 #include <seal/seal.h>
 #include <spdlog/spdlog.h>
 
@@ -747,41 +746,6 @@ std::vector<std::vector<faiss_idx_t>> Client::compute_nearest_vectors_id(
     return nquery_selected_probe_vectors;
 }
 
-// void get_precise_vectors_pir(
-//     const std::array<std::array<DistanceIndexData, COARSE_PROBE>, NQUERY>
-//         &nearest_precise_vectors,
-//     std::array<std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, K>,
-//                NQUERY> &query_results,
-//     std::array<std::array<faiss_idx_t, K>, NQUERY> &query_results_idx) {
-//
-//     if constexpr (K > COARSE_PROBE) {
-//         SPDLOG_ERROR("K greater than COARSE_PROBE");
-//         throw std::runtime_error("K greater than COARSE_PROBE");
-//     }
-//
-//     for (int i = 0; i < NQUERY; i++) {
-//         for (int j = 0; j < K; j++) {
-//             query_results_idx[i][j] = nearest_precise_vectors[i][j].idx;
-//         }
-//     }
-//
-//     nlohmann::json precise_vector_pir_json;
-//     precise_vector_pir_json["nearestPreciseVectorIndexes"] =
-//     query_results_idx;
-//
-//     cpr::Response r = cpr::Post(cpr::Url(server_addr + "precise-vector-pir"),
-//                                 cpr::Body(precise_vector_pir_json.dump()));
-//
-//     nlohmann::json resp = nlohmann::json::parse(r.text);
-//
-//     query_results =
-//         resp.at("queryResults")
-//             .get<std::array<
-//                 std::array<std::array<float, PRECISE_VECTOR_DIMENSIONS>, K>,
-//                 NQUERY>>();
-// }
-
-// ----------------------------------------------------
 // Single Phase Search
 
 std::tuple<std::vector<std::vector<seal::seal_byte>>,

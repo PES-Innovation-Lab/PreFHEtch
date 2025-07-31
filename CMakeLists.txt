@@ -41,12 +41,6 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(SEAL)
 
-# JSON Library
-FetchContent_Declare(json
-        URL https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz
-)
-FetchContent_MakeAvailable(json)
-
 FetchContent_Declare(
         spdlog
         GIT_REPOSITORY https://github.com/gabime/spdlog
@@ -77,7 +71,6 @@ target_include_directories(PreFHEtch_server_headers
 )
 target_link_libraries(PreFHEtch_server_headers
         INTERFACE
-        nlohmann_json::nlohmann_json
         Drogon::Drogon
         spdlog::spdlog
         SEAL::seal
@@ -116,7 +109,6 @@ target_include_directories(PreFHEtch_client_headers
 )
 target_link_libraries(PreFHEtch_client_headers
         INTERFACE
-        nlohmann_json::nlohmann_json
         cpr::cpr
         spdlog::spdlog
         SEAL::seal

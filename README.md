@@ -8,6 +8,7 @@ Pre-Filtering Homomorphically Encrypted queries for Triage and Candidate Handlin
 
     - [FAISS](https://github.com/facebookresearch/faiss/blob/main/INSTALL.md)
     - [JsonCpp](https://github.com/open-source-parsers/jsoncpp)
+    - [Protocol Buffers](https://developers.google.com/protocol-buffers)
     - [Drogon](https://github.com/drogonframework/drogon)
     - [cpr](https://github.com/libcpr/cpr)
     - [Boost](https://www.boost.org/)

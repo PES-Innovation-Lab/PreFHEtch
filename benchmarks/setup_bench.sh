@@ -5,7 +5,7 @@
 setup() {
   sudo apt-get update && sudo apt-get install -y \
     git build-essential curl uuid-dev \
-    libjsoncpp-dev pkg-config zlib1g-dev \
+    libjsoncpp-dev libprotobuf-dev protobuf-compiler pkg-config zlib1g-dev \
     libssl-dev libblas-dev liblapack-dev \
     libcurl4-openssl-dev \
     libboost-all-dev \

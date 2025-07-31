@@ -6,7 +6,6 @@
 #include <faiss/IndexIVF.h>
 #include <faiss/IndexIVFPQ.h>
 #include <faiss/index_io.h>
-#include <nlohmann/json.hpp>
 #include <seal/seal.h>
 #include <spdlog/spdlog.h>
 

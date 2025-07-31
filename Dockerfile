@@ -2,7 +2,7 @@ FROM debian:stable-slim
 
 RUN apt-get update && apt-get install -y \
     git build-essential curl uuid-dev \
-    libjsoncpp-dev pkg-config zlib1g-dev \
+    libjsoncpp-dev libprotobuf-dev protobuf-compiler pkg-config zlib1g-dev \
     libssl-dev libblas-dev liblapack-dev \
     libcurl4-openssl-dev \
     wget && apt-get clean && \
