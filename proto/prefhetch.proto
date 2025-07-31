@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package prefhetch;
+
+// Query endpoint request/response
+message QueryRequest {
+  // Empty request for getting centroids and encryption parameters
+}
+
+message QueryResponse {
+  repeated float centroids = 1;
+  bytes encrypted_parms = 2;
+  uint64 subquantizers = 3;
+}
+
+// Coarse search endpoint request/response
+message CoarseSearchRequest {
+  uint64 num_queries = 1;
+  repeated CoarseQueryData queries = 2;
+  // repeated bytes residual_vecs = 2;
+  // repeated bytes residual_vecs_squared = 3;
+  // repeated uint64 nearest_centroids = 4;
+  bytes relin_keys = 3;
+  bytes galois_keys = 4;
+  bytes sk = 5;
+}
+
+message CoarseQueryData{
+  repeated bytes residual_vecs = 1;
+  repeated bytes residual_vecs_squared = 2;
+  repeated uint64 nearest_centroids = 3;
+}
+message CoarseSearchResponse {
+  // repeated bytes encrypted_coarse_distances = 1;
+  // repeated uint64 coarse_vector_labels = 2;
+  repeated CoarseQueryResult results = 1;
+}
+
+message CoarseQueryResult{
+  repeated bytes encrypted_coarse_distances = 1;
+  repeated uint64 coarse_vector_labels = 2;
+}
+
+// Precise search endpoint request/response
+message PreciseSearchRequest {
+  repeated float precise_query = 1;  // Flattened array
+  repeated uint64 nearest_coarse_vector_indexes = 2;  // Flattened array
+}
+
+message PreciseSearchResponse {
+  repeated float precise_distance_scores = 1;  // Flattened array
+}
+
+// Precise vector PIR endpoint request/response
+message PreciseVectorPirRequest {
+  repeated uint64 nearest_precise_vector_indexes = 1;  // Flattened array
+}
+
+message PreciseVectorPirResponse {
+  repeated float query_results = 1;  // Flattened array
+} 

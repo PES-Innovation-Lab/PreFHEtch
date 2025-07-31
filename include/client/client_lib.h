@@ -56,7 +56,7 @@ class Client {
     // NPROBE centroids for each of the NQUERIES
     std::pair<std::vector<faiss_idx_t>, std::vector<faiss_idx_t>>
     sort_nearest_centroids(std::vector<float> &precise_queries,
-                           std::vector<float> &centroids) const;
+                           std::vector<float> &centroids, size_t coarse_probe) const;
 
     // Returns NQUERY pairs of serialized ciphertexts and the relinearization
     // and galois keys, tuple.1 - vector of encrypted residual queries for
@@ -69,7 +69,7 @@ class Client {
                std::vector<std::vector<seal::seal_byte>>>
     compute_encrypted_two_phase_search_parms(
         std::vector<float> &precise_queries, std::vector<float> &centroids,
-        std::vector<faiss_idx_t> &nearest_centroids_idx) const;
+        std::vector<faiss_idx_t> &nearest_centroids_idx, size_t coarse_probe) const;
 
     // Sends the residuals and nearest centroids to the server to perform a
     // coarse search and returns the encrypted coarse distances

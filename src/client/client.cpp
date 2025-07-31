@@ -41,6 +41,16 @@ int main(int argc, char *argv[]) {
             return 1;
         }
 
+        // Check for required arguments
+        std::vector<std::string> required_args = {"nq", "nprobe", "coarse-probe", "k"};
+        for (const auto& arg : required_args) {
+            if (!po_vm.count(arg)) {
+                SPDLOG_ERROR("Missing required argument: {}", arg);
+                std::cout << desc << "\n";
+                return 1;
+            }
+        }
+
         num_queries = po_vm["nq"].as<size_t>();
         nprobe = po_vm["nprobe"].as<size_t>();
         coarse_probe = po_vm["coarse-probe"].as<size_t>();
@@ -59,37 +69,47 @@ int main(int argc, char *argv[]) {
     Timer sort_centroids_timer;
 
     SPDLOG_INFO("Enable single phase search = {}", enable_single_phase);
-    SPDLOG_INFO("Starting query and timers");
-    SPDLOG_INFO("num_queries = {}, nprobe = {}, coarse_probe = {}", num_queries,
-                nprobe, coarse_probe);
 
-    // Future TODO: Parallelise query retrieval while fetching and
-    // computing nearest centroids
-    // INFO: Encryption params are sent from the server, so query encryption
-    // only after initial query to server
+    SPDLOG_INFO("==== PIPELINE START ====");
+    SPDLOG_INFO("Step 1: Query and timers initialized");
+    SPDLOG_INFO("num_queries = {}, nprobe = {}, coarse_probe = {}, k = {}", num_queries, nprobe, coarse_probe, k);
 
     complete_search_timer.StartTimer();
+
+    SPDLOG_INFO("Step 2: Fetching query vectors from dataset");
 
     get_query_timer.StartTimer();
     std::vector<float> precise_queries = client.get_query();
     get_query_timer.StopTimer();
-    SPDLOG_INFO("Query vectors obtained successfully, time = {}(us)",
-                get_query_timer.getDurationMicroseconds());
+    SPDLOG_INFO("Query vectors obtained successfully, time = {}(us)", get_query_timer.getDurationMicroseconds());
+    SPDLOG_INFO("Query vector count: {}", precise_queries.size());
 
+    SPDLOG_INFO("Step 3: Fetching centroids and encryption parameters from server");
     get_centroids_timer.StartTimer();
     auto [centroids, encrypted_parms] = client.get_centroids_encrypted_parms();
     get_centroids_timer.StopTimer();
-    SPDLOG_INFO("Fetched centroids from server successfully, time = {}(us)",
-                get_centroids_timer.getDurationMicroseconds());
+    SPDLOG_INFO("Fetched centroids from server successfully, time = {}(us)", get_centroids_timer.getDurationMicroseconds());
+    size_t num_centroids = 256; // Should match server Nlist
+    size_t centroid_dim = centroids.size() / num_centroids;
+    SPDLOG_INFO("Centroids received: count = {}, dimension = {}", num_centroids, centroid_dim);
+    size_t print_limit = std::min(num_centroids, size_t(5));
+    for (size_t i = 0; i < print_limit; ++i) {
+        std::string centroid_str;
+        for (size_t d = 0; d < centroid_dim; ++d) {
+            centroid_str += fmt::format("{:.6f} ", centroids[i * centroid_dim + d]);
+        }
+        SPDLOG_INFO("Centroid[{}]: {}", i, centroid_str);
+    }
 
+    SPDLOG_INFO("Step 4: Initializing client encryption parameters");
     client.init_client_encrypt_parms(encrypted_parms);
 
+    SPDLOG_INFO("Step 5: Sorting nearest centroids");
     sort_centroids_timer.StartTimer();
-    auto [sort_nearest_centroids_idx, nprobe_nearest_centroids_idx] =
-        client.sort_nearest_centroids(precise_queries, centroids);
+    auto [sort_nearest_centroids_idx, nprobe_nearest_centroids_idx] = client.sort_nearest_centroids(precise_queries, centroids, coarse_probe);
     sort_centroids_timer.StopTimer();
-    SPDLOG_INFO("Computed nearest centroids successfully, time = {}(us)",
-                sort_centroids_timer.getDurationMicroseconds());
+    SPDLOG_INFO("Computed nearest centroids successfully, time = {}(us)", sort_centroids_timer.getDurationMicroseconds());
+    SPDLOG_INFO("Sorted nearest centroids index count: {}", sort_nearest_centroids_idx.size());
 
     if (enable_single_phase) {
 
