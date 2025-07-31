@@ -14,6 +14,82 @@ CLIENT_EXECUTABLE = "build/PreFHEtch_client"
 SERVER_READY_MESSAGE = "Server listening on"
 
 
+def generate_log_filename(config):
+    timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+
+    sections = config.sections()
+    if not sections:
+        return f"log_{timestamp}.log"
+
+    first_section = config[sections[0]]
+
+    nq_values = []
+    nprobe_values = []
+    k_values = []
+    coarse_probe_values = []
+    nlist_values = ""
+
+    for section_name in sections:
+        section = config[section_name]
+        if "nq" in section:
+            nq_values.append(section["nq"])
+        if "nprobe" in section:
+            nprobe_values.append(section["nprobe"])
+        if "k" in section:
+            k_values.append(section["k"])
+        if "coarse-probe" in section:
+            coarse_probe_values.append(section["coarse-probe"])
+        if "nlist" in section:
+            nlist_values = section["nlist"]
+
+    nq_unique = sorted(set(nq_values))
+    nprobe_unique = sorted(set(nprobe_values))
+    k_unique = sorted(set(k_values))
+    coarse_probe_unique = sorted(set(coarse_probe_values))
+
+    filename_parts = [f"log_{timestamp}"]
+
+    if nlist_values != "":
+        filename_parts.append(f"nlist_{nlist_values}")
+
+    if nq_unique:
+        if len(nq_unique) == 1:
+            filename_parts.append(f"nq_{nq_unique[0]}")
+        else:
+            filename_parts.append(f"nq_{'-'.join(nq_unique)}")
+
+    if nprobe_unique:
+        if len(nprobe_unique) == 1:
+            filename_parts.append(f"nprobe_{nprobe_unique[0]}")
+        else:
+            filename_parts.append(f"nprobe_{'-'.join(nprobe_unique)}")
+
+    if k_unique:
+        if len(k_unique) == 1:
+            filename_parts.append(f"k_{k_unique[0]}")
+        else:
+            filename_parts.append(f"k_{'-'.join(k_unique)}")
+
+    if coarse_probe_unique:
+        if len(coarse_probe_unique) == 1:
+            filename_parts.append(f"cprobe_{coarse_probe_unique[0]}")
+        else:
+            filename_parts.append(f"cprobe_{'-'.join(coarse_probe_unique)}")
+
+    has_single_phase = any(
+        config[section].getboolean("single-phase", fallback=False)
+        for section in sections
+    )
+    if has_single_phase:
+        filename_parts.append("single_phase")
+
+    return "_".join(filename_parts) + ".log"
+
+
+def main():
+    "Server listening on"
+
+
 def capture_server_output(process, output_queue):
     try:
         for line in iter(process.stdout.readline, ""):
@@ -278,7 +354,7 @@ def main():
     config = configparser.ConfigParser()
     config.read(config_file)
 
-    client_output_file = datetime.now().strftime("log_%Y_%m_%d_%H_%M_%S.log")
+    client_output_file = generate_log_filename(config)
 
     with open(client_output_file, "w") as f:
         f.write(f"PreFHEtch Test Run Log\n")
