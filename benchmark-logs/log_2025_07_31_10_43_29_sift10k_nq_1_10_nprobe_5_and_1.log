@@ -1,0 +1,2988 @@
+PreFHEtch Test Run Log
+Generated: 2025-07-31 10:43:29.712331
+Configuration file: benchmarks/config_sift10k_nq_1_10_nprobe_5_and_10.ini
+================================================================================
+
+
+================================================================================
+TEST RUN: 1
+Timestamp: 2025-07-31 10:46:41.762672
+Status: SUCCESS
+================================================================================
+
+--- Configuration Parameters ---
+nq: 1
+nprobe: 5
+coarse-probe: 200
+k: 100
+nlist: 256
+sub-quantizers: 32
+sub-quantizers-size: 8
+poly-modulus: 8192
+plaintext-modulus: 48
+single-phase: false
+
+--- Boolean Options Status ---
+single-phase: DISABLED
+
+--- Server Arguments ---
+build/PreFHEtch_server --nlist 256 --sub-quantizers 32 --sub-quantizers-size 8 --poly-modulus 8192 --plaintext-modulus 48
+
+--- Client Arguments ---
+build/PreFHEtch_client --nq 1 --nprobe 5 --coarse-probe 200 --k 100
+
+--- Server Output ---
+[2025-07-31 10:43:29.743] [info] [server.cpp:69] Encryption params = valid
+[2025-07-31 10:43:29.744] [info] [server_lib.cpp:100] Reading cached data from index file = build/IVF256_PQ32_SUB_QUANTIZER_SIZE8.faiss
+[2025-07-31 10:43:29.766] [info] [server.cpp:81] Initialized index, time = 22025(us)
+[2025-07-31 10:43:29.766] [info] [server_lib.cpp:63] Server listening on 0.0.0.0:8080
+[2025-07-31 10:43:30.276] [info] [Query.cc:19]
+
+Received request on /query
+[2025-07-31 10:43:30.315] [info] [Query.cc:42] Time to retrieve centroids = 555(us)
+[2025-07-31 10:43:30.315] [info] [Query.cc:44] Time to serialise encrypted params = 304(us)
+[2025-07-31 10:43:30.315] [info] [Query.cc:46] Exiting from query handler, total handler time = 38577(us)
+[2025-07-31 10:43:33.971] [info] [Query.cc:58] Received request on /coarsesearch
+[2025-07-31 10:43:52.288] [info] [Query.cc:108] Size of the serialised encrypted data = 373(mb)
+[2025-07-31 10:44:47.918] [info] [Query.cc:118] Time to deserialise coarse search params = 346342(us)
+[2025-07-31 10:44:47.918] [info] [Query.cc:120] Time to perform coarse search = 8637694(us)
+[2025-07-31 10:44:47.918] [info] [Query.cc:122] Time to serialise coarse search results = 429156(us)
+[2025-07-31 10:44:47.918] [info] [Query.cc:124] Size of the unserialised encrypted data = 114(mb)
+[2025-07-31 10:44:47.918] [info] [Query.cc:127] Exiting from coarse search handler, total handler time = 73946542(us)
+[2025-07-31 10:45:11.790] [info] [Query.cc:141] Received request on /precisesearch
+[2025-07-31 10:46:21.183] [info] [Query.cc:188] Time to deserialise precise search params = 207504(us)
+[2025-07-31 10:46:21.183] [info] [Query.cc:191] Time to perform precise search = 12594617(us)
+[2025-07-31 10:46:21.183] [info] [Query.cc:193] Time to serialise precise search results = 272919(us)
+[2025-07-31 10:46:21.183] [info] [Query.cc:196] Exiting from precise search handler, total handler time = 69392512(us)
+
+--- Client Standard Output ---
+[2025-07-31 10:43:30.274] [info] [client.cpp:60] Enable single phase search = false
+[2025-07-31 10:43:30.274] [info] [client.cpp:61] Starting query and timers
+[2025-07-31 10:43:30.274] [info] [client.cpp:62] num_queries = 1, nprobe = 5, coarse_probe = 200
+[2025-07-31 10:43:30.274] [info] [client.cpp:75] Query vectors obtained successfully, time = 102(us)
+[2025-07-31 10:43:30.341] [info] [client.cpp:81] Fetched centroids from server successfully, time = 66381(us)
+[2025-07-31 10:43:30.714] [info] [client.cpp:90] Computed nearest centroids successfully, time = 117(us)
+[2025-07-31 10:43:31.011] [info] [client.cpp:162] Computed encrypted coarse search params time = 296770(us)
+[2025-07-31 10:43:32.587] [info] [client_lib.cpp:345] Size of the coarse search request = 117(mb)
+[2025-07-31 10:45:09.101] [info] [client.cpp:175] Received encrypted coarse distances successfully, time = 98089881(us)
+[2025-07-31 10:45:09.644] [info] [client.cpp:184] Deserialised and decrypted coarse distances successfully, time = 542788(us)
+[2025-07-31 10:45:09.644] [info] [client.cpp:195] Computed nearest coarse vectors successfully, time = 13(us)
+[2025-07-31 10:45:10.551] [info] [client_lib.cpp:424] Size of the precise search request = 108(mb)
+[2025-07-31 10:46:39.466] [info] [client.cpp:207] Received precise distance scores successfully, time = 89821958(us)
+[2025-07-31 10:46:39.971] [info] [client.cpp:216] Deserialised and decrypted precise distances successfully, time = 504870(us)
+[2025-07-31 10:46:39.971] [info] [client.cpp:227] Computed nearest precise vectors successfully, time = 10(us)
+
+[2025-07-31 10:46:39.971] [info] [client.cpp:232] Complete Two Phase Search time = 189696555(us)
+[2025-07-31 10:46:39.971] [info] [client.cpp:235] Two Phase Search Query completed!
+
+[2025-07-31 10:46:39.971] [info] [client_lib.cpp:492] BENCHMARK RESULTS
+
+
+[2025-07-31 10:46:39.971] [info] [client_lib.cpp:565] Total Query Benchmark Results
+[2025-07-31 10:46:39.971] [info] [client_lib.cpp:566] Recall@1 = 1, Recall@10 = 1, Recall@100 = 0.4
+[2025-07-31 10:46:39.971] [info] [client_lib.cpp:570] MRR@1 = 0, MRR@10 = 0, MRR@100 = 0
+
+
+----------------------------------------------------------------------------------------------------
+
+--- Client Standard Error ---
+No client stderr
+
+--- Client Return Code ---
+0
+
+================================================================================
+END OF TEST RUN: 1
+================================================================================
+
+
+================================================================================
+TEST RUN: 2
+Timestamp: 2025-07-31 10:48:28.312768
+Status: SUCCESS
+================================================================================
+
+--- Configuration Parameters ---
+nq: 1
+nprobe: 5
+coarse-probe: 200
+k: 100
+nlist: 256
+sub-quantizers: 32
+sub-quantizers-size: 8
+poly-modulus: 8192
+plaintext-modulus: 48
+single-phase: true
+
+--- Boolean Options Status ---
+single-phase: ENABLED
+
+--- Server Arguments ---
+build/PreFHEtch_server --nlist 256 --sub-quantizers 32 --sub-quantizers-size 8 --poly-modulus 8192 --plaintext-modulus 48
+
+--- Client Arguments ---
+build/PreFHEtch_client --nq 1 --nprobe 5 --coarse-probe 200 --k 100 --single-phase
+
+--- Server Output ---
+[2025-07-31 10:46:41.797] [info] [server.cpp:69] Encryption params = valid
+[2025-07-31 10:46:41.798] [info] [server_lib.cpp:100] Reading cached data from index file = build/IVF256_PQ32_SUB_QUANTIZER_SIZE8.faiss
+[2025-07-31 10:46:41.819] [info] [server.cpp:81] Initialized index, time = 20941(us)
+[2025-07-31 10:46:41.819] [info] [server_lib.cpp:63] Server listening on 0.0.0.0:8080
+[2025-07-31 10:46:42.331] [info] [Query.cc:19]
+
+Received request on /query
+[2025-07-31 10:46:42.369] [info] [Query.cc:42] Time to retrieve centroids = 582(us)
+[2025-07-31 10:46:42.369] [info] [Query.cc:44] Time to serialise encrypted params = 340(us)
+[2025-07-31 10:46:42.369] [info] [Query.cc:46] Exiting from query handler, total handler time = 38670(us)
+[2025-07-31 10:46:45.720] [info] [Query.cc:240] Received request on /single-phase-search
+[2025-07-31 10:47:08.703] [info] [Query.cc:280] Size of the serialised encrypted data = 373(mb)
+[2025-07-31 10:48:05.100] [info] [Query.cc:290] Time to deserialise single phase search params = 327320(us)
+[2025-07-31 10:48:05.100] [info] [Query.cc:292] Time to perform single phase search = 13815696(us)
+[2025-07-31 10:48:05.100] [info] [Query.cc:294] Time to serialise single phase search results = 432573(us)
+[2025-07-31 10:48:05.100] [info] [Query.cc:296] Size of the unserialised encrypted data = 114(mb)
+[2025-07-31 10:48:05.100] [info] [Query.cc:299] Exiting from single phase search handler, total handler time = 79379519(us)
+
+--- Client Standard Output ---
+[2025-07-31 10:46:42.329] [info] [client.cpp:60] Enable single phase search = true
+[2025-07-31 10:46:42.329] [info] [client.cpp:61] Starting query and timers
+[2025-07-31 10:46:42.329] [info] [client.cpp:62] num_queries = 1, nprobe = 5, coarse_probe = 200
+[2025-07-31 10:46:42.329] [info] [client.cpp:75] Query vectors obtained successfully, time = 146(us)
+[2025-07-31 10:46:42.396] [info] [client.cpp:81] Fetched centroids from server successfully, time = 67400(us)
+[2025-07-31 10:46:42.792] [info] [client.cpp:90] Computed nearest centroids successfully, time = 118(us)
+[2025-07-31 10:46:43.054] [info] [client.cpp:104] Computed encrypted single phase search params time = 262623(us)
+[2025-07-31 10:46:44.430] [info] [client_lib.cpp:776] Size of the single phase search request = 108(mb)
+[2025-07-31 10:48:26.126] [info] [client.cpp:114] Received encrypted single phase search distances successfully, time = 103071876(us)
+[2025-07-31 10:48:26.675] [info] [client.cpp:123] Deserialised and decrypted search distances successfully, time = 548213(us)
+[2025-07-31 10:48:26.675] [info] [client.cpp:133] Computed nearest precise vectors successfully, time = 13(us)
+
+[2025-07-31 10:48:26.675] [info] [client.cpp:138] Complete Single Phase Search time = 104345816(us)
+[2025-07-31 10:48:26.675] [info] [client.cpp:141] Single Phase Search Query completed!
+
+[2025-07-31 10:48:26.675] [info] [client_lib.cpp:492] BENCHMARK RESULTS
+
+
+[2025-07-31 10:48:26.675] [info] [client_lib.cpp:565] Total Query Benchmark Results
+[2025-07-31 10:48:26.675] [info] [client_lib.cpp:566] Recall@1 = 1, Recall@10 = 1, Recall@100 = 0.4
+[2025-07-31 10:48:26.675] [info] [client_lib.cpp:570] MRR@1 = 0, MRR@10 = 0, MRR@100 = 0
+
+
+----------------------------------------------------------------------------------------------------
+
+--- Client Standard Error ---
+No client stderr
+
+--- Client Return Code ---
+0
+
+================================================================================
+END OF TEST RUN: 2
+================================================================================
+
+
+================================================================================
+TEST RUN: 3
+Timestamp: 2025-07-31 10:53:38.263924
+Status: SUCCESS
+================================================================================
+
+--- Configuration Parameters ---
+nq: 1
+nprobe: 10
+coarse-probe: 200
+k: 100
+nlist: 256
+sub-quantizers: 32
+sub-quantizers-size: 8
+poly-modulus: 8192
+plaintext-modulus: 48
+single-phase: false
+
+--- Boolean Options Status ---
+single-phase: DISABLED
+
+--- Server Arguments ---
+build/PreFHEtch_server --nlist 256 --sub-quantizers 32 --sub-quantizers-size 8 --poly-modulus 8192 --plaintext-modulus 48
+
+--- Client Arguments ---
+build/PreFHEtch_client --nq 1 --nprobe 10 --coarse-probe 200 --k 100
+
+--- Server Output ---
+[2025-07-31 10:48:28.349] [info] [server.cpp:69] Encryption params = valid
+[2025-07-31 10:48:28.350] [info] [server_lib.cpp:100] Reading cached data from index file = build/IVF256_PQ32_SUB_QUANTIZER_SIZE8.faiss
+[2025-07-31 10:48:28.373] [info] [server.cpp:81] Initialized index, time = 23576(us)
+[2025-07-31 10:48:28.374] [info] [server_lib.cpp:63] Server listening on 0.0.0.0:8080
+[2025-07-31 10:48:28.883] [info] [Query.cc:19]
+
+Received request on /query
+[2025-07-31 10:48:28.923] [info] [Query.cc:42] Time to retrieve centroids = 630(us)
+[2025-07-31 10:48:28.923] [info] [Query.cc:44] Time to serialise encrypted params = 382(us)
+[2025-07-31 10:48:28.923] [info] [Query.cc:46] Exiting from query handler, total handler time = 40337(us)
+[2025-07-31 10:48:32.865] [info] [Query.cc:58] Received request on /coarsesearch
+[2025-07-31 10:49:10.139] [info] [Query.cc:108] Size of the serialised encrypted data = 844(mb)
+[2025-07-31 10:51:19.389] [info] [Query.cc:118] Time to deserialise coarse search params = 379043(us)
+[2025-07-31 10:51:19.389] [info] [Query.cc:120] Time to perform coarse search = 19977720(us)
+[2025-07-31 10:51:19.389] [info] [Query.cc:122] Time to serialise coarse search results = 1073581(us)
+[2025-07-31 10:51:19.389] [info] [Query.cc:124] Size of the unserialised encrypted data = 258(mb)
+[2025-07-31 10:51:19.389] [info] [Query.cc:127] Exiting from coarse search handler, total handler time = 166523911(us)
+[2025-07-31 10:52:06.397] [info] [Query.cc:141] Received request on /precisesearch
+[2025-07-31 10:53:18.131] [info] [Query.cc:188] Time to deserialise precise search params = 221384(us)
+[2025-07-31 10:53:18.131] [info] [Query.cc:191] Time to perform precise search = 12790652(us)
+[2025-07-31 10:53:18.131] [info] [Query.cc:193] Time to serialise precise search results = 309976(us)
+[2025-07-31 10:53:18.131] [info] [Query.cc:196] Exiting from precise search handler, total handler time = 71734370(us)
+
+--- Client Standard Output ---
+[2025-07-31 10:48:28.881] [info] [client.cpp:60] Enable single phase search = false
+[2025-07-31 10:48:28.881] [info] [client.cpp:61] Starting query and timers
+[2025-07-31 10:48:28.881] [info] [client.cpp:62] num_queries = 1, nprobe = 10, coarse_probe = 200
+[2025-07-31 10:48:28.881] [info] [client.cpp:75] Query vectors obtained successfully, time = 72(us)
+[2025-07-31 10:48:28.946] [info] [client.cpp:81] Fetched centroids from server successfully, time = 64573(us)
+[2025-07-31 10:48:29.301] [info] [client.cpp:90] Computed nearest centroids successfully, time = 118(us)
+[2025-07-31 10:48:29.638] [info] [client.cpp:162] Computed encrypted coarse search params time = 337370(us)
+[2025-07-31 10:48:31.299] [info] [client_lib.cpp:345] Size of the coarse search request = 126(mb)
+[2025-07-31 10:52:03.183] [info] [client.cpp:175] Received encrypted coarse distances successfully, time = 213544354(us)
+[2025-07-31 10:52:04.405] [info] [client.cpp:184] Deserialised and decrypted coarse distances successfully, time = 1221927(us)
+[2025-07-31 10:52:04.405] [info] [client.cpp:195] Computed nearest coarse vectors successfully, time = 36(us)
+[2025-07-31 10:52:05.303] [info] [client_lib.cpp:424] Size of the precise search request = 108(mb)
+[2025-07-31 10:53:35.851] [info] [client.cpp:207] Received precise distance scores successfully, time = 91446390(us)
+[2025-07-31 10:53:36.347] [info] [client.cpp:216] Deserialised and decrypted precise distances successfully, time = 495664(us)
+[2025-07-31 10:53:36.347] [info] [client.cpp:227] Computed nearest precise vectors successfully, time = 12(us)
+
+[2025-07-31 10:53:36.347] [info] [client.cpp:232] Complete Two Phase Search time = 307465870(us)
+[2025-07-31 10:53:36.347] [info] [client.cpp:235] Two Phase Search Query completed!
+
+[2025-07-31 10:53:36.347] [info] [client_lib.cpp:492] BENCHMARK RESULTS
+
+
+[2025-07-31 10:53:36.347] [info] [client_lib.cpp:565] Total Query Benchmark Results
+[2025-07-31 10:53:36.347] [info] [client_lib.cpp:566] Recall@1 = 1, Recall@10 = 1, Recall@100 = 0.72
+[2025-07-31 10:53:36.347] [info] [client_lib.cpp:570] MRR@1 = 1, MRR@10 = 1, MRR@100 = 1
+
+
+----------------------------------------------------------------------------------------------------
+
+--- Client Standard Error ---
+No client stderr
+
+--- Client Return Code ---
+0
+
+================================================================================
+END OF TEST RUN: 3
+================================================================================
+
+
+================================================================================
+TEST RUN: 4
+Timestamp: 2025-07-31 10:57:19.303955
+Status: SUCCESS
+================================================================================
+
+--- Configuration Parameters ---
+nq: 1
+nprobe: 10
+coarse-probe: 200
+k: 100
+nlist: 256
+sub-quantizers: 32
+sub-quantizers-size: 8
+poly-modulus: 8192
+plaintext-modulus: 48
+single-phase: true
+
+--- Boolean Options Status ---
+single-phase: ENABLED
+
+--- Server Arguments ---
+build/PreFHEtch_server --nlist 256 --sub-quantizers 32 --sub-quantizers-size 8 --poly-modulus 8192 --plaintext-modulus 48
+
+--- Client Arguments ---
+build/PreFHEtch_client --nq 1 --nprobe 10 --coarse-probe 200 --k 100 --single-phase
+
+--- Server Output ---
+[2025-07-31 10:53:38.297] [info] [server.cpp:69] Encryption params = valid
+[2025-07-31 10:53:38.298] [info] [server_lib.cpp:100] Reading cached data from index file = build/IVF256_PQ32_SUB_QUANTIZER_SIZE8.faiss
+[2025-07-31 10:53:38.319] [info] [server.cpp:81] Initialized index, time = 21845(us)
+[2025-07-31 10:53:38.319] [info] [server_lib.cpp:63] Server listening on 0.0.0.0:8080
+[2025-07-31 10:53:38.828] [info] [Query.cc:19]
+
+Received request on /query
+[2025-07-31 10:53:38.868] [info] [Query.cc:42] Time to retrieve centroids = 569(us)
+[2025-07-31 10:53:38.868] [info] [Query.cc:44] Time to serialise encrypted params = 515(us)
+[2025-07-31 10:53:38.868] [info] [Query.cc:46] Exiting from query handler, total handler time = 39834(us)
+[2025-07-31 10:53:42.094] [info] [Query.cc:240] Received request on /single-phase-search
+[2025-07-31 10:54:28.903] [info] [Query.cc:280] Size of the serialised encrypted data = 844(mb)
+[2025-07-31 10:56:34.004] [info] [Query.cc:290] Time to deserialise single phase search params = 315440(us)
+[2025-07-31 10:56:34.004] [info] [Query.cc:292] Time to perform single phase search = 30739342(us)
+[2025-07-31 10:56:34.004] [info] [Query.cc:294] Time to serialise single phase search results = 1386349(us)
+[2025-07-31 10:56:34.004] [info] [Query.cc:296] Size of the unserialised encrypted data = 258(mb)
+[2025-07-31 10:56:34.004] [info] [Query.cc:299] Exiting from single phase search handler, total handler time = 171910495(us)
+
+--- Client Standard Output ---
+[2025-07-31 10:53:38.827] [info] [client.cpp:60] Enable single phase search = true
+[2025-07-31 10:53:38.827] [info] [client.cpp:61] Starting query and timers
+[2025-07-31 10:53:38.827] [info] [client.cpp:62] num_queries = 1, nprobe = 10, coarse_probe = 200
+[2025-07-31 10:53:38.827] [info] [client.cpp:75] Query vectors obtained successfully, time = 65(us)
+[2025-07-31 10:53:38.891] [info] [client.cpp:81] Fetched centroids from server successfully, time = 63792(us)
+[2025-07-31 10:53:39.248] [info] [client.cpp:90] Computed nearest centroids successfully, time = 119(us)
+[2025-07-31 10:53:39.508] [info] [client.cpp:104] Computed encrypted single phase search params time = 259285(us)
+[2025-07-31 10:53:40.851] [info] [client_lib.cpp:776] Size of the single phase search request = 108(mb)
+[2025-07-31 10:57:16.401] [info] [client.cpp:114] Received encrypted single phase search distances successfully, time = 216892840(us)
+[2025-07-31 10:57:17.612] [info] [client.cpp:123] Deserialised and decrypted search distances successfully, time = 1210898(us)
+[2025-07-31 10:57:17.612] [info] [client.cpp:133] Computed nearest precise vectors successfully, time = 31(us)
+
+[2025-07-31 10:57:17.612] [info] [client.cpp:138] Complete Single Phase Search time = 218784794(us)
+[2025-07-31 10:57:17.612] [info] [client.cpp:141] Single Phase Search Query completed!
+
+[2025-07-31 10:57:17.612] [info] [client_lib.cpp:492] BENCHMARK RESULTS
+
+
+[2025-07-31 10:57:17.612] [info] [client_lib.cpp:565] Total Query Benchmark Results
+[2025-07-31 10:57:17.612] [info] [client_lib.cpp:566] Recall@1 = 1, Recall@10 = 1, Recall@100 = 0.72
+[2025-07-31 10:57:17.612] [info] [client_lib.cpp:570] MRR@1 = 1, MRR@10 = 1, MRR@100 = 1
+
+
+----------------------------------------------------------------------------------------------------
+
+--- Client Standard Error ---
+No client stderr
+
+--- Client Return Code ---
+0
+
+================================================================================
+END OF TEST RUN: 4
+================================================================================
+
+
+================================================================================
+TEST RUN: 5
+Timestamp: 2025-07-31 11:03:53.969549
+Status: SUCCESS
+================================================================================
+
+--- Configuration Parameters ---
+nq: 2
+nprobe: 5
+coarse-probe: 200
+k: 100
+nlist: 256
+sub-quantizers: 32
+sub-quantizers-size: 8
+poly-modulus: 8192
+plaintext-modulus: 48
+single-phase: false
+
+--- Boolean Options Status ---
+single-phase: DISABLED
+
+--- Server Arguments ---
+build/PreFHEtch_server --nlist 256 --sub-quantizers 32 --sub-quantizers-size 8 --poly-modulus 8192 --plaintext-modulus 48
+
+--- Client Arguments ---
+build/PreFHEtch_client --nq 2 --nprobe 5 --coarse-probe 200 --k 100
+
+--- Server Output ---
+[2025-07-31 10:57:19.336] [info] [server.cpp:69] Encryption params = valid
+[2025-07-31 10:57:19.336] [info] [server_lib.cpp:100] Reading cached data from index file = build/IVF256_PQ32_SUB_QUANTIZER_SIZE8.faiss
+[2025-07-31 10:57:19.357] [info] [server.cpp:81] Initialized index, time = 20946(us)
+[2025-07-31 10:57:19.357] [info] [server_lib.cpp:63] Server listening on 0.0.0.0:8080
+[2025-07-31 10:57:19.868] [info] [Query.cc:19]
+
+Received request on /query
+[2025-07-31 10:57:19.910] [info] [Query.cc:42] Time to retrieve centroids = 639(us)
+[2025-07-31 10:57:19.910] [info] [Query.cc:44] Time to serialise encrypted params = 360(us)
+[2025-07-31 10:57:19.910] [info] [Query.cc:46] Exiting from query handler, total handler time = 41712(us)
+[2025-07-31 10:57:24.057] [info] [Query.cc:58] Received request on /coarsesearch
+[2025-07-31 10:57:54.020] [info] [Query.cc:108] Size of the serialised encrypted data = 872(mb)
+[2025-07-31 11:00:08.886] [info] [Query.cc:118] Time to deserialise coarse search params = 369871(us)
+[2025-07-31 11:00:08.886] [info] [Query.cc:120] Time to perform coarse search = 12892286(us)
+[2025-07-31 11:00:08.886] [info] [Query.cc:122] Time to serialise coarse search results = 878928(us)
+[2025-07-31 11:00:08.886] [info] [Query.cc:124] Size of the unserialised encrypted data = 266(mb)
+[2025-07-31 11:00:08.886] [info] [Query.cc:127] Exiting from coarse search handler, total handler time = 164828150(us)
+[2025-07-31 11:00:58.301] [info] [Query.cc:141] Received request on /precisesearch
+[2025-07-31 11:03:17.699] [info] [Query.cc:188] Time to deserialise precise search params = 235605(us)
+[2025-07-31 11:03:17.699] [info] [Query.cc:191] Time to perform precise search = 27326507(us)
+[2025-07-31 11:03:17.699] [info] [Query.cc:193] Time to serialise precise search results = 572974(us)
+[2025-07-31 11:03:17.699] [info] [Query.cc:196] Exiting from precise search handler, total handler time = 139398219(us)
+
+--- Client Standard Output ---
+[2025-07-31 10:57:19.866] [info] [client.cpp:60] Enable single phase search = false
+[2025-07-31 10:57:19.866] [info] [client.cpp:61] Starting query and timers
+[2025-07-31 10:57:19.866] [info] [client.cpp:62] num_queries = 2, nprobe = 5, coarse_probe = 200
+[2025-07-31 10:57:19.866] [info] [client.cpp:75] Query vectors obtained successfully, time = 93(us)
+[2025-07-31 10:57:19.935] [info] [client.cpp:81] Fetched centroids from server successfully, time = 68212(us)
+[2025-07-31 10:57:20.304] [info] [client.cpp:90] Computed nearest centroids successfully, time = 251(us)
+[2025-07-31 10:57:20.653] [info] [client.cpp:162] Computed encrypted coarse search params time = 348186(us)
+[2025-07-31 10:57:22.358] [info] [client_lib.cpp:345] Size of the coarse search request = 126(mb)
+[2025-07-31 11:00:55.033] [info] [client.cpp:175] Received encrypted coarse distances successfully, time = 214380806(us)
+[2025-07-31 11:00:56.295] [info] [client.cpp:184] Deserialised and decrypted coarse distances successfully, time = 1261827(us)
+[2025-07-31 11:00:56.295] [info] [client.cpp:195] Computed nearest coarse vectors successfully, time = 33(us)
+[2025-07-31 11:00:57.200] [info] [client_lib.cpp:424] Size of the precise search request = 109(mb)
+[2025-07-31 11:03:51.099] [info] [client.cpp:207] Received precise distance scores successfully, time = 174803208(us)
+[2025-07-31 11:03:52.118] [info] [client.cpp:216] Deserialised and decrypted precise distances successfully, time = 1019217(us)
+[2025-07-31 11:03:52.118] [info] [client.cpp:227] Computed nearest precise vectors successfully, time = 21(us)
+
+[2025-07-31 11:03:52.118] [info] [client.cpp:232] Complete Two Phase Search time = 392251744(us)
+[2025-07-31 11:03:52.118] [info] [client.cpp:235] Two Phase Search Query completed!
+
+[2025-07-31 11:03:52.118] [info] [client_lib.cpp:492] BENCHMARK RESULTS
+
+
+[2025-07-31 11:03:52.118] [info] [client_lib.cpp:565] Total Query Benchmark Results
+[2025-07-31 11:03:52.118] [info] [client_lib.cpp:566] Recall@1 = 1, Recall@10 = 1, Recall@100 = 0.495
+[2025-07-31 11:03:52.118] [info] [client_lib.cpp:570] MRR@1 = 0.5, MRR@10 = 0.5, MRR@100 = 0.5
+
+
+----------------------------------------------------------------------------------------------------
+
+--- Client Standard Error ---
+No client stderr
+
+--- Client Return Code ---
+0
+
+================================================================================
+END OF TEST RUN: 5
+================================================================================
+
+
+================================================================================
+TEST RUN: 6
+Timestamp: 2025-07-31 11:07:50.502328
+Status: SUCCESS
+================================================================================
+
+--- Configuration Parameters ---
+nq: 2
+nprobe: 5
+coarse-probe: 200
+k: 100
+nlist: 256
+sub-quantizers: 32
+sub-quantizers-size: 8
+poly-modulus: 8192
+plaintext-modulus: 48
+single-phase: true
+
+--- Boolean Options Status ---
+single-phase: ENABLED
+
+--- Server Arguments ---
+build/PreFHEtch_server --nlist 256 --sub-quantizers 32 --sub-quantizers-size 8 --poly-modulus 8192 --plaintext-modulus 48
+
+--- Client Arguments ---
+build/PreFHEtch_client --nq 2 --nprobe 5 --coarse-probe 200 --k 100 --single-phase
+
+--- Server Output ---
+[2025-07-31 11:03:54.006] [info] [server.cpp:69] Encryption params = valid
+[2025-07-31 11:03:54.006] [info] [server_lib.cpp:100] Reading cached data from index file = build/IVF256_PQ32_SUB_QUANTIZER_SIZE8.faiss
+[2025-07-31 11:03:54.029] [info] [server.cpp:81] Initialized index, time = 22928(us)
+[2025-07-31 11:03:54.029] [info] [server_lib.cpp:63] Server listening on 0.0.0.0:8080
+[2025-07-31 11:03:54.539] [info] [Query.cc:19]
+
+Received request on /query
+[2025-07-31 11:03:54.580] [info] [Query.cc:42] Time to retrieve centroids = 710(us)
+[2025-07-31 11:03:54.580] [info] [Query.cc:44] Time to serialise encrypted params = 356(us)
+[2025-07-31 11:03:54.580] [info] [Query.cc:46] Exiting from query handler, total handler time = 40884(us)
+[2025-07-31 11:03:58.014] [info] [Query.cc:240] Received request on /single-phase-search
+[2025-07-31 11:04:47.056] [info] [Query.cc:280] Size of the serialised encrypted data = 872(mb)
+[2025-07-31 11:07:00.386] [info] [Query.cc:290] Time to deserialise single phase search params = 328523(us)
+[2025-07-31 11:07:00.386] [info] [Query.cc:292] Time to perform single phase search = 32646009(us)
+[2025-07-31 11:07:00.386] [info] [Query.cc:294] Time to serialise single phase search results = 901670(us)
+[2025-07-31 11:07:00.386] [info] [Query.cc:296] Size of the unserialised encrypted data = 266(mb)
+[2025-07-31 11:07:00.386] [info] [Query.cc:299] Exiting from single phase search handler, total handler time = 182372574(us)
+
+--- Client Standard Output ---
+[2025-07-31 11:03:54.537] [info] [client.cpp:60] Enable single phase search = true
+[2025-07-31 11:03:54.537] [info] [client.cpp:61] Starting query and timers
+[2025-07-31 11:03:54.537] [info] [client.cpp:62] num_queries = 2, nprobe = 5, coarse_probe = 200
+[2025-07-31 11:03:54.537] [info] [client.cpp:75] Query vectors obtained successfully, time = 79(us)
+[2025-07-31 11:03:54.605] [info] [client.cpp:81] Fetched centroids from server successfully, time = 67660(us)
+[2025-07-31 11:03:54.995] [info] [client.cpp:90] Computed nearest centroids successfully, time = 281(us)
+[2025-07-31 11:03:55.269] [info] [client.cpp:104] Computed encrypted single phase search params time = 273501(us)
+[2025-07-31 11:03:56.665] [info] [client_lib.cpp:776] Size of the single phase search request = 109(mb)
+[2025-07-31 11:07:46.954] [info] [client.cpp:114] Received encrypted single phase search distances successfully, time = 231685459(us)
+[2025-07-31 11:07:48.253] [info] [client.cpp:123] Deserialised and decrypted search distances successfully, time = 1299369(us)
+[2025-07-31 11:07:48.254] [info] [client.cpp:133] Computed nearest precise vectors successfully, time = 36(us)
+
+[2025-07-31 11:07:48.254] [info] [client.cpp:138] Complete Single Phase Search time = 233716154(us)
+[2025-07-31 11:07:48.254] [info] [client.cpp:141] Single Phase Search Query completed!
+
+[2025-07-31 11:07:48.254] [info] [client_lib.cpp:492] BENCHMARK RESULTS
+
+
+[2025-07-31 11:07:48.254] [info] [client_lib.cpp:565] Total Query Benchmark Results
+[2025-07-31 11:07:48.254] [info] [client_lib.cpp:566] Recall@1 = 1, Recall@10 = 1, Recall@100 = 0.495
+[2025-07-31 11:07:48.254] [info] [client_lib.cpp:570] MRR@1 = 0.5, MRR@10 = 0.5, MRR@100 = 0.5
+
+
+----------------------------------------------------------------------------------------------------
+
+--- Client Standard Error ---
+No client stderr
+
+--- Client Return Code ---
+0
+
+================================================================================
+END OF TEST RUN: 6
+================================================================================
+
+
+================================================================================
+TEST RUN: 7
+Timestamp: 2025-07-31 11:17:26.148571
+Status: SUCCESS
+================================================================================
+
+--- Configuration Parameters ---
+nq: 2
+nprobe: 10
+coarse-probe: 200
+k: 100
+nlist: 256
+sub-quantizers: 32
+sub-quantizers-size: 8
+poly-modulus: 8192
+plaintext-modulus: 48
+single-phase: false
+
+--- Boolean Options Status ---
+single-phase: DISABLED
+
+--- Server Arguments ---
+build/PreFHEtch_server --nlist 256 --sub-quantizers 32 --sub-quantizers-size 8 --poly-modulus 8192 --plaintext-modulus 48
+
+--- Client Arguments ---
+build/PreFHEtch_client --nq 2 --nprobe 10 --coarse-probe 200 --k 100
+
+--- Server Output ---
+[2025-07-31 11:07:50.534] [info] [server.cpp:69] Encryption params = valid
+[2025-07-31 11:07:50.535] [info] [server_lib.cpp:100] Reading cached data from index file = build/IVF256_PQ32_SUB_QUANTIZER_SIZE8.faiss
+[2025-07-31 11:07:50.556] [info] [server.cpp:81] Initialized index, time = 20818(us)
+[2025-07-31 11:07:50.556] [info] [server_lib.cpp:63] Server listening on 0.0.0.0:8080
+[2025-07-31 11:07:51.072] [info] [Query.cc:19]
+
+Received request on /query
+[2025-07-31 11:07:51.112] [info] [Query.cc:42] Time to retrieve centroids = 852(us)
+[2025-07-31 11:07:51.112] [info] [Query.cc:44] Time to serialise encrypted params = 351(us)
+[2025-07-31 11:07:51.112] [info] [Query.cc:46] Exiting from query handler, total handler time = 39183(us)
+[2025-07-31 11:07:55.646] [info] [Query.cc:58] Received request on /coarsesearch
+[2025-07-31 11:08:46.257] [info] [Query.cc:108] Size of the serialised encrypted data = 1739(mb)
+[2025-07-31 11:13:02.961] [info] [Query.cc:118] Time to deserialise coarse search params = 446314(us)
+[2025-07-31 11:13:02.961] [info] [Query.cc:120] Time to perform coarse search = 21306378(us)
+[2025-07-31 11:13:02.961] [info] [Query.cc:122] Time to serialise coarse search results = 1785064(us)
+[2025-07-31 11:13:02.962] [info] [Query.cc:124] Size of the unserialised encrypted data = 532(mb)
+[2025-07-31 11:13:02.962] [info] [Query.cc:127] Exiting from coarse search handler, total handler time = 307315512(us)
+[2025-07-31 11:14:36.136] [info] [Query.cc:141] Received request on /precisesearch
+[2025-07-31 11:16:48.830] [info] [Query.cc:188] Time to deserialise precise search params = 226668(us)
+[2025-07-31 11:16:48.830] [info] [Query.cc:191] Time to perform precise search = 24781663(us)
+[2025-07-31 11:16:48.830] [info] [Query.cc:193] Time to serialise precise search results = 554405(us)
+[2025-07-31 11:16:48.830] [info] [Query.cc:196] Exiting from precise search handler, total handler time = 132694110(us)
+
+--- Client Standard Output ---
+[2025-07-31 11:07:51.071] [info] [client.cpp:60] Enable single phase search = false
+[2025-07-31 11:07:51.071] [info] [client.cpp:61] Starting query and timers
+[2025-07-31 11:07:51.071] [info] [client.cpp:62] num_queries = 2, nprobe = 10, coarse_probe = 200
+[2025-07-31 11:07:51.071] [info] [client.cpp:75] Query vectors obtained successfully, time = 108(us)
+[2025-07-31 11:07:51.135] [info] [client.cpp:81] Fetched centroids from server successfully, time = 64269(us)
+[2025-07-31 11:07:51.517] [info] [client.cpp:90] Computed nearest centroids successfully, time = 238(us)
+[2025-07-31 11:07:51.941] [info] [client.cpp:162] Computed encrypted coarse search params time = 423890(us)
+[2025-07-31 11:07:53.857] [info] [client_lib.cpp:345] Size of the coarse search request = 143(mb)
+[2025-07-31 11:14:31.648] [info] [client.cpp:175] Received encrypted coarse distances successfully, time = 399707427(us)
+[2025-07-31 11:14:34.126] [info] [client.cpp:184] Deserialised and decrypted coarse distances successfully, time = 2477528(us)
+[2025-07-31 11:14:34.126] [info] [client.cpp:195] Computed nearest coarse vectors successfully, time = 60(us)
+[2025-07-31 11:14:35.053] [info] [client_lib.cpp:424] Size of the precise search request = 109(mb)
+[2025-07-31 11:17:22.568] [info] [client.cpp:207] Received precise distance scores successfully, time = 168442101(us)
+[2025-07-31 11:17:23.610] [info] [client.cpp:216] Deserialised and decrypted precise distances successfully, time = 1042318(us)
+[2025-07-31 11:17:23.610] [info] [client.cpp:227] Computed nearest precise vectors successfully, time = 20(us)
+
+[2025-07-31 11:17:23.610] [info] [client.cpp:232] Complete Two Phase Search time = 572539545(us)
+[2025-07-31 11:17:23.610] [info] [client.cpp:235] Two Phase Search Query completed!
+
+[2025-07-31 11:17:23.610] [info] [client_lib.cpp:492] BENCHMARK RESULTS
+
+
+[2025-07-31 11:17:23.610] [info] [client_lib.cpp:565] Total Query Benchmark Results
+[2025-07-31 11:17:23.610] [info] [client_lib.cpp:566] Recall@1 = 1, Recall@10 = 1, Recall@100 = 0.785
+[2025-07-31 11:17:23.610] [info] [client_lib.cpp:570] MRR@1 = 1, MRR@10 = 1, MRR@100 = 1
+
+
+----------------------------------------------------------------------------------------------------
+
+--- Client Standard Error ---
+No client stderr
+
+--- Client Return Code ---
+0
+
+================================================================================
+END OF TEST RUN: 7
+================================================================================
+
+
+================================================================================
+TEST RUN: 8
+Timestamp: 2025-07-31 11:24:53.154682
+Status: SUCCESS
+================================================================================
+
+--- Configuration Parameters ---
+nq: 2
+nprobe: 10
+coarse-probe: 200
+k: 100
+nlist: 256
+sub-quantizers: 32
+sub-quantizers-size: 8
+poly-modulus: 8192
+plaintext-modulus: 48
+single-phase: true
+
+--- Boolean Options Status ---
+single-phase: ENABLED
+
+--- Server Arguments ---
+build/PreFHEtch_server --nlist 256 --sub-quantizers 32 --sub-quantizers-size 8 --poly-modulus 8192 --plaintext-modulus 48
+
+--- Client Arguments ---
+build/PreFHEtch_client --nq 2 --nprobe 10 --coarse-probe 200 --k 100 --single-phase
+
+--- Server Output ---
+[2025-07-31 11:17:26.181] [info] [server.cpp:69] Encryption params = valid
+[2025-07-31 11:17:26.182] [info] [server_lib.cpp:100] Reading cached data from index file = build/IVF256_PQ32_SUB_QUANTIZER_SIZE8.faiss
+[2025-07-31 11:17:26.204] [info] [server.cpp:81] Initialized index, time = 22311(us)
+[2025-07-31 11:17:26.204] [info] [server_lib.cpp:63] Server listening on 0.0.0.0:8080
+[2025-07-31 11:17:26.714] [info] [Query.cc:19]
+
+Received request on /query
+[2025-07-31 11:17:26.754] [info] [Query.cc:42] Time to retrieve centroids = 1317(us)
+[2025-07-31 11:17:26.754] [info] [Query.cc:44] Time to serialise encrypted params = 335(us)
+[2025-07-31 11:17:26.754] [info] [Query.cc:46] Exiting from query handler, total handler time = 40626(us)
+[2025-07-31 11:17:30.152] [info] [Query.cc:240] Received request on /single-phase-search
+[2025-07-31 11:19:02.701] [info] [Query.cc:280] Size of the serialised encrypted data = 1739(mb)
+[2025-07-31 11:23:19.694] [info] [Query.cc:290] Time to deserialise single phase search params = 317621(us)
+[2025-07-31 11:23:19.694] [info] [Query.cc:292] Time to perform single phase search = 63560936(us)
+[2025-07-31 11:23:19.694] [info] [Query.cc:294] Time to serialise single phase search results = 1785243(us)
+[2025-07-31 11:23:19.694] [info] [Query.cc:296] Size of the unserialised encrypted data = 532(mb)
+[2025-07-31 11:23:19.694] [info] [Query.cc:299] Exiting from single phase search handler, total handler time = 349541978(us)
+
+--- Client Standard Output ---
+[2025-07-31 11:17:26.712] [info] [client.cpp:60] Enable single phase search = true
+[2025-07-31 11:17:26.712] [info] [client.cpp:61] Starting query and timers
+[2025-07-31 11:17:26.712] [info] [client.cpp:62] num_queries = 2, nprobe = 10, coarse_probe = 200
+[2025-07-31 11:17:26.712] [info] [client.cpp:75] Query vectors obtained successfully, time = 124(us)
+[2025-07-31 11:17:26.777] [info] [client.cpp:81] Fetched centroids from server successfully, time = 64709(us)
+[2025-07-31 11:17:27.133] [info] [client.cpp:90] Computed nearest centroids successfully, time = 235(us)
+[2025-07-31 11:17:27.406] [info] [client.cpp:104] Computed encrypted single phase search params time = 273068(us)
+[2025-07-31 11:17:28.862] [info] [client_lib.cpp:776] Size of the single phase search request = 109(mb)
+[2025-07-31 11:24:48.158] [info] [client.cpp:114] Received encrypted single phase search distances successfully, time = 440752190(us)
+[2025-07-31 11:24:50.696] [info] [client.cpp:123] Deserialised and decrypted search distances successfully, time = 2537591(us)
+[2025-07-31 11:24:50.696] [info] [client.cpp:133] Computed nearest precise vectors successfully, time = 68(us)
+
+[2025-07-31 11:24:50.696] [info] [client.cpp:138] Complete Single Phase Search time = 443983505(us)
+[2025-07-31 11:24:50.696] [info] [client.cpp:141] Single Phase Search Query completed!
+
+[2025-07-31 11:24:50.696] [info] [client_lib.cpp:492] BENCHMARK RESULTS
+
+
+[2025-07-31 11:24:50.696] [info] [client_lib.cpp:565] Total Query Benchmark Results
+[2025-07-31 11:24:50.696] [info] [client_lib.cpp:566] Recall@1 = 1, Recall@10 = 1, Recall@100 = 0.785
+[2025-07-31 11:24:50.696] [info] [client_lib.cpp:570] MRR@1 = 1, MRR@10 = 1, MRR@100 = 1
+
+
+----------------------------------------------------------------------------------------------------
+
+--- Client Standard Error ---
+No client stderr
+
+--- Client Return Code ---
+0
+
+================================================================================
+END OF TEST RUN: 8
+================================================================================
+
+
+================================================================================
+TEST RUN: 9
+Timestamp: 2025-07-31 11:29:26.584165
+Status: FAILED
+Failure Reason: Client process failed with return code: -6
+================================================================================
+
+--- Configuration Parameters ---
+nq: 3
+nprobe: 5
+coarse-probe: 200
+k: 100
+nlist: 256
+sub-quantizers: 32
+sub-quantizers-size: 8
+poly-modulus: 8192
+plaintext-modulus: 48
+single-phase: false
+
+--- Boolean Options Status ---
+single-phase: DISABLED
+
+--- Server Arguments ---
+build/PreFHEtch_server --nlist 256 --sub-quantizers 32 --sub-quantizers-size 8 --poly-modulus 8192 --plaintext-modulus 48
+
+--- Client Arguments ---
+build/PreFHEtch_client --nq 3 --nprobe 5 --coarse-probe 200 --k 100
+
+--- Server Output ---
+[2025-07-31 11:24:53.189] [info] [server.cpp:69] Encryption params = valid
+[2025-07-31 11:24:53.190] [info] [server_lib.cpp:100] Reading cached data from index file = build/IVF256_PQ32_SUB_QUANTIZER_SIZE8.faiss
+[2025-07-31 11:24:53.212] [info] [server.cpp:81] Initialized index, time = 22441(us)
+[2025-07-31 11:24:53.212] [info] [server_lib.cpp:63] Server listening on 0.0.0.0:8080
+[2025-07-31 11:24:53.721] [info] [Query.cc:19]
+
+Received request on /query
+[2025-07-31 11:24:53.762] [info] [Query.cc:42] Time to retrieve centroids = 518(us)
+[2025-07-31 11:24:53.762] [info] [Query.cc:44] Time to serialise encrypted params = 303(us)
+[2025-07-31 11:24:53.762] [info] [Query.cc:46] Exiting from query handler, total handler time = 40356(us)
+[2025-07-31 11:24:58.230] [info] [Query.cc:58] Received request on /coarsesearch
+[2025-07-31 11:25:31.481] [info] [Query.cc:108] Size of the serialised encrypted data = 1121(mb)
+[2025-07-31 11:28:23.361] [info] [Query.cc:118] Time to deserialise coarse search params = 377437(us)
+[2025-07-31 11:28:23.361] [info] [Query.cc:120] Time to perform coarse search = 11800488(us)
+[2025-07-31 11:28:23.361] [info] [Query.cc:122] Time to serialise coarse search results = 1527721(us)
+[2025-07-31 11:28:23.361] [info] [Query.cc:124] Size of the unserialised encrypted data = 343(mb)
+[2025-07-31 11:28:23.361] [info] [Query.cc:127] Exiting from coarse search handler, total handler time = 205131295(us)
+
+--- Client Standard Output ---
+[2025-07-31 11:24:53.720] [info] [client.cpp:60] Enable single phase search = false
+[2025-07-31 11:24:53.720] [info] [client.cpp:61] Starting query and timers
+[2025-07-31 11:24:53.720] [info] [client.cpp:62] num_queries = 3, nprobe = 5, coarse_probe = 200
+[2025-07-31 11:24:53.720] [info] [client.cpp:75] Query vectors obtained successfully, time = 75(us)
+[2025-07-31 11:24:53.786] [info] [client.cpp:81] Fetched centroids from server successfully, time = 66106(us)
+[2025-07-31 11:24:54.161] [info] [client.cpp:90] Computed nearest centroids successfully, time = 357(us)
+[2025-07-31 11:24:54.559] [info] [client.cpp:162] Computed encrypted coarse search params time = 398297(us)
+[2025-07-31 11:24:56.366] [info] [client_lib.cpp:345] Size of the coarse search request = 134(mb)
+[2025-07-31 11:29:22.854] [info] [client.cpp:175] Received encrypted coarse distances successfully, time = 268294932(us)
+[2025-07-31 11:29:24.461] [info] [client.cpp:184] Deserialised and decrypted coarse distances successfully, time = 1607213(us)
+[2025-07-31 11:29:24.461] [error] [client_lib.cpp:595] Number of computed results is lesser than select_nearest_probe
+
+--- Client Standard Error ---
+terminate called after throwing an instance of 'std::runtime_error'
+  what():  Number of computed results is lesser than select_nearest_probe
+
+--- Client Return Code ---
+-6
+
+--- FAILURE DETAILS ---
+Reason: Client process failed with return code: -6
+
+================================================================================
+END OF TEST RUN: 9
+================================================================================
+
+
+================================================================================
+TEST RUN: 10
+Timestamp: 2025-07-31 11:34:26.712078
+Status: SUCCESS
+================================================================================
+
+--- Configuration Parameters ---
+nq: 3
+nprobe: 5
+coarse-probe: 200
+k: 100
+nlist: 256
+sub-quantizers: 32
+sub-quantizers-size: 8
+poly-modulus: 8192
+plaintext-modulus: 48
+single-phase: true
+
+--- Boolean Options Status ---
+single-phase: ENABLED
+
+--- Server Arguments ---
+build/PreFHEtch_server --nlist 256 --sub-quantizers 32 --sub-quantizers-size 8 --poly-modulus 8192 --plaintext-modulus 48
+
+--- Client Arguments ---
+build/PreFHEtch_client --nq 3 --nprobe 5 --coarse-probe 200 --k 100 --single-phase
+
+--- Server Output ---
+[2025-07-31 11:29:26.616] [info] [server.cpp:69] Encryption params = valid
+[2025-07-31 11:29:26.617] [info] [server_lib.cpp:100] Reading cached data from index file = build/IVF256_PQ32_SUB_QUANTIZER_SIZE8.faiss
+[2025-07-31 11:29:26.636] [info] [server.cpp:81] Initialized index, time = 19504(us)
+[2025-07-31 11:29:26.636] [info] [server_lib.cpp:63] Server listening on 0.0.0.0:8080
+[2025-07-31 11:29:27.147] [info] [Query.cc:19]
+
+Received request on /query
+[2025-07-31 11:29:27.193] [info] [Query.cc:42] Time to retrieve centroids = 679(us)
+[2025-07-31 11:29:27.193] [info] [Query.cc:44] Time to serialise encrypted params = 383(us)
+[2025-07-31 11:29:27.193] [info] [Query.cc:46] Exiting from query handler, total handler time = 45468(us)
+[2025-07-31 11:29:30.496] [info] [Query.cc:240] Received request on /single-phase-search
+[2025-07-31 11:30:32.081] [info] [Query.cc:280] Size of the serialised encrypted data = 1121(mb)
+[2025-07-31 11:33:23.499] [info] [Query.cc:290] Time to deserialise single phase search params = 311947(us)
+[2025-07-31 11:33:23.499] [info] [Query.cc:292] Time to perform single phase search = 41380622(us)
+[2025-07-31 11:33:23.499] [info] [Query.cc:294] Time to serialise single phase search results = 1065742(us)
+[2025-07-31 11:33:23.499] [info] [Query.cc:296] Size of the unserialised encrypted data = 343(mb)
+[2025-07-31 11:33:23.499] [info] [Query.cc:299] Exiting from single phase search handler, total handler time = 233002418(us)
+
+--- Client Standard Output ---
+[2025-07-31 11:29:27.146] [info] [client.cpp:60] Enable single phase search = true
+[2025-07-31 11:29:27.146] [info] [client.cpp:61] Starting query and timers
+[2025-07-31 11:29:27.146] [info] [client.cpp:62] num_queries = 3, nprobe = 5, coarse_probe = 200
+[2025-07-31 11:29:27.146] [info] [client.cpp:75] Query vectors obtained successfully, time = 100(us)
+[2025-07-31 11:29:27.220] [info] [client.cpp:81] Fetched centroids from server successfully, time = 74313(us)
+[2025-07-31 11:29:27.585] [info] [client.cpp:90] Computed nearest centroids successfully, time = 430(us)
+[2025-07-31 11:29:27.839] [info] [client.cpp:104] Computed encrypted single phase search params time = 254253(us)
+[2025-07-31 11:29:29.218] [info] [client_lib.cpp:776] Size of the single phase search request = 110(mb)
+[2025-07-31 11:34:22.602] [info] [client.cpp:114] Received encrypted single phase search distances successfully, time = 294762430(us)
+[2025-07-31 11:34:24.246] [info] [client.cpp:123] Deserialised and decrypted search distances successfully, time = 1644771(us)
+[2025-07-31 11:34:24.246] [info] [client.cpp:133] Computed nearest precise vectors successfully, time = 34(us)
+
+[2025-07-31 11:34:24.246] [info] [client.cpp:138] Complete Single Phase Search time = 297100757(us)
+[2025-07-31 11:34:24.246] [info] [client.cpp:141] Single Phase Search Query completed!
+
+[2025-07-31 11:34:24.246] [info] [client_lib.cpp:492] BENCHMARK RESULTS
+
+
+[2025-07-31 11:34:24.246] [info] [client_lib.cpp:565] Total Query Benchmark Results
+[2025-07-31 11:34:24.246] [info] [client_lib.cpp:566] Recall@1 = 1, Recall@10 = 1, Recall@100 = 0.40333334
+[2025-07-31 11:34:24.246] [info] [client_lib.cpp:570] MRR@1 = 0.6666667, MRR@10 = 0.6666667, MRR@100 = 0.6666667
+
+
+----------------------------------------------------------------------------------------------------
+
+--- Client Standard Error ---
+No client stderr
+
+--- Client Return Code ---
+0
+
+================================================================================
+END OF TEST RUN: 10
+================================================================================
+
+
+================================================================================
+TEST RUN: 11
+Timestamp: 2025-07-31 11:48:05.711670
+Status: SUCCESS
+================================================================================
+
+--- Configuration Parameters ---
+nq: 3
+nprobe: 10
+coarse-probe: 200
+k: 100
+nlist: 256
+sub-quantizers: 32
+sub-quantizers-size: 8
+poly-modulus: 8192
+plaintext-modulus: 48
+single-phase: false
+
+--- Boolean Options Status ---
+single-phase: DISABLED
+
+--- Server Arguments ---
+build/PreFHEtch_server --nlist 256 --sub-quantizers 32 --sub-quantizers-size 8 --poly-modulus 8192 --plaintext-modulus 48
+
+--- Client Arguments ---
+build/PreFHEtch_client --nq 3 --nprobe 10 --coarse-probe 200 --k 100
+
+--- Server Output ---
+[2025-07-31 11:34:26.752] [info] [server.cpp:69] Encryption params = valid
+[2025-07-31 11:34:26.753] [info] [server_lib.cpp:100] Reading cached data from index file = build/IVF256_PQ32_SUB_QUANTIZER_SIZE8.faiss
+[2025-07-31 11:34:26.779] [info] [server.cpp:81] Initialized index, time = 25937(us)
+[2025-07-31 11:34:26.779] [info] [server_lib.cpp:63] Server listening on 0.0.0.0:8080
+[2025-07-31 11:34:27.288] [info] [Query.cc:19]
+
+Received request on /query
+[2025-07-31 11:34:27.328] [info] [Query.cc:42] Time to retrieve centroids = 712(us)
+[2025-07-31 11:34:27.328] [info] [Query.cc:44] Time to serialise encrypted params = 470(us)
+[2025-07-31 11:34:27.328] [info] [Query.cc:46] Exiting from query handler, total handler time = 39231(us)
+[2025-07-31 11:34:32.340] [info] [Query.cc:58] Received request on /coarsesearch
+[2025-07-31 11:35:37.652] [info] [Query.cc:108] Size of the serialised encrypted data = 2436(mb)
+[2025-07-31 11:41:39.071] [info] [Query.cc:118] Time to deserialise coarse search params = 480919(us)
+[2025-07-31 11:41:39.071] [info] [Query.cc:120] Time to perform coarse search = 22808348(us)
+[2025-07-31 11:41:39.071] [info] [Query.cc:122] Time to serialise coarse search results = 2315357(us)
+[2025-07-31 11:41:39.071] [info] [Query.cc:124] Size of the unserialised encrypted data = 745(mb)
+[2025-07-31 11:41:39.071] [info] [Query.cc:127] Exiting from coarse search handler, total handler time = 426730749(us)
+[2025-07-31 11:43:52.183] [info] [Query.cc:141] Received request on /precisesearch
+[2025-07-31 11:47:10.750] [info] [Query.cc:188] Time to deserialise precise search params = 234587(us)
+[2025-07-31 11:47:10.750] [info] [Query.cc:191] Time to perform precise search = 36928357(us)
+[2025-07-31 11:47:10.750] [info] [Query.cc:193] Time to serialise precise search results = 859093(us)
+[2025-07-31 11:47:10.750] [info] [Query.cc:196] Exiting from precise search handler, total handler time = 198567432(us)
+
+--- Client Standard Output ---
+[2025-07-31 11:34:27.287] [info] [client.cpp:60] Enable single phase search = false
+[2025-07-31 11:34:27.287] [info] [client.cpp:61] Starting query and timers
+[2025-07-31 11:34:27.287] [info] [client.cpp:62] num_queries = 3, nprobe = 10, coarse_probe = 200
+[2025-07-31 11:34:27.287] [info] [client.cpp:75] Query vectors obtained successfully, time = 74(us)
+[2025-07-31 11:34:27.354] [info] [client.cpp:81] Fetched centroids from server successfully, time = 66759(us)
+[2025-07-31 11:34:27.742] [info] [client.cpp:90] Computed nearest centroids successfully, time = 442(us)
+[2025-07-31 11:34:28.283] [info] [client.cpp:162] Computed encrypted coarse search params time = 540537(us)
+[2025-07-31 11:34:30.330] [info] [client_lib.cpp:345] Size of the coarse search request = 160(mb)
+[2025-07-31 11:43:46.568] [info] [client.cpp:175] Received encrypted coarse distances successfully, time = 558285532(us)
+[2025-07-31 11:43:50.191] [info] [client.cpp:184] Deserialised and decrypted coarse distances successfully, time = 3622318(us)
+[2025-07-31 11:43:50.191] [info] [client.cpp:195] Computed nearest coarse vectors successfully, time = 160(us)
+[2025-07-31 11:43:51.119] [info] [client_lib.cpp:424] Size of the precise search request = 110(mb)
+[2025-07-31 11:48:00.900] [info] [client.cpp:207] Received precise distance scores successfully, time = 250708945(us)
+[2025-07-31 11:48:02.472] [info] [client.cpp:216] Deserialised and decrypted precise distances successfully, time = 1572474(us)
+[2025-07-31 11:48:02.473] [info] [client.cpp:227] Computed nearest precise vectors successfully, time = 36(us)
+
+[2025-07-31 11:48:02.473] [info] [client.cpp:232] Complete Two Phase Search time = 815185670(us)
+[2025-07-31 11:48:02.473] [info] [client.cpp:235] Two Phase Search Query completed!
+
+[2025-07-31 11:48:02.473] [info] [client_lib.cpp:492] BENCHMARK RESULTS
+
+
+[2025-07-31 11:48:02.473] [info] [client_lib.cpp:565] Total Query Benchmark Results
+[2025-07-31 11:48:02.473] [info] [client_lib.cpp:566] Recall@1 = 1, Recall@10 = 1, Recall@100 = 0.78333336
+[2025-07-31 11:48:02.473] [info] [client_lib.cpp:570] MRR@1 = 1, MRR@10 = 1, MRR@100 = 1
+
+
+----------------------------------------------------------------------------------------------------
+
+--- Client Standard Error ---
+No client stderr
+
+--- Client Return Code ---
+0
+
+================================================================================
+END OF TEST RUN: 11
+================================================================================
+
+
+================================================================================
+TEST RUN: 12
+Timestamp: 2025-07-31 11:58:48.888448
+Status: SUCCESS
+================================================================================
+
+--- Configuration Parameters ---
+nq: 3
+nprobe: 10
+coarse-probe: 200
+k: 100
+nlist: 256
+sub-quantizers: 32
+sub-quantizers-size: 8
+poly-modulus: 8192
+plaintext-modulus: 48
+single-phase: true
+
+--- Boolean Options Status ---
+single-phase: ENABLED
+
+--- Server Arguments ---
+build/PreFHEtch_server --nlist 256 --sub-quantizers 32 --sub-quantizers-size 8 --poly-modulus 8192 --plaintext-modulus 48
+
+--- Client Arguments ---
+build/PreFHEtch_client --nq 3 --nprobe 10 --coarse-probe 200 --k 100 --single-phase
+
+--- Server Output ---
+[2025-07-31 11:48:05.758] [info] [server.cpp:69] Encryption params = valid
+[2025-07-31 11:48:05.759] [info] [server_lib.cpp:100] Reading cached data from index file = build/IVF256_PQ32_SUB_QUANTIZER_SIZE8.faiss
+[2025-07-31 11:48:05.781] [info] [server.cpp:81] Initialized index, time = 22065(us)
+[2025-07-31 11:48:05.781] [info] [server_lib.cpp:63] Server listening on 0.0.0.0:8080
+[2025-07-31 11:48:06.291] [info] [Query.cc:19]
+
+Received request on /query
+[2025-07-31 11:48:06.330] [info] [Query.cc:42] Time to retrieve centroids = 585(us)
+[2025-07-31 11:48:06.330] [info] [Query.cc:44] Time to serialise encrypted params = 350(us)
+[2025-07-31 11:48:06.330] [info] [Query.cc:46] Exiting from query handler, total handler time = 39298(us)
+[2025-07-31 11:48:09.735] [info] [Query.cc:240] Received request on /single-phase-search
+[2025-07-31 11:50:19.460] [info] [Query.cc:280] Size of the serialised encrypted data = 2436(mb)
+[2025-07-31 11:56:36.790] [info] [Query.cc:290] Time to deserialise single phase search params = 295852(us)
+[2025-07-31 11:56:36.790] [info] [Query.cc:292] Time to perform single phase search = 89639097(us)
+[2025-07-31 11:56:36.790] [info] [Query.cc:294] Time to serialise single phase search results = 2514474(us)
+[2025-07-31 11:56:36.790] [info] [Query.cc:296] Size of the unserialised encrypted data = 745(mb)
+[2025-07-31 11:56:36.790] [info] [Query.cc:299] Exiting from single phase search handler, total handler time = 507054997(us)
+
+--- Client Standard Output ---
+[2025-07-31 11:48:06.289] [info] [client.cpp:60] Enable single phase search = true
+[2025-07-31 11:48:06.289] [info] [client.cpp:61] Starting query and timers
+[2025-07-31 11:48:06.289] [info] [client.cpp:62] num_queries = 3, nprobe = 10, coarse_probe = 200
+[2025-07-31 11:48:06.289] [info] [client.cpp:75] Query vectors obtained successfully, time = 90(us)
+[2025-07-31 11:48:06.354] [info] [client.cpp:81] Fetched centroids from server successfully, time = 65018(us)
+[2025-07-31 11:48:06.723] [info] [client.cpp:90] Computed nearest centroids successfully, time = 443(us)
+[2025-07-31 11:48:06.986] [info] [client.cpp:104] Computed encrypted single phase search params time = 262423(us)
+[2025-07-31 11:48:08.380] [info] [client_lib.cpp:776] Size of the single phase search request = 110(mb)
+[2025-07-31 11:58:42.428] [info] [client.cpp:114] Received encrypted single phase search distances successfully, time = 635441935(us)
+[2025-07-31 11:58:45.997] [info] [client.cpp:123] Deserialised and decrypted search distances successfully, time = 3569268(us)
+[2025-07-31 11:58:45.997] [info] [client.cpp:133] Computed nearest precise vectors successfully, time = 77(us)
+
+[2025-07-31 11:58:45.997] [info] [client.cpp:138] Complete Single Phase Search time = 639707687(us)
+[2025-07-31 11:58:45.997] [info] [client.cpp:141] Single Phase Search Query completed!
+
+[2025-07-31 11:58:45.997] [info] [client_lib.cpp:492] BENCHMARK RESULTS
+
+
+[2025-07-31 11:58:45.997] [info] [client_lib.cpp:565] Total Query Benchmark Results
+[2025-07-31 11:58:45.997] [info] [client_lib.cpp:566] Recall@1 = 1, Recall@10 = 1, Recall@100 = 0.78333336
+[2025-07-31 11:58:45.997] [info] [client_lib.cpp:570] MRR@1 = 1, MRR@10 = 1, MRR@100 = 1
+
+
+----------------------------------------------------------------------------------------------------
+
+--- Client Standard Error ---
+No client stderr
+
+--- Client Return Code ---
+0
+
+================================================================================
+END OF TEST RUN: 12
+================================================================================
+
+
+================================================================================
+TEST RUN: 13
+Timestamp: 2025-07-31 12:04:55.684581
+Status: FAILED
+Failure Reason: Client process failed with return code: -6
+================================================================================
+
+--- Configuration Parameters ---
+nq: 4
+nprobe: 5
+coarse-probe: 200
+k: 100
+nlist: 256
+sub-quantizers: 32
+sub-quantizers-size: 8
+poly-modulus: 8192
+plaintext-modulus: 48
+single-phase: false
+
+--- Boolean Options Status ---
+single-phase: DISABLED
+
+--- Server Arguments ---
+build/PreFHEtch_server --nlist 256 --sub-quantizers 32 --sub-quantizers-size 8 --poly-modulus 8192 --plaintext-modulus 48
+
+--- Client Arguments ---
+build/PreFHEtch_client --nq 4 --nprobe 5 --coarse-probe 200 --k 100
+
+--- Server Output ---
+[2025-07-31 11:58:48.925] [info] [server.cpp:69] Encryption params = valid
+[2025-07-31 11:58:48.926] [info] [server_lib.cpp:100] Reading cached data from index file = build/IVF256_PQ32_SUB_QUANTIZER_SIZE8.faiss
+[2025-07-31 11:58:48.947] [info] [server.cpp:81] Initialized index, time = 21998(us)
+[2025-07-31 11:58:48.948] [info] [server_lib.cpp:63] Server listening on 0.0.0.0:8080
+[2025-07-31 11:58:49.458] [info] [Query.cc:19]
+
+Received request on /query
+[2025-07-31 11:58:49.497] [info] [Query.cc:42] Time to retrieve centroids = 672(us)
+[2025-07-31 11:58:49.497] [info] [Query.cc:44] Time to serialise encrypted params = 533(us)
+[2025-07-31 11:58:49.497] [info] [Query.cc:46] Exiting from query handler, total handler time = 39574(us)
+[2025-07-31 11:58:53.964] [info] [Query.cc:58] Received request on /coarsesearch
+[2025-07-31 11:59:34.410] [info] [Query.cc:108] Size of the serialised encrypted data = 1579(mb)
+[2025-07-31 12:03:27.829] [info] [Query.cc:118] Time to deserialise coarse search params = 418984(us)
+[2025-07-31 12:03:27.829] [info] [Query.cc:120] Time to perform coarse search = 13679040(us)
+[2025-07-31 12:03:27.829] [info] [Query.cc:122] Time to serialise coarse search results = 1574038(us)
+[2025-07-31 12:03:27.829] [info] [Query.cc:124] Size of the unserialised encrypted data = 483(mb)
+[2025-07-31 12:03:27.829] [info] [Query.cc:127] Exiting from coarse search handler, total handler time = 273864971(us)
+
+--- Client Standard Output ---
+[2025-07-31 11:58:49.456] [info] [client.cpp:60] Enable single phase search = false
+[2025-07-31 11:58:49.456] [info] [client.cpp:61] Starting query and timers
+[2025-07-31 11:58:49.456] [info] [client.cpp:62] num_queries = 4, nprobe = 5, coarse_probe = 200
+[2025-07-31 11:58:49.456] [info] [client.cpp:75] Query vectors obtained successfully, time = 74(us)
+[2025-07-31 11:58:49.521] [info] [client.cpp:81] Fetched centroids from server successfully, time = 64799(us)
+[2025-07-31 11:58:49.889] [info] [client.cpp:90] Computed nearest centroids successfully, time = 478(us)
+[2025-07-31 11:58:50.316] [info] [client.cpp:162] Computed encrypted coarse search params time = 427040(us)
+[2025-07-31 11:58:52.237] [info] [client_lib.cpp:345] Size of the coarse search request = 143(mb)
+[2025-07-31 12:04:50.826] [info] [client.cpp:175] Received encrypted coarse distances successfully, time = 360510127(us)
+[2025-07-31 12:04:53.137] [info] [client.cpp:184] Deserialised and decrypted coarse distances successfully, time = 2310628(us)
+[2025-07-31 12:04:53.137] [error] [client_lib.cpp:595] Number of computed results is lesser than select_nearest_probe
+
+--- Client Standard Error ---
+terminate called after throwing an instance of 'std::runtime_error'
+  what():  Number of computed results is lesser than select_nearest_probe
+
+--- Client Return Code ---
+-6
+
+--- FAILURE DETAILS ---
+Reason: Client process failed with return code: -6
+
+================================================================================
+END OF TEST RUN: 13
+================================================================================
+
+
+================================================================================
+TEST RUN: 14
+Timestamp: 2025-07-31 12:11:42.250824
+Status: SUCCESS
+================================================================================
+
+--- Configuration Parameters ---
+nq: 4
+nprobe: 5
+coarse-probe: 200
+k: 100
+nlist: 256
+sub-quantizers: 32
+sub-quantizers-size: 8
+poly-modulus: 8192
+plaintext-modulus: 48
+single-phase: true
+
+--- Boolean Options Status ---
+single-phase: ENABLED
+
+--- Server Arguments ---
+build/PreFHEtch_server --nlist 256 --sub-quantizers 32 --sub-quantizers-size 8 --poly-modulus 8192 --plaintext-modulus 48
+
+--- Client Arguments ---
+build/PreFHEtch_client --nq 4 --nprobe 5 --coarse-probe 200 --k 100 --single-phase
+
+--- Server Output ---
+[2025-07-31 12:04:55.721] [info] [server.cpp:69] Encryption params = valid
+[2025-07-31 12:04:55.722] [info] [server_lib.cpp:100] Reading cached data from index file = build/IVF256_PQ32_SUB_QUANTIZER_SIZE8.faiss
+[2025-07-31 12:04:55.745] [info] [server.cpp:81] Initialized index, time = 23925(us)
+[2025-07-31 12:04:55.745] [info] [server_lib.cpp:63] Server listening on 0.0.0.0:8080
+[2025-07-31 12:04:56.255] [info] [Query.cc:19]
+
+Received request on /query
+[2025-07-31 12:04:56.294] [info] [Query.cc:42] Time to retrieve centroids = 542(us)
+[2025-07-31 12:04:56.294] [info] [Query.cc:44] Time to serialise encrypted params = 322(us)
+[2025-07-31 12:04:56.294] [info] [Query.cc:46] Exiting from query handler, total handler time = 38413(us)
+[2025-07-31 12:04:59.689] [info] [Query.cc:240] Received request on /single-phase-search
+[2025-07-31 12:06:24.360] [info] [Query.cc:280] Size of the serialised encrypted data = 1579(mb)
+[2025-07-31 12:10:17.428] [info] [Query.cc:290] Time to deserialise single phase search params = 302288(us)
+[2025-07-31 12:10:17.428] [info] [Query.cc:292] Time to perform single phase search = 57885419(us)
+[2025-07-31 12:10:17.428] [info] [Query.cc:294] Time to serialise single phase search results = 2457862(us)
+[2025-07-31 12:10:17.428] [info] [Query.cc:296] Size of the unserialised encrypted data = 483(mb)
+[2025-07-31 12:10:17.428] [info] [Query.cc:299] Exiting from single phase search handler, total handler time = 317738460(us)
+
+--- Client Standard Output ---
+[2025-07-31 12:04:56.254] [info] [client.cpp:60] Enable single phase search = true
+[2025-07-31 12:04:56.254] [info] [client.cpp:61] Starting query and timers
+[2025-07-31 12:04:56.254] [info] [client.cpp:62] num_queries = 4, nprobe = 5, coarse_probe = 200
+[2025-07-31 12:04:56.254] [info] [client.cpp:75] Query vectors obtained successfully, time = 75(us)
+[2025-07-31 12:04:56.317] [info] [client.cpp:81] Fetched centroids from server successfully, time = 63417(us)
+[2025-07-31 12:04:56.688] [info] [client.cpp:90] Computed nearest centroids successfully, time = 553(us)
+[2025-07-31 12:04:56.950] [info] [client.cpp:104] Computed encrypted single phase search params time = 261711(us)
+[2025-07-31 12:04:58.367] [info] [client_lib.cpp:776] Size of the single phase search request = 111(mb)
+[2025-07-31 12:11:37.733] [info] [client.cpp:114] Received encrypted single phase search distances successfully, time = 400783425(us)
+[2025-07-31 12:11:40.038] [info] [client.cpp:123] Deserialised and decrypted search distances successfully, time = 2304111(us)
+[2025-07-31 12:11:40.038] [info] [client.cpp:133] Computed nearest precise vectors successfully, time = 53(us)
+
+[2025-07-31 12:11:40.038] [info] [client.cpp:138] Complete Single Phase Search time = 403783830(us)
+[2025-07-31 12:11:40.038] [info] [client.cpp:141] Single Phase Search Query completed!
+
+[2025-07-31 12:11:40.038] [info] [client_lib.cpp:492] BENCHMARK RESULTS
+
+
+[2025-07-31 12:11:40.038] [info] [client_lib.cpp:565] Total Query Benchmark Results
+[2025-07-31 12:11:40.038] [info] [client_lib.cpp:566] Recall@1 = 1, Recall@10 = 1, Recall@100 = 0.4625
+[2025-07-31 12:11:40.038] [info] [client_lib.cpp:570] MRR@1 = 0.5, MRR@10 = 0.5, MRR@100 = 0.5
+
+
+----------------------------------------------------------------------------------------------------
+
+--- Client Standard Error ---
+No client stderr
+
+--- Client Return Code ---
+0
+
+================================================================================
+END OF TEST RUN: 14
+================================================================================
+
+
+================================================================================
+TEST RUN: 15
+Timestamp: 2025-07-31 12:30:16.031953
+Status: SUCCESS
+================================================================================
+
+--- Configuration Parameters ---
+nq: 4
+nprobe: 10
+coarse-probe: 200
+k: 100
+nlist: 256
+sub-quantizers: 32
+sub-quantizers-size: 8
+poly-modulus: 8192
+plaintext-modulus: 48
+single-phase: false
+
+--- Boolean Options Status ---
+single-phase: DISABLED
+
+--- Server Arguments ---
+build/PreFHEtch_server --nlist 256 --sub-quantizers 32 --sub-quantizers-size 8 --poly-modulus 8192 --plaintext-modulus 48
+
+--- Client Arguments ---
+build/PreFHEtch_client --nq 4 --nprobe 10 --coarse-probe 200 --k 100
+
+--- Server Output ---
+[2025-07-31 12:11:42.283] [info] [server.cpp:69] Encryption params = valid
+[2025-07-31 12:11:42.283] [info] [server_lib.cpp:100] Reading cached data from index file = build/IVF256_PQ32_SUB_QUANTIZER_SIZE8.faiss
+[2025-07-31 12:11:42.303] [info] [server.cpp:81] Initialized index, time = 19733(us)
+[2025-07-31 12:11:42.303] [info] [server_lib.cpp:63] Server listening on 0.0.0.0:8080
+[2025-07-31 12:11:42.813] [info] [Query.cc:19]
+
+Received request on /query
+[2025-07-31 12:11:42.851] [info] [Query.cc:42] Time to retrieve centroids = 528(us)
+[2025-07-31 12:11:42.851] [info] [Query.cc:44] Time to serialise encrypted params = 523(us)
+[2025-07-31 12:11:42.851] [info] [Query.cc:46] Exiting from query handler, total handler time = 38472(us)
+[2025-07-31 12:11:48.447] [info] [Query.cc:58] Received request on /coarsesearch
+[2025-07-31 12:13:11.257] [info] [Query.cc:108] Size of the serialised encrypted data = 3389(mb)
+[2025-07-31 12:21:34.442] [info] [Query.cc:118] Time to deserialise coarse search params = 477367(us)
+[2025-07-31 12:21:34.442] [info] [Query.cc:120] Time to perform coarse search = 26114694(us)
+[2025-07-31 12:21:34.442] [info] [Query.cc:122] Time to serialise coarse search results = 5022160(us)
+[2025-07-31 12:21:34.442] [info] [Query.cc:124] Size of the unserialised encrypted data = 1037(mb)
+[2025-07-31 12:21:34.442] [info] [Query.cc:127] Exiting from coarse search handler, total handler time = 585994557(us)
+[2025-07-31 12:24:38.593] [info] [Query.cc:141] Received request on /precisesearch
+[2025-07-31 12:29:00.558] [info] [Query.cc:188] Time to deserialise precise search params = 254211(us)
+[2025-07-31 12:29:00.558] [info] [Query.cc:191] Time to perform precise search = 49292078(us)
+[2025-07-31 12:29:00.558] [info] [Query.cc:193] Time to serialise precise search results = 1102291(us)
+[2025-07-31 12:29:00.558] [info] [Query.cc:196] Exiting from precise search handler, total handler time = 261964838(us)
+
+--- Client Standard Output ---
+[2025-07-31 12:11:42.811] [info] [client.cpp:60] Enable single phase search = false
+[2025-07-31 12:11:42.811] [info] [client.cpp:61] Starting query and timers
+[2025-07-31 12:11:42.811] [info] [client.cpp:62] num_queries = 4, nprobe = 10, coarse_probe = 200
+[2025-07-31 12:11:42.811] [info] [client.cpp:75] Query vectors obtained successfully, time = 91(us)
+[2025-07-31 12:11:42.874] [info] [client.cpp:81] Fetched centroids from server successfully, time = 62453(us)
+[2025-07-31 12:11:43.240] [info] [client.cpp:90] Computed nearest centroids successfully, time = 555(us)
+[2025-07-31 12:11:43.867] [info] [client.cpp:162] Computed encrypted coarse search params time = 626542(us)
+[2025-07-31 12:11:46.162] [info] [client_lib.cpp:345] Size of the coarse search request = 177(mb)
+[2025-07-31 12:24:31.617] [info] [client.cpp:175] Received encrypted coarse distances successfully, time = 767749592(us)
+[2025-07-31 12:24:36.581] [info] [client.cpp:184] Deserialised and decrypted coarse distances successfully, time = 4964715(us)
+[2025-07-31 12:24:36.582] [info] [client.cpp:195] Computed nearest coarse vectors successfully, time = 114(us)
+[2025-07-31 12:24:37.499] [info] [client_lib.cpp:424] Size of the precise search request = 111(mb)
+[2025-07-31 12:30:09.786] [info] [client.cpp:207] Received precise distance scores successfully, time = 333204639(us)
+[2025-07-31 12:30:11.829] [info] [client.cpp:216] Deserialised and decrypted precise distances successfully, time = 2042379(us)
+[2025-07-31 12:30:11.829] [info] [client.cpp:227] Computed nearest precise vectors successfully, time = 42(us)
+
+[2025-07-31 12:30:11.829] [info] [client.cpp:232] Complete Two Phase Search time = 1109017561(us)
+[2025-07-31 12:30:11.829] [info] [client.cpp:235] Two Phase Search Query completed!
+
+[2025-07-31 12:30:11.829] [info] [client_lib.cpp:492] BENCHMARK RESULTS
+
+
+[2025-07-31 12:30:11.829] [info] [client_lib.cpp:565] Total Query Benchmark Results
+[2025-07-31 12:30:11.829] [info] [client_lib.cpp:566] Recall@1 = 1, Recall@10 = 1, Recall@100 = 0.8225
+[2025-07-31 12:30:11.829] [info] [client_lib.cpp:570] MRR@1 = 1, MRR@10 = 1, MRR@100 = 1
+
+
+----------------------------------------------------------------------------------------------------
+
+--- Client Standard Error ---
+No client stderr
+
+--- Client Return Code ---
+0
+
+================================================================================
+END OF TEST RUN: 15
+================================================================================
+
+
+================================================================================
+TEST RUN: 16
+Timestamp: 2025-07-31 12:44:46.789089
+Status: SUCCESS
+================================================================================
+
+--- Configuration Parameters ---
+nq: 4
+nprobe: 10
+coarse-probe: 200
+k: 100
+nlist: 256
+sub-quantizers: 32
+sub-quantizers-size: 8
+poly-modulus: 8192
+plaintext-modulus: 48
+single-phase: true
+
+--- Boolean Options Status ---
+single-phase: ENABLED
+
+--- Server Arguments ---
+build/PreFHEtch_server --nlist 256 --sub-quantizers 32 --sub-quantizers-size 8 --poly-modulus 8192 --plaintext-modulus 48
+
+--- Client Arguments ---
+build/PreFHEtch_client --nq 4 --nprobe 10 --coarse-probe 200 --k 100 --single-phase
+
+--- Server Output ---
+[2025-07-31 12:30:16.068] [info] [server.cpp:69] Encryption params = valid
+[2025-07-31 12:30:16.068] [info] [server_lib.cpp:100] Reading cached data from index file = build/IVF256_PQ32_SUB_QUANTIZER_SIZE8.faiss
+[2025-07-31 12:30:16.090] [info] [server.cpp:81] Initialized index, time = 21993(us)
+[2025-07-31 12:30:16.090] [info] [server_lib.cpp:63] Server listening on 0.0.0.0:8080
+[2025-07-31 12:30:16.601] [info] [Query.cc:19]
+
+Received request on /query
+[2025-07-31 12:30:16.640] [info] [Query.cc:42] Time to retrieve centroids = 667(us)
+[2025-07-31 12:30:16.640] [info] [Query.cc:44] Time to serialise encrypted params = 439(us)
+[2025-07-31 12:30:16.640] [info] [Query.cc:46] Exiting from query handler, total handler time = 39060(us)
+[2025-07-31 12:30:20.065] [info] [Query.cc:240] Received request on /single-phase-search
+[2025-07-31 12:33:19.055] [info] [Query.cc:280] Size of the serialised encrypted data = 3389(mb)
+[2025-07-31 12:41:40.315] [info] [Query.cc:290] Time to deserialise single phase search params = 310624(us)
+[2025-07-31 12:41:40.315] [info] [Query.cc:292] Time to perform single phase search = 123127132(us)
+[2025-07-31 12:41:40.315] [info] [Query.cc:294] Time to serialise single phase search results = 5514226(us)
+[2025-07-31 12:41:40.315] [info] [Query.cc:296] Size of the unserialised encrypted data = 1037(mb)
+[2025-07-31 12:41:40.315] [info] [Query.cc:299] Exiting from single phase search handler, total handler time = 680250225(us)
+
+--- Client Standard Output ---
+[2025-07-31 12:30:16.600] [info] [client.cpp:60] Enable single phase search = true
+[2025-07-31 12:30:16.600] [info] [client.cpp:61] Starting query and timers
+[2025-07-31 12:30:16.600] [info] [client.cpp:62] num_queries = 4, nprobe = 10, coarse_probe = 200
+[2025-07-31 12:30:16.600] [info] [client.cpp:75] Query vectors obtained successfully, time = 136(us)
+[2025-07-31 12:30:16.666] [info] [client.cpp:81] Fetched centroids from server successfully, time = 66595(us)
+[2025-07-31 12:30:17.047] [info] [client.cpp:90] Computed nearest centroids successfully, time = 573(us)
+[2025-07-31 12:30:17.358] [info] [client.cpp:104] Computed encrypted single phase search params time = 311337(us)
+[2025-07-31 12:30:18.756] [info] [client_lib.cpp:776] Size of the single phase search request = 111(mb)
+[2025-07-31 12:44:38.593] [info] [client.cpp:114] Received encrypted single phase search distances successfully, time = 861234724(us)
+[2025-07-31 12:44:43.383] [info] [client.cpp:123] Deserialised and decrypted search distances successfully, time = 4790040(us)
+[2025-07-31 12:44:43.383] [info] [client.cpp:133] Computed nearest precise vectors successfully, time = 119(us)
+
+[2025-07-31 12:44:43.383] [info] [client.cpp:138] Complete Single Phase Search time = 866783688(us)
+[2025-07-31 12:44:43.383] [info] [client.cpp:141] Single Phase Search Query completed!
+
+[2025-07-31 12:44:43.383] [info] [client_lib.cpp:492] BENCHMARK RESULTS
+
+
+[2025-07-31 12:44:43.383] [info] [client_lib.cpp:565] Total Query Benchmark Results
+[2025-07-31 12:44:43.383] [info] [client_lib.cpp:566] Recall@1 = 1, Recall@10 = 1, Recall@100 = 0.8225
+[2025-07-31 12:44:43.383] [info] [client_lib.cpp:570] MRR@1 = 1, MRR@10 = 1, MRR@100 = 1
+
+
+----------------------------------------------------------------------------------------------------
+
+--- Client Standard Error ---
+No client stderr
+
+--- Client Return Code ---
+0
+
+================================================================================
+END OF TEST RUN: 16
+================================================================================
+
+
+================================================================================
+TEST RUN: 17
+Timestamp: 2025-07-31 12:52:06.175585
+Status: FAILED
+Failure Reason: Client process failed with return code: -6
+================================================================================
+
+--- Configuration Parameters ---
+nq: 5
+nprobe: 5
+coarse-probe: 200
+k: 100
+nlist: 256
+sub-quantizers: 32
+sub-quantizers-size: 8
+poly-modulus: 8192
+plaintext-modulus: 48
+single-phase: false
+
+--- Boolean Options Status ---
+single-phase: DISABLED
+
+--- Server Arguments ---
+build/PreFHEtch_server --nlist 256 --sub-quantizers 32 --sub-quantizers-size 8 --poly-modulus 8192 --plaintext-modulus 48
+
+--- Client Arguments ---
+build/PreFHEtch_client --nq 5 --nprobe 5 --coarse-probe 200 --k 100
+
+--- Server Output ---
+[2025-07-31 12:44:46.823] [info] [server.cpp:69] Encryption params = valid
+[2025-07-31 12:44:46.823] [info] [server_lib.cpp:100] Reading cached data from index file = build/IVF256_PQ32_SUB_QUANTIZER_SIZE8.faiss
+[2025-07-31 12:44:46.844] [info] [server.cpp:81] Initialized index, time = 21022(us)
+[2025-07-31 12:44:46.845] [info] [server_lib.cpp:63] Server listening on 0.0.0.0:8080
+[2025-07-31 12:44:47.354] [info] [Query.cc:19]
+
+Received request on /query
+[2025-07-31 12:44:47.394] [info] [Query.cc:42] Time to retrieve centroids = 882(us)
+[2025-07-31 12:44:47.394] [info] [Query.cc:44] Time to serialise encrypted params = 442(us)
+[2025-07-31 12:44:47.394] [info] [Query.cc:46] Exiting from query handler, total handler time = 39522(us)
+[2025-07-31 12:44:52.205] [info] [Query.cc:58] Received request on /coarsesearch
+[2025-07-31 12:45:40.481] [info] [Query.cc:108] Size of the serialised encrypted data = 1896(mb)
+[2025-07-31 12:50:20.800] [info] [Query.cc:118] Time to deserialise coarse search params = 447767(us)
+[2025-07-31 12:50:20.800] [info] [Query.cc:120] Time to perform coarse search = 16750915(us)
+[2025-07-31 12:50:20.800] [info] [Query.cc:122] Time to serialise coarse search results = 1922247(us)
+[2025-07-31 12:50:20.800] [info] [Query.cc:124] Size of the unserialised encrypted data = 580(mb)
+[2025-07-31 12:50:20.800] [info] [Query.cc:127] Exiting from coarse search handler, total handler time = 328595120(us)
+
+--- Client Standard Output ---
+[2025-07-31 12:44:47.352] [info] [client.cpp:60] Enable single phase search = false
+[2025-07-31 12:44:47.352] [info] [client.cpp:61] Starting query and timers
+[2025-07-31 12:44:47.353] [info] [client.cpp:62] num_queries = 5, nprobe = 5, coarse_probe = 200
+[2025-07-31 12:44:47.353] [info] [client.cpp:75] Query vectors obtained successfully, time = 79(us)
+[2025-07-31 12:44:47.417] [info] [client.cpp:81] Fetched centroids from server successfully, time = 64779(us)
+[2025-07-31 12:44:47.777] [info] [client.cpp:90] Computed nearest centroids successfully, time = 602(us)
+[2025-07-31 12:44:48.250] [info] [client.cpp:162] Computed encrypted coarse search params time = 472836(us)
+[2025-07-31 12:44:50.386] [info] [client_lib.cpp:345] Size of the coarse search request = 151(mb)
+[2025-07-31 12:52:00.616] [info] [client.cpp:175] Received encrypted coarse distances successfully, time = 432365918(us)
+[2025-07-31 12:52:03.386] [info] [client.cpp:184] Deserialised and decrypted coarse distances successfully, time = 2769978(us)
+[2025-07-31 12:52:03.386] [error] [client_lib.cpp:595] Number of computed results is lesser than select_nearest_probe
+
+--- Client Standard Error ---
+terminate called after throwing an instance of 'std::runtime_error'
+  what():  Number of computed results is lesser than select_nearest_probe
+
+--- Client Return Code ---
+-6
+
+--- FAILURE DETAILS ---
+Reason: Client process failed with return code: -6
+
+================================================================================
+END OF TEST RUN: 17
+================================================================================
+
+
+================================================================================
+TEST RUN: 18
+Timestamp: 2025-07-31 13:00:25.777467
+Status: SUCCESS
+================================================================================
+
+--- Configuration Parameters ---
+nq: 5
+nprobe: 5
+coarse-probe: 200
+k: 100
+nlist: 256
+sub-quantizers: 32
+sub-quantizers-size: 8
+poly-modulus: 8192
+plaintext-modulus: 48
+single-phase: true
+
+--- Boolean Options Status ---
+single-phase: ENABLED
+
+--- Server Arguments ---
+build/PreFHEtch_server --nlist 256 --sub-quantizers 32 --sub-quantizers-size 8 --poly-modulus 8192 --plaintext-modulus 48
+
+--- Client Arguments ---
+build/PreFHEtch_client --nq 5 --nprobe 5 --coarse-probe 200 --k 100 --single-phase
+
+--- Server Output ---
+[2025-07-31 12:52:06.209] [info] [server.cpp:69] Encryption params = valid
+[2025-07-31 12:52:06.210] [info] [server_lib.cpp:100] Reading cached data from index file = build/IVF256_PQ32_SUB_QUANTIZER_SIZE8.faiss
+[2025-07-31 12:52:06.231] [info] [server.cpp:81] Initialized index, time = 20854(us)
+[2025-07-31 12:52:06.231] [info] [server_lib.cpp:63] Server listening on 0.0.0.0:8080
+[2025-07-31 12:52:06.741] [info] [Query.cc:19]
+
+Received request on /query
+[2025-07-31 12:52:06.783] [info] [Query.cc:42] Time to retrieve centroids = 763(us)
+[2025-07-31 12:52:06.783] [info] [Query.cc:44] Time to serialise encrypted params = 546(us)
+[2025-07-31 12:52:06.783] [info] [Query.cc:46] Exiting from query handler, total handler time = 41663(us)
+[2025-07-31 12:52:10.124] [info] [Query.cc:240] Received request on /single-phase-search
+[2025-07-31 12:53:51.115] [info] [Query.cc:280] Size of the serialised encrypted data = 1896(mb)
+[2025-07-31 12:58:41.335] [info] [Query.cc:290] Time to deserialise single phase search params = 301899(us)
+[2025-07-31 12:58:41.335] [info] [Query.cc:292] Time to perform single phase search = 69695900(us)
+[2025-07-31 12:58:41.335] [info] [Query.cc:294] Time to serialise single phase search results = 1877941(us)
+[2025-07-31 12:58:41.335] [info] [Query.cc:296] Size of the unserialised encrypted data = 580(mb)
+[2025-07-31 12:58:41.335] [info] [Query.cc:299] Exiting from single phase search handler, total handler time = 391210863(us)
+
+--- Client Standard Output ---
+[2025-07-31 12:52:06.739] [info] [client.cpp:60] Enable single phase search = true
+[2025-07-31 12:52:06.739] [info] [client.cpp:61] Starting query and timers
+[2025-07-31 12:52:06.739] [info] [client.cpp:62] num_queries = 5, nprobe = 5, coarse_probe = 200
+[2025-07-31 12:52:06.739] [info] [client.cpp:75] Query vectors obtained successfully, time = 68(us)
+[2025-07-31 12:52:06.807] [info] [client.cpp:81] Fetched centroids from server successfully, time = 67528(us)
+[2025-07-31 12:52:07.201] [info] [client.cpp:90] Computed nearest centroids successfully, time = 731(us)
+[2025-07-31 12:52:07.463] [info] [client.cpp:104] Computed encrypted single phase search params time = 261376(us)
+[2025-07-31 12:52:08.828] [info] [client_lib.cpp:776] Size of the single phase search request = 112(mb)
+[2025-07-31 13:00:19.427] [info] [client.cpp:114] Received encrypted single phase search distances successfully, time = 491964120(us)
+[2025-07-31 13:00:22.290] [info] [client.cpp:123] Deserialised and decrypted search distances successfully, time = 2863630(us)
+[2025-07-31 13:00:22.290] [info] [client.cpp:133] Computed nearest precise vectors successfully, time = 70(us)
+
+[2025-07-31 13:00:22.290] [info] [client.cpp:138] Complete Single Phase Search time = 495551127(us)
+[2025-07-31 13:00:22.290] [info] [client.cpp:141] Single Phase Search Query completed!
+
+[2025-07-31 13:00:22.290] [info] [client_lib.cpp:492] BENCHMARK RESULTS
+
+
+[2025-07-31 13:00:22.291] [info] [client_lib.cpp:565] Total Query Benchmark Results
+[2025-07-31 13:00:22.291] [info] [client_lib.cpp:566] Recall@1 = 1, Recall@10 = 1, Recall@100 = 0.458
+[2025-07-31 13:00:22.291] [info] [client_lib.cpp:570] MRR@1 = 0.4, MRR@10 = 0.4, MRR@100 = 0.4
+
+
+----------------------------------------------------------------------------------------------------
+
+--- Client Standard Error ---
+No client stderr
+
+--- Client Return Code ---
+0
+
+================================================================================
+END OF TEST RUN: 18
+================================================================================
+
+
+================================================================================
+TEST RUN: 19
+Timestamp: 2025-07-31 13:23:17.256762
+Status: SUCCESS
+================================================================================
+
+--- Configuration Parameters ---
+nq: 5
+nprobe: 10
+coarse-probe: 200
+k: 100
+nlist: 256
+sub-quantizers: 32
+sub-quantizers-size: 8
+poly-modulus: 8192
+plaintext-modulus: 48
+single-phase: false
+
+--- Boolean Options Status ---
+single-phase: DISABLED
+
+--- Server Arguments ---
+build/PreFHEtch_server --nlist 256 --sub-quantizers 32 --sub-quantizers-size 8 --poly-modulus 8192 --plaintext-modulus 48
+
+--- Client Arguments ---
+build/PreFHEtch_client --nq 5 --nprobe 10 --coarse-probe 200 --k 100
+
+--- Server Output ---
+[2025-07-31 13:00:25.813] [info] [server.cpp:69] Encryption params = valid
+[2025-07-31 13:00:25.814] [info] [server_lib.cpp:100] Reading cached data from index file = build/IVF256_PQ32_SUB_QUANTIZER_SIZE8.faiss
+[2025-07-31 13:00:25.835] [info] [server.cpp:81] Initialized index, time = 21357(us)
+[2025-07-31 13:00:25.835] [info] [server_lib.cpp:63] Server listening on 0.0.0.0:8080
+[2025-07-31 13:00:26.345] [info] [Query.cc:19]
+
+Received request on /query
+[2025-07-31 13:00:26.385] [info] [Query.cc:42] Time to retrieve centroids = 843(us)
+[2025-07-31 13:00:26.385] [info] [Query.cc:44] Time to serialise encrypted params = 418(us)
+[2025-07-31 13:00:26.385] [info] [Query.cc:46] Exiting from query handler, total handler time = 39755(us)
+[2025-07-31 13:00:32.758] [info] [Query.cc:58] Received request on /coarsesearch
+[2025-07-31 13:02:10.972] [info] [Query.cc:108] Size of the serialised encrypted data = 4067(mb)
+[2025-07-31 13:12:16.302] [info] [Query.cc:118] Time to deserialise coarse search params = 544471(us)
+[2025-07-31 13:12:16.302] [info] [Query.cc:120] Time to perform coarse search = 29820432(us)
+[2025-07-31 13:12:16.302] [info] [Query.cc:122] Time to serialise coarse search results = 3990025(us)
+[2025-07-31 13:12:16.302] [info] [Query.cc:124] Size of the unserialised encrypted data = 1244(mb)
+[2025-07-31 13:12:16.302] [info] [Query.cc:127] Exiting from coarse search handler, total handler time = 703543847(us)
+[2025-07-31 13:15:53.092] [info] [Query.cc:141] Received request on /precisesearch
+[2025-07-31 13:21:42.564] [info] [Query.cc:188] Time to deserialise precise search params = 241246(us)
+[2025-07-31 13:21:42.564] [info] [Query.cc:191] Time to perform precise search = 61321750(us)
+[2025-07-31 13:21:42.564] [info] [Query.cc:193] Time to serialise precise search results = 1414499(us)
+[2025-07-31 13:21:42.564] [info] [Query.cc:196] Exiting from precise search handler, total handler time = 349471677(us)
+
+--- Client Standard Output ---
+[2025-07-31 13:00:26.344] [info] [client.cpp:60] Enable single phase search = false
+[2025-07-31 13:00:26.344] [info] [client.cpp:61] Starting query and timers
+[2025-07-31 13:00:26.344] [info] [client.cpp:62] num_queries = 5, nprobe = 10, coarse_probe = 200
+[2025-07-31 13:00:26.344] [info] [client.cpp:75] Query vectors obtained successfully, time = 90(us)
+[2025-07-31 13:00:26.435] [info] [client.cpp:81] Fetched centroids from server successfully, time = 90782(us)
+[2025-07-31 13:00:26.831] [info] [client.cpp:90] Computed nearest centroids successfully, time = 601(us)
+[2025-07-31 13:00:27.517] [info] [client.cpp:162] Computed encrypted coarse search params time = 686356(us)
+[2025-07-31 13:00:30.202] [info] [client_lib.cpp:345] Size of the coarse search request = 194(mb)
+[2025-07-31 13:15:45.232] [info] [client.cpp:175] Received encrypted coarse distances successfully, time = 917714408(us)
+[2025-07-31 13:15:51.056] [info] [client.cpp:184] Deserialised and decrypted coarse distances successfully, time = 5824241(us)
+[2025-07-31 13:15:51.056] [info] [client.cpp:195] Computed nearest coarse vectors successfully, time = 131(us)
+[2025-07-31 13:15:51.992] [info] [client_lib.cpp:424] Size of the precise search request = 112(mb)
+[2025-07-31 13:23:09.215] [info] [client.cpp:207] Received precise distance scores successfully, time = 438159036(us)
+[2025-07-31 13:23:11.704] [info] [client.cpp:216] Deserialised and decrypted precise distances successfully, time = 2488650(us)
+[2025-07-31 13:23:11.704] [info] [client.cpp:227] Computed nearest precise vectors successfully, time = 55(us)
+
+[2025-07-31 13:23:11.704] [info] [client.cpp:232] Complete Two Phase Search time = 1365360507(us)
+[2025-07-31 13:23:11.704] [info] [client.cpp:235] Two Phase Search Query completed!
+
+[2025-07-31 13:23:11.704] [info] [client_lib.cpp:492] BENCHMARK RESULTS
+
+
+[2025-07-31 13:23:11.704] [info] [client_lib.cpp:565] Total Query Benchmark Results
+[2025-07-31 13:23:11.704] [info] [client_lib.cpp:566] Recall@1 = 1, Recall@10 = 1, Recall@100 = 0.794
+[2025-07-31 13:23:11.704] [info] [client_lib.cpp:570] MRR@1 = 0.8, MRR@10 = 0.8, MRR@100 = 0.8
+
+
+----------------------------------------------------------------------------------------------------
+
+--- Client Standard Error ---
+No client stderr
+
+--- Client Return Code ---
+0
+
+================================================================================
+END OF TEST RUN: 19
+================================================================================
+
+
+================================================================================
+TEST RUN: 20
+Timestamp: 2025-07-31 13:40:34.283836
+Status: SUCCESS
+================================================================================
+
+--- Configuration Parameters ---
+nq: 5
+nprobe: 10
+coarse-probe: 200
+k: 100
+nlist: 256
+sub-quantizers: 32
+sub-quantizers-size: 8
+poly-modulus: 8192
+plaintext-modulus: 48
+single-phase: true
+
+--- Boolean Options Status ---
+single-phase: ENABLED
+
+--- Server Arguments ---
+build/PreFHEtch_server --nlist 256 --sub-quantizers 32 --sub-quantizers-size 8 --poly-modulus 8192 --plaintext-modulus 48
+
+--- Client Arguments ---
+build/PreFHEtch_client --nq 5 --nprobe 10 --coarse-probe 200 --k 100 --single-phase
+
+--- Server Output ---
+[2025-07-31 13:23:17.288] [info] [server.cpp:69] Encryption params = valid
+[2025-07-31 13:23:17.289] [info] [server_lib.cpp:100] Reading cached data from index file = build/IVF256_PQ32_SUB_QUANTIZER_SIZE8.faiss
+[2025-07-31 13:23:17.311] [info] [server.cpp:81] Initialized index, time = 22242(us)
+[2025-07-31 13:23:17.311] [info] [server_lib.cpp:63] Server listening on 0.0.0.0:8080
+[2025-07-31 13:23:17.820] [info] [Query.cc:19]
+
+Received request on /query
+[2025-07-31 13:23:17.860] [info] [Query.cc:42] Time to retrieve centroids = 711(us)
+[2025-07-31 13:23:17.860] [info] [Query.cc:44] Time to serialise encrypted params = 400(us)
+[2025-07-31 13:23:17.860] [info] [Query.cc:46] Exiting from query handler, total handler time = 39652(us)
+[2025-07-31 13:23:21.494] [info] [Query.cc:240] Received request on /single-phase-search
+[2025-07-31 13:27:00.097] [info] [Query.cc:280] Size of the serialised encrypted data = 4067(mb)
+[2025-07-31 13:37:04.636] [info] [Query.cc:290] Time to deserialise single phase search params = 306362(us)
+[2025-07-31 13:37:04.636] [info] [Query.cc:292] Time to perform single phase search = 148700683(us)
+[2025-07-31 13:37:04.636] [info] [Query.cc:294] Time to serialise single phase search results = 6870443(us)
+[2025-07-31 13:37:04.636] [info] [Query.cc:296] Size of the unserialised encrypted data = 1244(mb)
+[2025-07-31 13:37:04.636] [info] [Query.cc:299] Exiting from single phase search handler, total handler time = 823142454(us)
+
+--- Client Standard Output ---
+[2025-07-31 13:23:17.819] [info] [client.cpp:60] Enable single phase search = true
+[2025-07-31 13:23:17.819] [info] [client.cpp:61] Starting query and timers
+[2025-07-31 13:23:17.819] [info] [client.cpp:62] num_queries = 5, nprobe = 10, coarse_probe = 200
+[2025-07-31 13:23:17.819] [info] [client.cpp:75] Query vectors obtained successfully, time = 92(us)
+[2025-07-31 13:23:17.883] [info] [client.cpp:81] Fetched centroids from server successfully, time = 64203(us)
+[2025-07-31 13:23:18.270] [info] [client.cpp:90] Computed nearest centroids successfully, time = 606(us)
+[2025-07-31 13:23:18.536] [info] [client.cpp:104] Computed encrypted single phase search params time = 265588(us)
+[2025-07-31 13:23:19.913] [info] [client_lib.cpp:776] Size of the single phase search request = 112(mb)
+[2025-07-31 13:40:24.679] [info] [client.cpp:114] Received encrypted single phase search distances successfully, time = 1026143297(us)
+[2025-07-31 13:40:30.448] [info] [client.cpp:123] Deserialised and decrypted search distances successfully, time = 5769496(us)
+[2025-07-31 13:40:30.449] [info] [client.cpp:133] Computed nearest precise vectors successfully, time = 132(us)
+
+[2025-07-31 13:40:30.449] [info] [client.cpp:138] Complete Single Phase Search time = 1032629915(us)
+[2025-07-31 13:40:30.449] [info] [client.cpp:141] Single Phase Search Query completed!
+
+[2025-07-31 13:40:30.449] [info] [client_lib.cpp:492] BENCHMARK RESULTS
+
+
+[2025-07-31 13:40:30.449] [info] [client_lib.cpp:565] Total Query Benchmark Results
+[2025-07-31 13:40:30.449] [info] [client_lib.cpp:566] Recall@1 = 1, Recall@10 = 1, Recall@100 = 0.794
+[2025-07-31 13:40:30.449] [info] [client_lib.cpp:570] MRR@1 = 0.8, MRR@10 = 0.8, MRR@100 = 0.8
+
+
+----------------------------------------------------------------------------------------------------
+
+--- Client Standard Error ---
+No client stderr
+
+--- Client Return Code ---
+0
+
+================================================================================
+END OF TEST RUN: 20
+================================================================================
+
+
+================================================================================
+TEST RUN: 21
+Timestamp: 2025-07-31 13:49:14.916382
+Status: FAILED
+Failure Reason: Client process failed with return code: -6
+================================================================================
+
+--- Configuration Parameters ---
+nq: 6
+nprobe: 5
+coarse-probe: 200
+k: 100
+nlist: 256
+sub-quantizers: 32
+sub-quantizers-size: 8
+poly-modulus: 8192
+plaintext-modulus: 48
+single-phase: false
+
+--- Boolean Options Status ---
+single-phase: DISABLED
+
+--- Server Arguments ---
+build/PreFHEtch_server --nlist 256 --sub-quantizers 32 --sub-quantizers-size 8 --poly-modulus 8192 --plaintext-modulus 48
+
+--- Client Arguments ---
+build/PreFHEtch_client --nq 6 --nprobe 5 --coarse-probe 200 --k 100
+
+--- Server Output ---
+[2025-07-31 13:40:34.316] [info] [server.cpp:69] Encryption params = valid
+[2025-07-31 13:40:34.316] [info] [server_lib.cpp:100] Reading cached data from index file = build/IVF256_PQ32_SUB_QUANTIZER_SIZE8.faiss
+[2025-07-31 13:40:34.336] [info] [server.cpp:81] Initialized index, time = 20656(us)
+[2025-07-31 13:40:34.337] [info] [server_lib.cpp:63] Server listening on 0.0.0.0:8080
+[2025-07-31 13:40:34.846] [info] [Query.cc:19]
+
+Received request on /query
+[2025-07-31 13:40:34.886] [info] [Query.cc:42] Time to retrieve centroids = 673(us)
+[2025-07-31 13:40:34.886] [info] [Query.cc:44] Time to serialise encrypted params = 463(us)
+[2025-07-31 13:40:34.886] [info] [Query.cc:46] Exiting from query handler, total handler time = 39834(us)
+[2025-07-31 13:40:39.795] [info] [Query.cc:58] Received request on /coarsesearch
+[2025-07-31 13:41:35.119] [info] [Query.cc:108] Size of the serialised encrypted data = 2212(mb)
+[2025-07-31 13:47:16.626] [info] [Query.cc:118] Time to deserialise coarse search params = 441708(us)
+[2025-07-31 13:47:16.626] [info] [Query.cc:120] Time to perform coarse search = 17689780(us)
+[2025-07-31 13:47:16.626] [info] [Query.cc:122] Time to serialise coarse search results = 2200896(us)
+[2025-07-31 13:47:16.626] [info] [Query.cc:124] Size of the unserialised encrypted data = 677(mb)
+[2025-07-31 13:47:16.626] [info] [Query.cc:127] Exiting from coarse search handler, total handler time = 396830052(us)
+
+--- Client Standard Output ---
+[2025-07-31 13:40:34.845] [info] [client.cpp:60] Enable single phase search = false
+[2025-07-31 13:40:34.845] [info] [client.cpp:61] Starting query and timers
+[2025-07-31 13:40:34.845] [info] [client.cpp:62] num_queries = 6, nprobe = 5, coarse_probe = 200
+[2025-07-31 13:40:34.845] [info] [client.cpp:75] Query vectors obtained successfully, time = 107(us)
+[2025-07-31 13:40:34.908] [info] [client.cpp:81] Fetched centroids from server successfully, time = 63504(us)
+[2025-07-31 13:40:35.267] [info] [client.cpp:90] Computed nearest centroids successfully, time = 731(us)
+[2025-07-31 13:40:35.799] [info] [client.cpp:162] Computed encrypted coarse search params time = 531868(us)
+[2025-07-31 13:40:37.881] [info] [client_lib.cpp:345] Size of the coarse search request = 160(mb)
+[2025-07-31 13:49:08.839] [info] [client.cpp:175] Received encrypted coarse distances successfully, time = 513040568(us)
+[2025-07-31 13:49:11.948] [info] [client.cpp:184] Deserialised and decrypted coarse distances successfully, time = 3108582(us)
+[2025-07-31 13:49:11.948] [error] [client_lib.cpp:595] Number of computed results is lesser than select_nearest_probe
+
+--- Client Standard Error ---
+terminate called after throwing an instance of 'std::runtime_error'
+  what():  Number of computed results is lesser than select_nearest_probe
+
+--- Client Return Code ---
+-6
+
+--- FAILURE DETAILS ---
+Reason: Client process failed with return code: -6
+
+================================================================================
+END OF TEST RUN: 21
+================================================================================
+
+
+================================================================================
+TEST RUN: 22
+Timestamp: 2025-07-31 13:58:59.346750
+Status: SUCCESS
+================================================================================
+
+--- Configuration Parameters ---
+nq: 6
+nprobe: 5
+coarse-probe: 200
+k: 100
+nlist: 256
+sub-quantizers: 32
+sub-quantizers-size: 8
+poly-modulus: 8192
+plaintext-modulus: 48
+single-phase: true
+
+--- Boolean Options Status ---
+single-phase: ENABLED
+
+--- Server Arguments ---
+build/PreFHEtch_server --nlist 256 --sub-quantizers 32 --sub-quantizers-size 8 --poly-modulus 8192 --plaintext-modulus 48
+
+--- Client Arguments ---
+build/PreFHEtch_client --nq 6 --nprobe 5 --coarse-probe 200 --k 100 --single-phase
+
+--- Server Output ---
+[2025-07-31 13:49:14.951] [info] [server.cpp:69] Encryption params = valid
+[2025-07-31 13:49:14.952] [info] [server_lib.cpp:100] Reading cached data from index file = build/IVF256_PQ32_SUB_QUANTIZER_SIZE8.faiss
+[2025-07-31 13:49:14.972] [info] [server.cpp:81] Initialized index, time = 19710(us)
+[2025-07-31 13:49:14.972] [info] [server_lib.cpp:63] Server listening on 0.0.0.0:8080
+[2025-07-31 13:49:15.482] [info] [Query.cc:19]
+
+Received request on /query
+[2025-07-31 13:49:15.521] [info] [Query.cc:42] Time to retrieve centroids = 623(us)
+[2025-07-31 13:49:15.521] [info] [Query.cc:44] Time to serialise encrypted params = 448(us)
+[2025-07-31 13:49:15.521] [info] [Query.cc:46] Exiting from query handler, total handler time = 38842(us)
+[2025-07-31 13:49:18.929] [info] [Query.cc:240] Received request on /single-phase-search
+[2025-07-31 13:51:18.521] [info] [Query.cc:280] Size of the serialised encrypted data = 2212(mb)
+[2025-07-31 13:56:58.637] [info] [Query.cc:290] Time to deserialise single phase search params = 317371(us)
+[2025-07-31 13:56:58.637] [info] [Query.cc:292] Time to perform single phase search = 81901100(us)
+[2025-07-31 13:56:58.637] [info] [Query.cc:294] Time to serialise single phase search results = 3177376(us)
+[2025-07-31 13:56:58.638] [info] [Query.cc:296] Size of the unserialised encrypted data = 677(mb)
+[2025-07-31 13:56:58.638] [info] [Query.cc:299] Exiting from single phase search handler, total handler time = 459708840(us)
+
+--- Client Standard Output ---
+[2025-07-31 13:49:15.480] [info] [client.cpp:60] Enable single phase search = true
+[2025-07-31 13:49:15.480] [info] [client.cpp:61] Starting query and timers
+[2025-07-31 13:49:15.480] [info] [client.cpp:62] num_queries = 6, nprobe = 5, coarse_probe = 200
+[2025-07-31 13:49:15.480] [info] [client.cpp:75] Query vectors obtained successfully, time = 66(us)
+[2025-07-31 13:49:15.544] [info] [client.cpp:81] Fetched centroids from server successfully, time = 63531(us)
+[2025-07-31 13:49:15.920] [info] [client.cpp:90] Computed nearest centroids successfully, time = 730(us)
+[2025-07-31 13:49:16.197] [info] [client.cpp:104] Computed encrypted single phase search params time = 276520(us)
+[2025-07-31 13:49:17.609] [info] [client_lib.cpp:776] Size of the single phase search request = 112(mb)
+[2025-07-31 13:58:53.503] [info] [client.cpp:114] Received encrypted single phase search distances successfully, time = 577306552(us)
+[2025-07-31 13:58:56.712] [info] [client.cpp:123] Deserialised and decrypted search distances successfully, time = 3209001(us)
+[2025-07-31 13:58:56.713] [info] [client.cpp:133] Computed nearest precise vectors successfully, time = 68(us)
+
+[2025-07-31 13:58:56.713] [info] [client.cpp:138] Complete Single Phase Search time = 581232409(us)
+[2025-07-31 13:58:56.713] [info] [client.cpp:141] Single Phase Search Query completed!
+
+[2025-07-31 13:58:56.713] [info] [client_lib.cpp:492] BENCHMARK RESULTS
+
+
+[2025-07-31 13:58:56.713] [info] [client_lib.cpp:565] Total Query Benchmark Results
+[2025-07-31 13:58:56.713] [info] [client_lib.cpp:566] Recall@1 = 1, Recall@10 = 1, Recall@100 = 0.43
+[2025-07-31 13:58:56.713] [info] [client_lib.cpp:570] MRR@1 = 0.5, MRR@10 = 0.5, MRR@100 = 0.5
+
+
+----------------------------------------------------------------------------------------------------
+
+--- Client Standard Error ---
+No client stderr
+
+--- Client Return Code ---
+0
+
+================================================================================
+END OF TEST RUN: 22
+================================================================================
+
+
+================================================================================
+TEST RUN: 23
+Timestamp: 2025-07-31 14:03:34.492647
+Status: FAILED
+Failure Reason: Client process failed with return code: -6
+================================================================================
+
+--- Configuration Parameters ---
+nq: 6
+nprobe: 10
+coarse-probe: 200
+k: 100
+nlist: 256
+sub-quantizers: 32
+sub-quantizers-size: 8
+poly-modulus: 8192
+plaintext-modulus: 48
+single-phase: false
+
+--- Boolean Options Status ---
+single-phase: DISABLED
+
+--- Server Arguments ---
+build/PreFHEtch_server --nlist 256 --sub-quantizers 32 --sub-quantizers-size 8 --poly-modulus 8192 --plaintext-modulus 48
+
+--- Client Arguments ---
+build/PreFHEtch_client --nq 6 --nprobe 10 --coarse-probe 200 --k 100
+
+--- Server Output ---
+[2025-07-31 13:58:59.380] [info] [server.cpp:69] Encryption params = valid
+[2025-07-31 13:58:59.380] [info] [server_lib.cpp:100] Reading cached data from index file = build/IVF256_PQ32_SUB_QUANTIZER_SIZE8.faiss
+[2025-07-31 13:58:59.403] [info] [server.cpp:81] Initialized index, time = 22181(us)
+[2025-07-31 13:58:59.403] [info] [server_lib.cpp:63] Server listening on 0.0.0.0:8080
+[2025-07-31 13:58:59.913] [info] [Query.cc:19]
+
+Received request on /query
+[2025-07-31 13:58:59.959] [info] [Query.cc:42] Time to retrieve centroids = 927(us)
+[2025-07-31 13:58:59.959] [info] [Query.cc:44] Time to serialise encrypted params = 510(us)
+[2025-07-31 13:58:59.959] [info] [Query.cc:46] Exiting from query handler, total handler time = 45469(us)
+[2025-07-31 13:59:06.484] [info] [Query.cc:58] Received request on /coarsesearch
+[2025-07-31 14:01:02.964] [info] [Query.cc:108] Size of the serialised encrypted data = 4687(mb)
+[2025-07-31 14:02:51.712] [info] [Query.cc:118] Time to deserialise coarse search params = 593033(us)
+[2025-07-31 14:02:51.712] [info] [Query.cc:120] Time to perform coarse search = 36304683(us)
+[2025-07-31 14:02:51.712] [info] [Query.cc:122] Time to serialise coarse search results = 4243484(us)
+[2025-07-31 14:02:51.712] [info] [Query.cc:124] Size of the unserialised encrypted data = 1434(mb)
+[2025-07-31 14:02:51.712] [info] [Query.cc:127] Exiting from coarse search handler, total handler time = 225227950(us)
+
+--- Client Standard Output ---
+[2025-07-31 13:58:59.911] [info] [client.cpp:60] Enable single phase search = false
+[2025-07-31 13:58:59.911] [info] [client.cpp:61] Starting query and timers
+[2025-07-31 13:58:59.911] [info] [client.cpp:62] num_queries = 6, nprobe = 10, coarse_probe = 200
+[2025-07-31 13:58:59.912] [info] [client.cpp:75] Query vectors obtained successfully, time = 85(us)
+[2025-07-31 13:58:59.983] [info] [client.cpp:81] Fetched centroids from server successfully, time = 71954(us)
+[2025-07-31 13:59:00.343] [info] [client.cpp:90] Computed nearest centroids successfully, time = 730(us)
+[2025-07-31 13:59:01.138] [info] [client.cpp:162] Computed encrypted coarse search params time = 795093(us)
+[2025-07-31 13:59:03.912] [info] [client_lib.cpp:345] Size of the coarse search request = 212(mb)
+
+--- Client Standard Error ---
+terminate called after throwing an instance of 'nlohmann::json_abi_v3_12_0::detail::parse_error'
+  what():  [json.exception.parse_error.101] parse error at line 1, column 392230973: syntax error while parsing value - unexpected end of input; expected '[', '{', or a literal
+
+--- Client Return Code ---
+-6
+
+--- FAILURE DETAILS ---
+Reason: Client process failed with return code: -6
+
+================================================================================
+END OF TEST RUN: 23
+================================================================================
+
+
+================================================================================
+TEST RUN: 24
+Timestamp: 2025-07-31 14:10:18.889078
+Status: FAILED
+Failure Reason: Client process failed with return code: -6
+================================================================================
+
+--- Configuration Parameters ---
+nq: 6
+nprobe: 10
+coarse-probe: 200
+k: 100
+nlist: 256
+sub-quantizers: 32
+sub-quantizers-size: 8
+poly-modulus: 8192
+plaintext-modulus: 48
+single-phase: true
+
+--- Boolean Options Status ---
+single-phase: ENABLED
+
+--- Server Arguments ---
+build/PreFHEtch_server --nlist 256 --sub-quantizers 32 --sub-quantizers-size 8 --poly-modulus 8192 --plaintext-modulus 48
+
+--- Client Arguments ---
+build/PreFHEtch_client --nq 6 --nprobe 10 --coarse-probe 200 --k 100 --single-phase
+
+--- Server Output ---
+[2025-07-31 14:03:34.524] [info] [server.cpp:69] Encryption params = valid
+[2025-07-31 14:03:34.524] [info] [server_lib.cpp:100] Reading cached data from index file = build/IVF256_PQ32_SUB_QUANTIZER_SIZE8.faiss
+[2025-07-31 14:03:34.544] [info] [server.cpp:81] Initialized index, time = 20405(us)
+[2025-07-31 14:03:34.544] [info] [server_lib.cpp:63] Server listening on 0.0.0.0:8080
+[2025-07-31 14:03:35.054] [info] [Query.cc:19]
+
+Received request on /query
+[2025-07-31 14:03:35.096] [info] [Query.cc:42] Time to retrieve centroids = 535(us)
+[2025-07-31 14:03:35.096] [info] [Query.cc:44] Time to serialise encrypted params = 392(us)
+[2025-07-31 14:03:35.096] [info] [Query.cc:46] Exiting from query handler, total handler time = 41932(us)
+[2025-07-31 14:03:38.593] [info] [Query.cc:240] Received request on /single-phase-search
+[2025-07-31 14:07:46.502] [info] [Query.cc:280] Size of the serialised encrypted data = 4687(mb)
+[2025-07-31 14:09:35.213] [info] [Query.cc:290] Time to deserialise single phase search params = 304357(us)
+[2025-07-31 14:09:35.213] [info] [Query.cc:292] Time to perform single phase search = 172429545(us)
+[2025-07-31 14:09:35.213] [info] [Query.cc:294] Time to serialise single phase search results = 4995062(us)
+[2025-07-31 14:09:35.213] [info] [Query.cc:296] Size of the unserialised encrypted data = 1434(mb)
+[2025-07-31 14:09:35.213] [info] [Query.cc:299] Exiting from single phase search handler, total handler time = 356619579(us)
+
+--- Client Standard Output ---
+[2025-07-31 14:03:35.052] [info] [client.cpp:60] Enable single phase search = true
+[2025-07-31 14:03:35.052] [info] [client.cpp:61] Starting query and timers
+[2025-07-31 14:03:35.052] [info] [client.cpp:62] num_queries = 6, nprobe = 10, coarse_probe = 200
+[2025-07-31 14:03:35.053] [info] [client.cpp:75] Query vectors obtained successfully, time = 87(us)
+[2025-07-31 14:03:35.121] [info] [client.cpp:81] Fetched centroids from server successfully, time = 68274(us)
+[2025-07-31 14:03:35.487] [info] [client.cpp:90] Computed nearest centroids successfully, time = 887(us)
+[2025-07-31 14:03:35.771] [info] [client.cpp:104] Computed encrypted single phase search params time = 284195(us)
+[2025-07-31 14:03:37.228] [info] [client_lib.cpp:776] Size of the single phase search request = 112(mb)
+
+--- Client Standard Error ---
+terminate called after throwing an instance of 'nlohmann::json_abi_v3_12_0::detail::parse_error'
+  what():  [json.exception.parse_error.101] parse error at line 1, column 392271519: syntax error while parsing value - unexpected end of input; expected '[', '{', or a literal
+
+--- Client Return Code ---
+-6
+
+--- FAILURE DETAILS ---
+Reason: Client process failed with return code: -6
+
+================================================================================
+END OF TEST RUN: 24
+================================================================================
+
+
+================================================================================
+TEST RUN: 25
+Timestamp: 2025-07-31 14:20:42.037791
+Status: FAILED
+Failure Reason: Client process failed with return code: -6
+================================================================================
+
+--- Configuration Parameters ---
+nq: 7
+nprobe: 5
+coarse-probe: 200
+k: 100
+nlist: 256
+sub-quantizers: 32
+sub-quantizers-size: 8
+poly-modulus: 8192
+plaintext-modulus: 48
+single-phase: false
+
+--- Boolean Options Status ---
+single-phase: DISABLED
+
+--- Server Arguments ---
+build/PreFHEtch_server --nlist 256 --sub-quantizers 32 --sub-quantizers-size 8 --poly-modulus 8192 --plaintext-modulus 48
+
+--- Client Arguments ---
+build/PreFHEtch_client --nq 7 --nprobe 5 --coarse-probe 200 --k 100
+
+--- Server Output ---
+[2025-07-31 14:10:18.925] [info] [server.cpp:69] Encryption params = valid
+[2025-07-31 14:10:18.926] [info] [server_lib.cpp:100] Reading cached data from index file = build/IVF256_PQ32_SUB_QUANTIZER_SIZE8.faiss
+[2025-07-31 14:10:18.946] [info] [server.cpp:81] Initialized index, time = 20337(us)
+[2025-07-31 14:10:18.946] [info] [server_lib.cpp:63] Server listening on 0.0.0.0:8080
+[2025-07-31 14:10:19.457] [info] [Query.cc:19]
+
+Received request on /query
+[2025-07-31 14:10:19.504] [info] [Query.cc:42] Time to retrieve centroids = 899(us)
+[2025-07-31 14:10:19.504] [info] [Query.cc:44] Time to serialise encrypted params = 497(us)
+[2025-07-31 14:10:19.504] [info] [Query.cc:46] Exiting from query handler, total handler time = 47077(us)
+[2025-07-31 14:10:24.935] [info] [Query.cc:58] Received request on /coarsesearch
+[2025-07-31 14:11:27.880] [info] [Query.cc:108] Size of the serialised encrypted data = 2655(mb)
+[2025-07-31 14:18:16.954] [info] [Query.cc:118] Time to deserialise coarse search params = 463836(us)
+[2025-07-31 14:18:16.954] [info] [Query.cc:120] Time to perform coarse search = 15721985(us)
+[2025-07-31 14:18:16.954] [info] [Query.cc:122] Time to serialise coarse search results = 4369707(us)
+[2025-07-31 14:18:16.954] [info] [Query.cc:124] Size of the unserialised encrypted data = 812(mb)
+[2025-07-31 14:18:16.954] [info] [Query.cc:127] Exiting from coarse search handler, total handler time = 472018283(us)
+
+--- Client Standard Output ---
+[2025-07-31 14:10:19.455] [info] [client.cpp:60] Enable single phase search = false
+[2025-07-31 14:10:19.455] [info] [client.cpp:61] Starting query and timers
+[2025-07-31 14:10:19.455] [info] [client.cpp:62] num_queries = 7, nprobe = 5, coarse_probe = 200
+[2025-07-31 14:10:19.455] [info] [client.cpp:75] Query vectors obtained successfully, time = 172(us)
+[2025-07-31 14:10:19.532] [info] [client.cpp:81] Fetched centroids from server successfully, time = 76599(us)
+[2025-07-31 14:10:19.927] [info] [client.cpp:90] Computed nearest centroids successfully, time = 954(us)
+[2025-07-31 14:10:20.494] [info] [client.cpp:162] Computed encrypted coarse search params time = 567023(us)
+[2025-07-31 14:10:22.788] [info] [client_lib.cpp:345] Size of the coarse search request = 169(mb)
+[2025-07-31 14:20:34.931] [info] [client.cpp:175] Received encrypted coarse distances successfully, time = 614436406(us)
+[2025-07-31 14:20:38.872] [info] [client.cpp:184] Deserialised and decrypted coarse distances successfully, time = 3940648(us)
+[2025-07-31 14:20:38.872] [error] [client_lib.cpp:595] Number of computed results is lesser than select_nearest_probe
+
+--- Client Standard Error ---
+terminate called after throwing an instance of 'std::runtime_error'
+  what():  Number of computed results is lesser than select_nearest_probe
+
+--- Client Return Code ---
+-6
+
+--- FAILURE DETAILS ---
+Reason: Client process failed with return code: -6
+
+================================================================================
+END OF TEST RUN: 25
+================================================================================
+
+
+================================================================================
+TEST RUN: 26
+Timestamp: 2025-07-31 14:32:07.460928
+Status: SUCCESS
+================================================================================
+
+--- Configuration Parameters ---
+nq: 7
+nprobe: 5
+coarse-probe: 200
+k: 100
+nlist: 256
+sub-quantizers: 32
+sub-quantizers-size: 8
+poly-modulus: 8192
+plaintext-modulus: 48
+single-phase: true
+
+--- Boolean Options Status ---
+single-phase: ENABLED
+
+--- Server Arguments ---
+build/PreFHEtch_server --nlist 256 --sub-quantizers 32 --sub-quantizers-size 8 --poly-modulus 8192 --plaintext-modulus 48
+
+--- Client Arguments ---
+build/PreFHEtch_client --nq 7 --nprobe 5 --coarse-probe 200 --k 100 --single-phase
+
+--- Server Output ---
+[2025-07-31 14:20:42.069] [info] [server.cpp:69] Encryption params = valid
+[2025-07-31 14:20:42.070] [info] [server_lib.cpp:100] Reading cached data from index file = build/IVF256_PQ32_SUB_QUANTIZER_SIZE8.faiss
+[2025-07-31 14:20:42.092] [info] [server.cpp:81] Initialized index, time = 22011(us)
+[2025-07-31 14:20:42.092] [info] [server_lib.cpp:63] Server listening on 0.0.0.0:8080
+[2025-07-31 14:20:42.601] [info] [Query.cc:19]
+
+Received request on /query
+[2025-07-31 14:20:42.640] [info] [Query.cc:42] Time to retrieve centroids = 545(us)
+[2025-07-31 14:20:42.640] [info] [Query.cc:44] Time to serialise encrypted params = 344(us)
+[2025-07-31 14:20:42.640] [info] [Query.cc:46] Exiting from query handler, total handler time = 38846(us)
+[2025-07-31 14:20:46.127] [info] [Query.cc:240] Received request on /single-phase-search
+[2025-07-31 14:23:06.041] [info] [Query.cc:280] Size of the serialised encrypted data = 2655(mb)
+[2025-07-31 14:29:39.618] [info] [Query.cc:290] Time to deserialise single phase search params = 327039(us)
+[2025-07-31 14:29:39.618] [info] [Query.cc:292] Time to perform single phase search = 97265530(us)
+[2025-07-31 14:29:39.618] [info] [Query.cc:294] Time to serialise single phase search results = 2579871(us)
+[2025-07-31 14:29:39.618] [info] [Query.cc:296] Size of the unserialised encrypted data = 812(mb)
+[2025-07-31 14:29:39.618] [info] [Query.cc:299] Exiting from single phase search handler, total handler time = 533491036(us)
+
+--- Client Standard Output ---
+[2025-07-31 14:20:42.600] [info] [client.cpp:60] Enable single phase search = true
+[2025-07-31 14:20:42.600] [info] [client.cpp:61] Starting query and timers
+[2025-07-31 14:20:42.600] [info] [client.cpp:62] num_queries = 7, nprobe = 5, coarse_probe = 200
+[2025-07-31 14:20:42.600] [info] [client.cpp:75] Query vectors obtained successfully, time = 81(us)
+[2025-07-31 14:20:42.664] [info] [client.cpp:81] Fetched centroids from server successfully, time = 63461(us)
+[2025-07-31 14:20:43.039] [info] [client.cpp:90] Computed nearest centroids successfully, time = 867(us)
+[2025-07-31 14:20:43.351] [info] [client.cpp:104] Computed encrypted single phase search params time = 311807(us)
+[2025-07-31 14:20:44.798] [info] [client_lib.cpp:776] Size of the single phase search request = 113(mb)
+[2025-07-31 14:31:59.174] [info] [client.cpp:114] Received encrypted single phase search distances successfully, time = 675822705(us)
+[2025-07-31 14:32:03.096] [info] [client.cpp:123] Deserialised and decrypted search distances successfully, time = 3922375(us)
+[2025-07-31 14:32:03.097] [info] [client.cpp:133] Computed nearest precise vectors successfully, time = 80(us)
+
+[2025-07-31 14:32:03.097] [info] [client.cpp:138] Complete Single Phase Search time = 680496563(us)
+[2025-07-31 14:32:03.097] [info] [client.cpp:141] Single Phase Search Query completed!
+
+[2025-07-31 14:32:03.097] [info] [client_lib.cpp:492] BENCHMARK RESULTS
+
+
+[2025-07-31 14:32:03.097] [info] [client_lib.cpp:565] Total Query Benchmark Results
+[2025-07-31 14:32:03.097] [info] [client_lib.cpp:566] Recall@1 = 1, Recall@10 = 1, Recall@100 = 0.44
+[2025-07-31 14:32:03.097] [info] [client_lib.cpp:570] MRR@1 = 0.5714286, MRR@10 = 0.5714286, MRR@100 = 0.5714286
+
+
+----------------------------------------------------------------------------------------------------
+
+--- Client Standard Error ---
+No client stderr
+
+--- Client Return Code ---
+0
+
+================================================================================
+END OF TEST RUN: 26
+================================================================================
+
+
+================================================================================
+TEST RUN: 27
+Timestamp: 2025-07-31 14:40:22.212365
+Status: FAILED
+Failure Reason: Client process failed with return code: -6
+================================================================================
+
+--- Configuration Parameters ---
+nq: 7
+nprobe: 10
+coarse-probe: 200
+k: 100
+nlist: 256
+sub-quantizers: 32
+sub-quantizers-size: 8
+poly-modulus: 8192
+plaintext-modulus: 48
+single-phase: false
+
+--- Boolean Options Status ---
+single-phase: DISABLED
+
+--- Server Arguments ---
+build/PreFHEtch_server --nlist 256 --sub-quantizers 32 --sub-quantizers-size 8 --poly-modulus 8192 --plaintext-modulus 48
+
+--- Client Arguments ---
+build/PreFHEtch_client --nq 7 --nprobe 10 --coarse-probe 200 --k 100
+
+--- Server Output ---
+[2025-07-31 14:32:07.494] [info] [server.cpp:69] Encryption params = valid
+[2025-07-31 14:32:07.495] [info] [server_lib.cpp:100] Reading cached data from index file = build/IVF256_PQ32_SUB_QUANTIZER_SIZE8.faiss
+[2025-07-31 14:32:07.515] [info] [server.cpp:81] Initialized index, time = 20021(us)
+[2025-07-31 14:32:07.515] [info] [server_lib.cpp:63] Server listening on 0.0.0.0:8080
+[2025-07-31 14:32:08.025] [info] [Query.cc:19]
+
+Received request on /query
+[2025-07-31 14:32:08.064] [info] [Query.cc:42] Time to retrieve centroids = 1024(us)
+[2025-07-31 14:32:08.064] [info] [Query.cc:44] Time to serialise encrypted params = 397(us)
+[2025-07-31 14:32:08.064] [info] [Query.cc:46] Exiting from query handler, total handler time = 39035(us)
+[2025-07-31 14:32:15.027] [info] [Query.cc:58] Received request on /coarsesearch
+[2025-07-31 14:34:47.210] [info] [Query.cc:108] Size of the serialised encrypted data = 5530(mb)
+[2025-07-31 14:38:57.031] [info] [Query.cc:118] Time to deserialise coarse search params = 654106(us)
+[2025-07-31 14:38:57.031] [info] [Query.cc:120] Time to perform coarse search = 36649431(us)
+[2025-07-31 14:38:57.031] [info] [Query.cc:122] Time to serialise coarse search results = 5248510(us)
+[2025-07-31 14:38:57.031] [info] [Query.cc:124] Size of the unserialised encrypted data = 1692(mb)
+[2025-07-31 14:38:57.031] [info] [Query.cc:127] Exiting from coarse search handler, total handler time = 402004228(us)
+
+--- Client Standard Output ---
+[2025-07-31 14:32:08.023] [info] [client.cpp:60] Enable single phase search = false
+[2025-07-31 14:32:08.023] [info] [client.cpp:61] Starting query and timers
+[2025-07-31 14:32:08.023] [info] [client.cpp:62] num_queries = 7, nprobe = 10, coarse_probe = 200
+[2025-07-31 14:32:08.023] [info] [client.cpp:75] Query vectors obtained successfully, time = 83(us)
+[2025-07-31 14:32:08.088] [info] [client.cpp:81] Fetched centroids from server successfully, time = 64328(us)
+[2025-07-31 14:32:08.482] [info] [client.cpp:90] Computed nearest centroids successfully, time = 854(us)
+[2025-07-31 14:32:09.383] [info] [client.cpp:162] Computed encrypted coarse search params time = 900615(us)
+[2025-07-31 14:32:12.290] [info] [client_lib.cpp:345] Size of the coarse search request = 229(mb)
+
+--- Client Standard Error ---
+terminate called after throwing an instance of 'nlohmann::json_abi_v3_12_0::detail::parse_error'
+  what():  [json.exception.parse_error.101] parse error at line 1, column 1235443742: syntax error while parsing array - unexpected end of input; expected ']'
+
+--- Client Return Code ---
+-6
+
+--- FAILURE DETAILS ---
+Reason: Client process failed with return code: -6
+
+================================================================================
+END OF TEST RUN: 27
+================================================================================
+
+
+================================================================================
+TEST RUN: 28
+Timestamp: 2025-07-31 14:50:18.045271
+Status: FAILED
+Failure Reason: Client process failed with return code: -6
+================================================================================
+
+--- Configuration Parameters ---
+nq: 7
+nprobe: 10
+coarse-probe: 200
+k: 100
+nlist: 256
+sub-quantizers: 32
+sub-quantizers-size: 8
+poly-modulus: 8192
+plaintext-modulus: 48
+single-phase: true
+
+--- Boolean Options Status ---
+single-phase: ENABLED
+
+--- Server Arguments ---
+build/PreFHEtch_server --nlist 256 --sub-quantizers 32 --sub-quantizers-size 8 --poly-modulus 8192 --plaintext-modulus 48
+
+--- Client Arguments ---
+build/PreFHEtch_client --nq 7 --nprobe 10 --coarse-probe 200 --k 100 --single-phase
+
+--- Server Output ---
+[2025-07-31 14:40:22.254] [info] [server.cpp:69] Encryption params = valid
+[2025-07-31 14:40:22.254] [info] [server_lib.cpp:100] Reading cached data from index file = build/IVF256_PQ32_SUB_QUANTIZER_SIZE8.faiss
+[2025-07-31 14:40:22.280] [info] [server.cpp:81] Initialized index, time = 25603(us)
+[2025-07-31 14:40:22.280] [info] [server_lib.cpp:63] Server listening on 0.0.0.0:8080
+[2025-07-31 14:40:22.790] [info] [Query.cc:19]
+
+Received request on /query
+[2025-07-31 14:40:22.829] [info] [Query.cc:42] Time to retrieve centroids = 778(us)
+[2025-07-31 14:40:22.829] [info] [Query.cc:44] Time to serialise encrypted params = 426(us)
+[2025-07-31 14:40:22.829] [info] [Query.cc:46] Exiting from query handler, total handler time = 39229(us)
+[2025-07-31 14:40:26.305] [info] [Query.cc:240] Received request on /single-phase-search
+[2025-07-31 14:45:10.722] [info] [Query.cc:280] Size of the serialised encrypted data = 5530(mb)
+[2025-07-31 14:48:59.734] [info] [Query.cc:290] Time to deserialise single phase search params = 322465(us)
+[2025-07-31 14:48:59.734] [info] [Query.cc:292] Time to perform single phase search = 202217079(us)
+[2025-07-31 14:48:59.734] [info] [Query.cc:294] Time to serialise single phase search results = 5819560(us)
+[2025-07-31 14:48:59.734] [info] [Query.cc:296] Size of the unserialised encrypted data = 1692(mb)
+[2025-07-31 14:48:59.734] [info] [Query.cc:299] Exiting from single phase search handler, total handler time = 513428435(us)
+
+--- Client Standard Output ---
+[2025-07-31 14:40:22.788] [info] [client.cpp:60] Enable single phase search = true
+[2025-07-31 14:40:22.788] [info] [client.cpp:61] Starting query and timers
+[2025-07-31 14:40:22.788] [info] [client.cpp:62] num_queries = 7, nprobe = 10, coarse_probe = 200
+[2025-07-31 14:40:22.788] [info] [client.cpp:75] Query vectors obtained successfully, time = 78(us)
+[2025-07-31 14:40:22.852] [info] [client.cpp:81] Fetched centroids from server successfully, time = 64093(us)
+[2025-07-31 14:40:23.221] [info] [client.cpp:90] Computed nearest centroids successfully, time = 876(us)
+[2025-07-31 14:40:23.495] [info] [client.cpp:104] Computed encrypted single phase search params time = 274438(us)
+[2025-07-31 14:40:24.970] [info] [client_lib.cpp:776] Size of the single phase search request = 113(mb)
+
+--- Client Standard Error ---
+terminate called after throwing an instance of 'nlohmann::json_abi_v3_12_0::detail::parse_error'
+  what():  [json.exception.parse_error.101] parse error at line 1, column 1235387842: syntax error while parsing array - unexpected end of input; expected ']'
+
+--- Client Return Code ---
+-6
+
+--- FAILURE DETAILS ---
+Reason: Client process failed with return code: -6
+
+================================================================================
+END OF TEST RUN: 28
+================================================================================
+
+
+================================================================================
+TEST RUN: 29
+Timestamp: 2025-07-31 15:03:04.429746
+Status: FAILED
+Failure Reason: Client process failed with return code: -6
+================================================================================
+
+--- Configuration Parameters ---
+nq: 8
+nprobe: 5
+coarse-probe: 200
+k: 100
+nlist: 256
+sub-quantizers: 32
+sub-quantizers-size: 8
+poly-modulus: 8192
+plaintext-modulus: 48
+single-phase: false
+
+--- Boolean Options Status ---
+single-phase: DISABLED
+
+--- Server Arguments ---
+build/PreFHEtch_server --nlist 256 --sub-quantizers 32 --sub-quantizers-size 8 --poly-modulus 8192 --plaintext-modulus 48
+
+--- Client Arguments ---
+build/PreFHEtch_client --nq 8 --nprobe 5 --coarse-probe 200 --k 100
+
+--- Server Output ---
+[2025-07-31 14:50:18.077] [info] [server.cpp:69] Encryption params = valid
+[2025-07-31 14:50:18.078] [info] [server_lib.cpp:100] Reading cached data from index file = build/IVF256_PQ32_SUB_QUANTIZER_SIZE8.faiss
+[2025-07-31 14:50:18.098] [info] [server.cpp:81] Initialized index, time = 20353(us)
+[2025-07-31 14:50:18.098] [info] [server_lib.cpp:63] Server listening on 0.0.0.0:8080
+[2025-07-31 14:50:18.607] [info] [Query.cc:19]
+
+Received request on /query
+[2025-07-31 14:50:18.646] [info] [Query.cc:42] Time to retrieve centroids = 578(us)
+[2025-07-31 14:50:18.646] [info] [Query.cc:44] Time to serialise encrypted params = 414(us)
+[2025-07-31 14:50:18.646] [info] [Query.cc:46] Exiting from query handler, total handler time = 38781(us)
+[2025-07-31 14:50:24.117] [info] [Query.cc:58] Received request on /coarsesearch
+[2025-07-31 14:51:37.168] [info] [Query.cc:108] Size of the serialised encrypted data = 3293(mb)
+[2025-07-31 15:00:12.467] [info] [Query.cc:118] Time to deserialise coarse search params = 489569(us)
+[2025-07-31 15:00:12.467] [info] [Query.cc:120] Time to perform coarse search = 20149916(us)
+[2025-07-31 15:00:12.467] [info] [Query.cc:122] Time to serialise coarse search results = 3135098(us)
+[2025-07-31 15:00:12.467] [info] [Query.cc:124] Size of the unserialised encrypted data = 1007(mb)
+[2025-07-31 15:00:12.467] [info] [Query.cc:127] Exiting from coarse search handler, total handler time = 588349706(us)
+
+--- Client Standard Output ---
+[2025-07-31 14:50:18.606] [info] [client.cpp:60] Enable single phase search = false
+[2025-07-31 14:50:18.606] [info] [client.cpp:61] Starting query and timers
+[2025-07-31 14:50:18.606] [info] [client.cpp:62] num_queries = 8, nprobe = 5, coarse_probe = 200
+[2025-07-31 14:50:18.606] [info] [client.cpp:75] Query vectors obtained successfully, time = 60(us)
+[2025-07-31 14:50:18.669] [info] [client.cpp:81] Fetched centroids from server successfully, time = 62748(us)
+[2025-07-31 14:50:19.022] [info] [client.cpp:90] Computed nearest centroids successfully, time = 982(us)
+[2025-07-31 14:50:19.633] [info] [client.cpp:162] Computed encrypted coarse search params time = 611046(us)
+[2025-07-31 14:50:21.966] [info] [client_lib.cpp:345] Size of the coarse search request = 177(mb)
+[2025-07-31 15:02:56.101] [info] [client.cpp:175] Received encrypted coarse distances successfully, time = 756467703(us)
+[2025-07-31 15:03:00.745] [info] [client.cpp:184] Deserialised and decrypted coarse distances successfully, time = 4644343(us)
+[2025-07-31 15:03:00.745] [error] [client_lib.cpp:595] Number of computed results is lesser than select_nearest_probe
+
+--- Client Standard Error ---
+terminate called after throwing an instance of 'std::runtime_error'
+  what():  Number of computed results is lesser than select_nearest_probe
+
+--- Client Return Code ---
+-6
+
+--- FAILURE DETAILS ---
+Reason: Client process failed with return code: -6
+
+================================================================================
+END OF TEST RUN: 29
+================================================================================
+
+
+================================================================================
+TEST RUN: 30
+Timestamp: 2025-07-31 15:17:32.809298
+Status: SUCCESS
+================================================================================
+
+--- Configuration Parameters ---
+nq: 8
+nprobe: 5
+coarse-probe: 200
+k: 100
+nlist: 256
+sub-quantizers: 32
+sub-quantizers-size: 8
+poly-modulus: 8192
+plaintext-modulus: 48
+single-phase: true
+
+--- Boolean Options Status ---
+single-phase: ENABLED
+
+--- Server Arguments ---
+build/PreFHEtch_server --nlist 256 --sub-quantizers 32 --sub-quantizers-size 8 --poly-modulus 8192 --plaintext-modulus 48
+
+--- Client Arguments ---
+build/PreFHEtch_client --nq 8 --nprobe 5 --coarse-probe 200 --k 100 --single-phase
+
+--- Server Output ---
+[2025-07-31 15:03:04.464] [info] [server.cpp:69] Encryption params = valid
+[2025-07-31 15:03:04.464] [info] [server_lib.cpp:100] Reading cached data from index file = build/IVF256_PQ32_SUB_QUANTIZER_SIZE8.faiss
+[2025-07-31 15:03:04.486] [info] [server.cpp:81] Initialized index, time = 22302(us)
+[2025-07-31 15:03:04.487] [info] [server_lib.cpp:63] Server listening on 0.0.0.0:8080
+[2025-07-31 15:03:04.997] [info] [Query.cc:19]
+
+Received request on /query
+[2025-07-31 15:03:05.035] [info] [Query.cc:42] Time to retrieve centroids = 596(us)
+[2025-07-31 15:03:05.035] [info] [Query.cc:44] Time to serialise encrypted params = 380(us)
+[2025-07-31 15:03:05.035] [info] [Query.cc:46] Exiting from query handler, total handler time = 38714(us)
+[2025-07-31 15:03:08.520] [info] [Query.cc:240] Received request on /single-phase-search
+[2025-07-31 15:06:13.666] [info] [Query.cc:280] Size of the serialised encrypted data = 3293(mb)
+[2025-07-31 15:14:37.589] [info] [Query.cc:290] Time to deserialise single phase search params = 327817(us)
+[2025-07-31 15:14:37.589] [info] [Query.cc:292] Time to perform single phase search = 133398193(us)
+[2025-07-31 15:14:37.589] [info] [Query.cc:294] Time to serialise single phase search results = 3378327(us)
+[2025-07-31 15:14:37.589] [info] [Query.cc:296] Size of the unserialised encrypted data = 1007(mb)
+[2025-07-31 15:14:37.589] [info] [Query.cc:299] Exiting from single phase search handler, total handler time = 689068446(us)
+
+--- Client Standard Output ---
+[2025-07-31 15:03:04.995] [info] [client.cpp:60] Enable single phase search = true
+[2025-07-31 15:03:04.995] [info] [client.cpp:61] Starting query and timers
+[2025-07-31 15:03:04.995] [info] [client.cpp:62] num_queries = 8, nprobe = 5, coarse_probe = 200
+[2025-07-31 15:03:04.995] [info] [client.cpp:75] Query vectors obtained successfully, time = 105(us)
+[2025-07-31 15:03:05.058] [info] [client.cpp:81] Fetched centroids from server successfully, time = 63252(us)
+[2025-07-31 15:03:05.428] [info] [client.cpp:90] Computed nearest centroids successfully, time = 981(us)
+[2025-07-31 15:03:05.718] [info] [client.cpp:104] Computed encrypted single phase search params time = 289306(us)
+[2025-07-31 15:03:07.195] [info] [client_lib.cpp:776] Size of the single phase search request = 114(mb)
+[2025-07-31 15:17:24.692] [info] [client.cpp:114] Received encrypted single phase search distances successfully, time = 858974520(us)
+[2025-07-31 15:17:29.440] [info] [client.cpp:123] Deserialised and decrypted search distances successfully, time = 4748170(us)
+[2025-07-31 15:17:29.441] [info] [client.cpp:133] Computed nearest precise vectors successfully, time = 109(us)
+
+[2025-07-31 15:17:29.441] [info] [client.cpp:138] Complete Single Phase Search time = 864445558(us)
+[2025-07-31 15:17:29.441] [info] [client.cpp:141] Single Phase Search Query completed!
+
+[2025-07-31 15:17:29.441] [info] [client_lib.cpp:492] BENCHMARK RESULTS
+
+
+[2025-07-31 15:17:29.441] [info] [client_lib.cpp:565] Total Query Benchmark Results
+[2025-07-31 15:17:29.441] [info] [client_lib.cpp:566] Recall@1 = 1, Recall@10 = 1, Recall@100 = 0.49375
+[2025-07-31 15:17:29.441] [info] [client_lib.cpp:570] MRR@1 = 0.625, MRR@10 = 0.625, MRR@100 = 0.625
+
+
+----------------------------------------------------------------------------------------------------
+
+--- Client Standard Error ---
+No client stderr
+
+--- Client Return Code ---
+0
+
+================================================================================
+END OF TEST RUN: 30
+================================================================================
+
+
+================================================================================
+TEST RUN: 31
+Timestamp: 2025-07-31 15:30:14.901540
+Status: FAILED
+Failure Reason: Client process failed with return code: -6
+================================================================================
+
+--- Configuration Parameters ---
+nq: 8
+nprobe: 10
+coarse-probe: 200
+k: 100
+nlist: 256
+sub-quantizers: 32
+sub-quantizers-size: 8
+poly-modulus: 8192
+plaintext-modulus: 48
+single-phase: false
+
+--- Boolean Options Status ---
+single-phase: DISABLED
+
+--- Server Arguments ---
+build/PreFHEtch_server --nlist 256 --sub-quantizers 32 --sub-quantizers-size 8 --poly-modulus 8192 --plaintext-modulus 48
+
+--- Client Arguments ---
+build/PreFHEtch_client --nq 8 --nprobe 10 --coarse-probe 200 --k 100
+
+--- Server Output ---
+[2025-07-31 15:17:32.842] [info] [server.cpp:69] Encryption params = valid
+[2025-07-31 15:17:32.842] [info] [server_lib.cpp:100] Reading cached data from index file = build/IVF256_PQ32_SUB_QUANTIZER_SIZE8.faiss
+[2025-07-31 15:17:32.864] [info] [server.cpp:81] Initialized index, time = 22254(us)
+[2025-07-31 15:17:32.864] [info] [server_lib.cpp:63] Server listening on 0.0.0.0:8080
+[2025-07-31 15:17:33.375] [info] [Query.cc:19]
+
+Received request on /query
+[2025-07-31 15:17:33.413] [info] [Query.cc:42] Time to retrieve centroids = 717(us)
+[2025-07-31 15:17:33.413] [info] [Query.cc:44] Time to serialise encrypted params = 441(us)
+[2025-07-31 15:17:33.413] [info] [Query.cc:46] Exiting from query handler, total handler time = 38568(us)
+[2025-07-31 15:17:40.844] [info] [Query.cc:58] Received request on /coarsesearch
+[2025-07-31 15:20:36.193] [info] [Query.cc:108] Size of the serialised encrypted data = 6648(mb)
+[2025-07-31 15:27:51.910] [info] [Query.cc:118] Time to deserialise coarse search params = 697277(us)
+[2025-07-31 15:27:51.910] [info] [Query.cc:120] Time to perform coarse search = 39153127(us)
+[2025-07-31 15:27:51.910] [info] [Query.cc:122] Time to serialise coarse search results = 6672105(us)
+[2025-07-31 15:27:51.910] [info] [Query.cc:124] Size of the unserialised encrypted data = 2034(mb)
+[2025-07-31 15:27:51.910] [info] [Query.cc:127] Exiting from coarse search handler, total handler time = 611065521(us)
+
+--- Client Standard Output ---
+[2025-07-31 15:17:33.373] [info] [client.cpp:60] Enable single phase search = false
+[2025-07-31 15:17:33.373] [info] [client.cpp:61] Starting query and timers
+[2025-07-31 15:17:33.373] [info] [client.cpp:62] num_queries = 8, nprobe = 10, coarse_probe = 200
+[2025-07-31 15:17:33.373] [info] [client.cpp:75] Query vectors obtained successfully, time = 142(us)
+[2025-07-31 15:17:33.438] [info] [client.cpp:81] Fetched centroids from server successfully, time = 65185(us)
+[2025-07-31 15:17:33.815] [info] [client.cpp:90] Computed nearest centroids successfully, time = 980(us)
+[2025-07-31 15:17:34.786] [info] [client.cpp:162] Computed encrypted coarse search params time = 971911(us)
+[2025-07-31 15:17:37.910] [info] [client_lib.cpp:345] Size of the coarse search request = 246(mb)
+
+--- Client Standard Error ---
+terminate called after throwing an instance of 'nlohmann::json_abi_v3_12_0::detail::parse_error'
+  what():  [json.exception.parse_error.101] parse error at line 1, column 2353894926: syntax error while parsing value - unexpected end of input; expected '[', '{', or a literal
+
+--- Client Return Code ---
+-6
+
+--- FAILURE DETAILS ---
+Reason: Client process failed with return code: -6
+
+================================================================================
+END OF TEST RUN: 31
+================================================================================
+
+
+================================================================================
+TEST RUN: 32
+Timestamp: 2025-07-31 15:44:58.297756
+Status: FAILED
+Failure Reason: Client process failed with return code: -6
+================================================================================
+
+--- Configuration Parameters ---
+nq: 8
+nprobe: 10
+coarse-probe: 200
+k: 100
+nlist: 256
+sub-quantizers: 32
+sub-quantizers-size: 8
+poly-modulus: 8192
+plaintext-modulus: 48
+single-phase: true
+
+--- Boolean Options Status ---
+single-phase: ENABLED
+
+--- Server Arguments ---
+build/PreFHEtch_server --nlist 256 --sub-quantizers 32 --sub-quantizers-size 8 --poly-modulus 8192 --plaintext-modulus 48
+
+--- Client Arguments ---
+build/PreFHEtch_client --nq 8 --nprobe 10 --coarse-probe 200 --k 100 --single-phase
+
+--- Server Output ---
+[2025-07-31 15:30:14.938] [info] [server.cpp:69] Encryption params = valid
+[2025-07-31 15:30:14.939] [info] [server_lib.cpp:100] Reading cached data from index file = build/IVF256_PQ32_SUB_QUANTIZER_SIZE8.faiss
+[2025-07-31 15:30:14.963] [info] [server.cpp:81] Initialized index, time = 24079(us)
+[2025-07-31 15:30:14.963] [info] [server_lib.cpp:63] Server listening on 0.0.0.0:8080
+[2025-07-31 15:30:15.473] [info] [Query.cc:19]
+
+Received request on /query
+[2025-07-31 15:30:15.513] [info] [Query.cc:42] Time to retrieve centroids = 766(us)
+[2025-07-31 15:30:15.513] [info] [Query.cc:44] Time to serialise encrypted params = 473(us)
+[2025-07-31 15:30:15.513] [info] [Query.cc:46] Exiting from query handler, total handler time = 39600(us)
+[2025-07-31 15:30:19.021] [info] [Query.cc:240] Received request on /single-phase-search
+[2025-07-31 15:36:04.697] [info] [Query.cc:280] Size of the serialised encrypted data = 6648(mb)
+[2025-07-31 15:42:42.351] [info] [Query.cc:290] Time to deserialise single phase search params = 320066(us)
+[2025-07-31 15:42:42.351] [info] [Query.cc:292] Time to perform single phase search = 241187318(us)
+[2025-07-31 15:42:42.351] [info] [Query.cc:294] Time to serialise single phase search results = 10206186(us)
+[2025-07-31 15:42:42.351] [info] [Query.cc:296] Size of the unserialised encrypted data = 2034(mb)
+[2025-07-31 15:42:42.351] [info] [Query.cc:299] Exiting from single phase search handler, total handler time = 743330300(us)
+
+--- Client Standard Output ---
+[2025-07-31 15:30:15.472] [info] [client.cpp:60] Enable single phase search = true
+[2025-07-31 15:30:15.472] [info] [client.cpp:61] Starting query and timers
+[2025-07-31 15:30:15.472] [info] [client.cpp:62] num_queries = 8, nprobe = 10, coarse_probe = 200
+[2025-07-31 15:30:15.472] [info] [client.cpp:75] Query vectors obtained successfully, time = 124(us)
+[2025-07-31 15:30:15.536] [info] [client.cpp:81] Fetched centroids from server successfully, time = 64760(us)
+[2025-07-31 15:30:15.921] [info] [client.cpp:90] Computed nearest centroids successfully, time = 1014(us)
+[2025-07-31 15:30:16.209] [info] [client.cpp:104] Computed encrypted single phase search params time = 287824(us)
+[2025-07-31 15:30:17.690] [info] [client_lib.cpp:776] Size of the single phase search request = 114(mb)
+
+--- Client Standard Error ---
+terminate called after throwing an instance of 'nlohmann::json_abi_v3_12_0::detail::parse_error'
+  what():  [json.exception.parse_error.101] parse error at line 1, column 2353857276: syntax error while parsing value - unexpected end of input; expected '[', '{', or a literal
+
+--- Client Return Code ---
+-6
+
+--- FAILURE DETAILS ---
+Reason: Client process failed with return code: -6
+
+================================================================================
+END OF TEST RUN: 32
+================================================================================
+
+
+================================================================================
+TEST RUN: 33
+Timestamp: 2025-07-31 15:58:40.281423
+Status: FAILED
+Failure Reason: Client process failed with return code: -6
+================================================================================
+
+--- Configuration Parameters ---
+nq: 9
+nprobe: 5
+coarse-probe: 200
+k: 100
+nlist: 256
+sub-quantizers: 32
+sub-quantizers-size: 8
+poly-modulus: 8192
+plaintext-modulus: 48
+single-phase: false
+
+--- Boolean Options Status ---
+single-phase: DISABLED
+
+--- Server Arguments ---
+build/PreFHEtch_server --nlist 256 --sub-quantizers 32 --sub-quantizers-size 8 --poly-modulus 8192 --plaintext-modulus 48
+
+--- Client Arguments ---
+build/PreFHEtch_client --nq 9 --nprobe 5 --coarse-probe 200 --k 100
+
+--- Server Output ---
+[2025-07-31 15:44:58.330] [info] [server.cpp:69] Encryption params = valid
+[2025-07-31 15:44:58.331] [info] [server_lib.cpp:100] Reading cached data from index file = build/IVF256_PQ32_SUB_QUANTIZER_SIZE8.faiss
+[2025-07-31 15:44:58.354] [info] [server.cpp:81] Initialized index, time = 23022(us)
+[2025-07-31 15:44:58.354] [info] [server_lib.cpp:63] Server listening on 0.0.0.0:8080
+[2025-07-31 15:44:58.863] [info] [Query.cc:19]
+
+Received request on /query
+[2025-07-31 15:44:58.902] [info] [Query.cc:42] Time to retrieve centroids = 665(us)
+[2025-07-31 15:44:58.902] [info] [Query.cc:44] Time to serialise encrypted params = 400(us)
+[2025-07-31 15:44:58.902] [info] [Query.cc:46] Exiting from query handler, total handler time = 39215(us)
+[2025-07-31 15:45:04.607] [info] [Query.cc:58] Received request on /coarsesearch
+[2025-07-31 15:46:19.329] [info] [Query.cc:108] Size of the serialised encrypted data = 3630(mb)
+[2025-07-31 15:55:17.446] [info] [Query.cc:118] Time to deserialise coarse search params = 541205(us)
+[2025-07-31 15:55:17.446] [info] [Query.cc:120] Time to perform coarse search = 18906158(us)
+[2025-07-31 15:55:17.446] [info] [Query.cc:122] Time to serialise coarse search results = 3478124(us)
+[2025-07-31 15:55:17.446] [info] [Query.cc:124] Size of the unserialised encrypted data = 1110(mb)
+[2025-07-31 15:55:17.446] [info] [Query.cc:127] Exiting from coarse search handler, total handler time = 612838895(us)
+20250731 15:55:43.854057 UTC 55773 FATAL Transport endpoint is not connected (errno=107) sockets::shutdownWrite - Socket.cc:110
+
+--- Client Standard Output ---
+[2025-07-31 15:44:58.862] [info] [client.cpp:60] Enable single phase search = false
+[2025-07-31 15:44:58.862] [info] [client.cpp:61] Starting query and timers
+[2025-07-31 15:44:58.862] [info] [client.cpp:62] num_queries = 9, nprobe = 5, coarse_probe = 200
+[2025-07-31 15:44:58.862] [info] [client.cpp:75] Query vectors obtained successfully, time = 101(us)
+[2025-07-31 15:44:58.927] [info] [client.cpp:81] Fetched centroids from server successfully, time = 64687(us)
+[2025-07-31 15:44:59.298] [info] [client.cpp:90] Computed nearest centroids successfully, time = 1275(us)
+[2025-07-31 15:44:59.964] [info] [client.cpp:162] Computed encrypted coarse search params time = 665806(us)
+[2025-07-31 15:45:02.397] [info] [client_lib.cpp:345] Size of the coarse search request = 186(mb)
+[2025-07-31 15:58:29.463] [info] [client.cpp:175] Received encrypted coarse distances successfully, time = 809499238(us)
+[2025-07-31 15:58:34.652] [info] [client.cpp:184] Deserialised and decrypted coarse distances successfully, time = 5188095(us)
+[2025-07-31 15:58:34.652] [error] [client_lib.cpp:595] Number of computed results is lesser than select_nearest_probe
+
+--- Client Standard Error ---
+terminate called after throwing an instance of 'std::runtime_error'
+  what():  Number of computed results is lesser than select_nearest_probe
+
+--- Client Return Code ---
+-6
+
+--- FAILURE DETAILS ---
+Reason: Client process failed with return code: -6
+
+================================================================================
+END OF TEST RUN: 33
+================================================================================
+
+
+================================================================================
+TEST RUN: 34
+Timestamp: 2025-07-31 16:14:07.162342
+Status: SUCCESS
+================================================================================
+
+--- Configuration Parameters ---
+nq: 9
+nprobe: 5
+coarse-probe: 200
+k: 100
+nlist: 256
+sub-quantizers: 32
+sub-quantizers-size: 8
+poly-modulus: 8192
+plaintext-modulus: 48
+single-phase: true
+
+--- Boolean Options Status ---
+single-phase: ENABLED
+
+--- Server Arguments ---
+build/PreFHEtch_server --nlist 256 --sub-quantizers 32 --sub-quantizers-size 8 --poly-modulus 8192 --plaintext-modulus 48
+
+--- Client Arguments ---
+build/PreFHEtch_client --nq 9 --nprobe 5 --coarse-probe 200 --k 100 --single-phase
+
+--- Server Output ---
+[2025-07-31 15:58:40.314] [info] [server.cpp:69] Encryption params = valid
+[2025-07-31 15:58:40.315] [info] [server_lib.cpp:100] Reading cached data from index file = build/IVF256_PQ32_SUB_QUANTIZER_SIZE8.faiss
+[2025-07-31 15:58:40.336] [info] [server.cpp:81] Initialized index, time = 21781(us)
+[2025-07-31 15:58:40.336] [info] [server_lib.cpp:63] Server listening on 0.0.0.0:8080
+[2025-07-31 15:58:40.847] [info] [Query.cc:19]
+
+Received request on /query
+[2025-07-31 15:58:40.886] [info] [Query.cc:42] Time to retrieve centroids = 699(us)
+[2025-07-31 15:58:40.886] [info] [Query.cc:44] Time to serialise encrypted params = 462(us)
+[2025-07-31 15:58:40.886] [info] [Query.cc:46] Exiting from query handler, total handler time = 38554(us)
+[2025-07-31 15:58:44.454] [info] [Query.cc:240] Received request on /single-phase-search
+[2025-07-31 16:01:51.841] [info] [Query.cc:280] Size of the serialised encrypted data = 3630(mb)
+[2025-07-31 16:10:52.072] [info] [Query.cc:290] Time to deserialise single phase search params = 308351(us)
+[2025-07-31 16:10:52.072] [info] [Query.cc:292] Time to perform single phase search = 132107222(us)
+[2025-07-31 16:10:52.072] [info] [Query.cc:294] Time to serialise single phase search results = 5172003(us)
+[2025-07-31 16:10:52.072] [info] [Query.cc:296] Size of the unserialised encrypted data = 1110(mb)
+[2025-07-31 16:10:52.072] [info] [Query.cc:299] Exiting from single phase search handler, total handler time = 727617987(us)
+
+--- Client Standard Output ---
+[2025-07-31 15:58:40.845] [info] [client.cpp:60] Enable single phase search = true
+[2025-07-31 15:58:40.845] [info] [client.cpp:61] Starting query and timers
+[2025-07-31 15:58:40.845] [info] [client.cpp:62] num_queries = 9, nprobe = 5, coarse_probe = 200
+[2025-07-31 15:58:40.845] [info] [client.cpp:75] Query vectors obtained successfully, time = 87(us)
+[2025-07-31 15:58:40.913] [info] [client.cpp:81] Fetched centroids from server successfully, time = 67589(us)
+[2025-07-31 15:58:41.311] [info] [client.cpp:90] Computed nearest centroids successfully, time = 1107(us)
+[2025-07-31 15:58:41.613] [info] [client.cpp:104] Computed encrypted single phase search params time = 301965(us)
+[2025-07-31 15:58:43.084] [info] [client_lib.cpp:776] Size of the single phase search request = 115(mb)
+[2025-07-31 16:13:58.296] [info] [client.cpp:114] Received encrypted single phase search distances successfully, time = 916682415(us)
+[2025-07-31 16:14:03.549] [info] [client.cpp:123] Deserialised and decrypted search distances successfully, time = 5252972(us)
+[2025-07-31 16:14:03.549] [info] [client.cpp:133] Computed nearest precise vectors successfully, time = 112(us)
+
+[2025-07-31 16:14:03.549] [info] [client.cpp:138] Complete Single Phase Search time = 922703321(us)
+[2025-07-31 16:14:03.549] [info] [client.cpp:141] Single Phase Search Query completed!
+
+[2025-07-31 16:14:03.549] [info] [client_lib.cpp:492] BENCHMARK RESULTS
+
+
+[2025-07-31 16:14:03.549] [info] [client_lib.cpp:565] Total Query Benchmark Results
+[2025-07-31 16:14:03.549] [info] [client_lib.cpp:566] Recall@1 = 1, Recall@10 = 1, Recall@100 = 0.4788889
+[2025-07-31 16:14:03.549] [info] [client_lib.cpp:570] MRR@1 = 0.6666667, MRR@10 = 0.6666667, MRR@100 = 0.6666667
+
+
+----------------------------------------------------------------------------------------------------
+
+--- Client Standard Error ---
+No client stderr
+
+--- Client Return Code ---
+0
+
+================================================================================
+END OF TEST RUN: 34
+================================================================================
+
+
+================================================================================
+TEST RUN: 35
+Timestamp: 2025-07-31 16:28:06.324531
+Status: FAILED
+Failure Reason: Client process failed with return code: -6
+================================================================================
+
+--- Configuration Parameters ---
+nq: 9
+nprobe: 10
+coarse-probe: 200
+k: 100
+nlist: 256
+sub-quantizers: 32
+sub-quantizers-size: 8
+poly-modulus: 8192
+plaintext-modulus: 48
+single-phase: false
+
+--- Boolean Options Status ---
+single-phase: DISABLED
+
+--- Server Arguments ---
+build/PreFHEtch_server --nlist 256 --sub-quantizers 32 --sub-quantizers-size 8 --poly-modulus 8192 --plaintext-modulus 48
+
+--- Client Arguments ---
+build/PreFHEtch_client --nq 9 --nprobe 10 --coarse-probe 200 --k 100
+
+--- Server Output ---
+[2025-07-31 16:14:07.195] [info] [server.cpp:69] Encryption params = valid
+[2025-07-31 16:14:07.196] [info] [server_lib.cpp:100] Reading cached data from index file = build/IVF256_PQ32_SUB_QUANTIZER_SIZE8.faiss
+[2025-07-31 16:14:07.217] [info] [server.cpp:81] Initialized index, time = 21472(us)
+[2025-07-31 16:14:07.217] [info] [server_lib.cpp:63] Server listening on 0.0.0.0:8080
+[2025-07-31 16:14:07.726] [info] [Query.cc:19]
+
+Received request on /query
+[2025-07-31 16:14:07.765] [info] [Query.cc:42] Time to retrieve centroids = 546(us)
+[2025-07-31 16:14:07.765] [info] [Query.cc:44] Time to serialise encrypted params = 422(us)
+[2025-07-31 16:14:07.765] [info] [Query.cc:46] Exiting from query handler, total handler time = 38792(us)
+[2025-07-31 16:14:16.078] [info] [Query.cc:58] Received request on /coarsesearch
+[2025-07-31 16:17:02.326] [info] [Query.cc:108] Size of the serialised encrypted data = 7285(mb)
+[2025-07-31 16:25:30.386] [info] [Query.cc:118] Time to deserialise coarse search params = 734598(us)
+[2025-07-31 16:25:30.386] [info] [Query.cc:120] Time to perform coarse search = 45421031(us)
+[2025-07-31 16:25:30.386] [info] [Query.cc:122] Time to serialise coarse search results = 6886183(us)
+[2025-07-31 16:25:30.387] [info] [Query.cc:124] Size of the unserialised encrypted data = 2228(mb)
+[2025-07-31 16:25:30.387] [info] [Query.cc:127] Exiting from coarse search handler, total handler time = 674308747(us)
+
+--- Client Standard Output ---
+[2025-07-31 16:14:07.725] [info] [client.cpp:60] Enable single phase search = false
+[2025-07-31 16:14:07.725] [info] [client.cpp:61] Starting query and timers
+[2025-07-31 16:14:07.725] [info] [client.cpp:62] num_queries = 9, nprobe = 10, coarse_probe = 200
+[2025-07-31 16:14:07.725] [info] [client.cpp:75] Query vectors obtained successfully, time = 71(us)
+[2025-07-31 16:14:07.788] [info] [client.cpp:81] Fetched centroids from server successfully, time = 62875(us)
+[2025-07-31 16:14:08.156] [info] [client.cpp:90] Computed nearest centroids successfully, time = 1093(us)
+[2025-07-31 16:14:09.198] [info] [client.cpp:162] Computed encrypted coarse search params time = 1041658(us)
+[2025-07-31 16:14:12.749] [info] [client_lib.cpp:345] Size of the coarse search request = 263(mb)
+
+--- Client Standard Error ---
+terminate called after throwing an instance of 'nlohmann::json_abi_v3_12_0::detail::parse_error'
+  what():  [json.exception.parse_error.101] parse error at line 1, column 2990573638: syntax error while parsing array - unexpected end of input; expected ']'
+
+--- Client Return Code ---
+-6
+
+--- FAILURE DETAILS ---
+Reason: Client process failed with return code: -6
+
+================================================================================
+END OF TEST RUN: 35
+================================================================================
+
+
+================================================================================
+TEST RUN: 36
+Timestamp: 2025-07-31 16:45:29.484398
+Status: FAILED
+Failure Reason: Client process failed with return code: -6
+================================================================================
+
+--- Configuration Parameters ---
+nq: 9
+nprobe: 10
+coarse-probe: 200
+k: 100
+nlist: 256
+sub-quantizers: 32
+sub-quantizers-size: 8
+poly-modulus: 8192
+plaintext-modulus: 48
+single-phase: true
+
+--- Boolean Options Status ---
+single-phase: ENABLED
+
+--- Server Arguments ---
+build/PreFHEtch_server --nlist 256 --sub-quantizers 32 --sub-quantizers-size 8 --poly-modulus 8192 --plaintext-modulus 48
+
+--- Client Arguments ---
+build/PreFHEtch_client --nq 9 --nprobe 10 --coarse-probe 200 --k 100 --single-phase
+
+--- Server Output ---
+[2025-07-31 16:28:06.359] [info] [server.cpp:69] Encryption params = valid
+[2025-07-31 16:28:06.360] [info] [server_lib.cpp:100] Reading cached data from index file = build/IVF256_PQ32_SUB_QUANTIZER_SIZE8.faiss
+[2025-07-31 16:28:06.382] [info] [server.cpp:81] Initialized index, time = 22135(us)
+[2025-07-31 16:28:06.382] [info] [server_lib.cpp:63] Server listening on 0.0.0.0:8080
+[2025-07-31 16:28:06.891] [info] [Query.cc:19]
+
+Received request on /query
+[2025-07-31 16:28:06.931] [info] [Query.cc:42] Time to retrieve centroids = 716(us)
+[2025-07-31 16:28:06.931] [info] [Query.cc:44] Time to serialise encrypted params = 470(us)
+[2025-07-31 16:28:06.931] [info] [Query.cc:46] Exiting from query handler, total handler time = 39748(us)
+[2025-07-31 16:28:10.477] [info] [Query.cc:240] Received request on /single-phase-search
+[2025-07-31 16:34:37.673] [info] [Query.cc:280] Size of the serialised encrypted data = 7285(mb)
+[2025-07-31 16:42:45.372] [info] [Query.cc:290] Time to deserialise single phase search params = 311782(us)
+[2025-07-31 16:42:45.372] [info] [Query.cc:292] Time to perform single phase search = 263223628(us)
+[2025-07-31 16:42:45.372] [info] [Query.cc:294] Time to serialise single phase search results = 11192586(us)
+[2025-07-31 16:42:45.372] [info] [Query.cc:296] Size of the unserialised encrypted data = 2228(mb)
+[2025-07-31 16:42:45.372] [info] [Query.cc:299] Exiting from single phase search handler, total handler time = 874895386(us)
+
+--- Client Standard Output ---
+[2025-07-31 16:28:06.890] [info] [client.cpp:60] Enable single phase search = true
+[2025-07-31 16:28:06.890] [info] [client.cpp:61] Starting query and timers
+[2025-07-31 16:28:06.890] [info] [client.cpp:62] num_queries = 9, nprobe = 10, coarse_probe = 200
+[2025-07-31 16:28:06.890] [info] [client.cpp:75] Query vectors obtained successfully, time = 111(us)
+[2025-07-31 16:28:06.955] [info] [client.cpp:81] Fetched centroids from server successfully, time = 65085(us)
+[2025-07-31 16:28:07.324] [info] [client.cpp:90] Computed nearest centroids successfully, time = 1132(us)
+[2025-07-31 16:28:07.621] [info] [client.cpp:104] Computed encrypted single phase search params time = 297156(us)
+[2025-07-31 16:28:09.128] [info] [client_lib.cpp:776] Size of the single phase search request = 115(mb)
+
+--- Client Standard Error ---
+terminate called after throwing an instance of 'nlohmann::json_abi_v3_12_0::detail::parse_error'
+  what():  [json.exception.parse_error.101] parse error at line 1, column 2990552463: syntax error while parsing array - unexpected end of input; expected ']'
+
+--- Client Return Code ---
+-6
+
+--- FAILURE DETAILS ---
+Reason: Client process failed with return code: -6
+
+================================================================================
+END OF TEST RUN: 36
+================================================================================
+
+
+================================================================================
+TEST RUN: 37
+Timestamp: 2025-07-31 17:00:04.912220
+Status: FAILED
+Failure Reason: Client process failed with return code: -6
+================================================================================
+
+--- Configuration Parameters ---
+nq: 10
+nprobe: 5
+coarse-probe: 200
+k: 100
+nlist: 256
+sub-quantizers: 32
+sub-quantizers-size: 8
+poly-modulus: 8192
+plaintext-modulus: 48
+single-phase: false
+
+--- Boolean Options Status ---
+single-phase: DISABLED
+
+--- Server Arguments ---
+build/PreFHEtch_server --nlist 256 --sub-quantizers 32 --sub-quantizers-size 8 --poly-modulus 8192 --plaintext-modulus 48
+
+--- Client Arguments ---
+build/PreFHEtch_client --nq 10 --nprobe 5 --coarse-probe 200 --k 100
+
+--- Server Output ---
+[2025-07-31 16:45:29.518] [info] [server.cpp:69] Encryption params = valid
+[2025-07-31 16:45:29.518] [info] [server_lib.cpp:100] Reading cached data from index file = build/IVF256_PQ32_SUB_QUANTIZER_SIZE8.faiss
+[2025-07-31 16:45:29.539] [info] [server.cpp:81] Initialized index, time = 20788(us)
+[2025-07-31 16:45:29.539] [info] [server_lib.cpp:63] Server listening on 0.0.0.0:8080
+[2025-07-31 16:45:30.049] [info] [Query.cc:19]
+
+Received request on /query
+[2025-07-31 16:45:30.089] [info] [Query.cc:42] Time to retrieve centroids = 566(us)
+[2025-07-31 16:45:30.089] [info] [Query.cc:44] Time to serialise encrypted params = 460(us)
+[2025-07-31 16:45:30.089] [info] [Query.cc:46] Exiting from query handler, total handler time = 39602(us)
+[2025-07-31 16:45:36.246] [info] [Query.cc:58] Received request on /coarsesearch
+[2025-07-31 16:46:54.425] [info] [Query.cc:108] Size of the serialised encrypted data = 3883(mb)
+[2025-07-31 16:56:29.435] [info] [Query.cc:118] Time to deserialise coarse search params = 534996(us)
+[2025-07-31 16:56:29.436] [info] [Query.cc:120] Time to perform coarse search = 17805134(us)
+[2025-07-31 16:56:29.436] [info] [Query.cc:122] Time to serialise coarse search results = 3691022(us)
+[2025-07-31 16:56:29.436] [info] [Query.cc:124] Size of the unserialised encrypted data = 1188(mb)
+[2025-07-31 16:56:29.436] [info] [Query.cc:127] Exiting from coarse search handler, total handler time = 653189368(us)
+
+--- Client Standard Output ---
+[2025-07-31 16:45:30.048] [info] [client.cpp:60] Enable single phase search = false
+[2025-07-31 16:45:30.048] [info] [client.cpp:61] Starting query and timers
+[2025-07-31 16:45:30.048] [info] [client.cpp:62] num_queries = 10, nprobe = 5, coarse_probe = 200
+[2025-07-31 16:45:30.048] [info] [client.cpp:75] Query vectors obtained successfully, time = 75(us)
+[2025-07-31 16:45:30.113] [info] [client.cpp:81] Fetched centroids from server successfully, time = 64591(us)
+[2025-07-31 16:45:30.482] [info] [client.cpp:90] Computed nearest centroids successfully, time = 1220(us)
+[2025-07-31 16:45:31.190] [info] [client.cpp:162] Computed encrypted coarse search params time = 707985(us)
+[2025-07-31 16:45:33.858] [info] [client_lib.cpp:345] Size of the coarse search request = 194(mb)
+[2025-07-31 16:59:53.466] [info] [client.cpp:175] Received encrypted coarse distances successfully, time = 862276182(us)
+[2025-07-31 16:59:58.966] [info] [client.cpp:184] Deserialised and decrypted coarse distances successfully, time = 5500403(us)
+[2025-07-31 16:59:58.967] [error] [client_lib.cpp:595] Number of computed results is lesser than select_nearest_probe
+
+--- Client Standard Error ---
+terminate called after throwing an instance of 'std::runtime_error'
+  what():  Number of computed results is lesser than select_nearest_probe
+
+--- Client Return Code ---
+-6
+
+--- FAILURE DETAILS ---
+Reason: Client process failed with return code: -6
+
+================================================================================
+END OF TEST RUN: 37
+================================================================================
+
